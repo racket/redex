@@ -483,6 +483,17 @@
           (term ((z z) (z z)))))
   
   (let ()
+    (define-metafunction empty-language
+      [(f number_1)
+       number_1
+       (where number_2 ,(add1 (term number_1)))
+       (where number_3 ,(add1 (term number_2)))
+       (side-condition (and (number? (term number_3))
+                            (= (term number_3) 4)))]
+      [(f any) 0])
+    (test (term (f 2)) 2))
+  
+  (let ()
     (define-language x-lang
       (x variable))
     (define-metafunction x-lang
@@ -536,6 +547,30 @@
             'no-exn)
           'no-exn))
     
+  (let ()
+    ;; test that 'where' clauses can contain recursive calls.
+    (define-metafunction empty-language
+      [(f (any)) 
+       x
+       (where x (f any))]
+      [(f any) any])
+    (test (term (f ((((x))))))
+          (term x)))
+  
+  (let ()
+    (define-language lamv
+      (z variable hole))
+
+    (define-metafunction lamv
+      foo : z  -> any
+      [(foo hole) dontcare]
+      [(foo variable) docare])
+
+    (test (term (foo hole))
+          (term dontcare))
+    (test (term (foo y))
+          (term docare)))
+  
   ;; test that tracing works properly
   ;; note that caching comes into play here (which is why we don't see the recursive calls)
   (let ()
@@ -740,6 +775,108 @@
          '(p q r))
         (list '((p q r))))
 
+  #;
+  (test (apply-reduction-relation
+         (reduction-relation 
+          empty-language
+          #:main-arrow :->
+          (:-> 1 2))
+         1)
+        '(2))
+  
+  (test (apply-reduction-relation
+         (reduction-relation 
+          empty-language
+          #:domain number
+          (--> 1 2))
+         1)
+        '(2))
+  
+  
+  (test (let ([red
+               (reduction-relation 
+                empty-language
+                #:domain number
+                (--> 1 2))])
+          (with-handlers ((exn? exn-message))
+            (apply-reduction-relation red 'x)
+            'no-exception-raised))
+        "reduction-relation: relation not defined for x")
+
+  (test (let ([red
+               (reduction-relation 
+                empty-language
+                #:domain number
+                (--> 1 x))])
+          (with-handlers ((exn? exn-message))
+            (apply-reduction-relation red 1)
+            'no-exception-raised))
+        "reduction-relation: relation reduced to x, which is outside its domain")
+
+  (let* ([red1
+          (reduction-relation 
+           empty-language
+           #:domain (side-condition number_1 (even? (term number_1)))
+           (--> number number))]
+         [red2
+          (reduction-relation 
+           empty-language
+           #:domain (side-condition number_1 (odd? (term number_1)))
+           (--> number number))]
+         [red-c
+          (union-reduction-relations red1 red2)])
+    
+    ;; ensure first branch of 'union' is checked  
+    (test (with-handlers ((exn? exn-message))
+            (apply-reduction-relation red-c 1)
+            'no-exception-raised)
+          "reduction-relation: relation not defined for 1")
+
+    ;; ensure second branch of 'union' is checked
+    (test (with-handlers ((exn? exn-message))
+            (apply-reduction-relation red-c 2)
+            'no-exception-raised)
+          "reduction-relation: relation not defined for 2"))
+
+  (let ()
+    (define-language l1
+      (D 0 1 2))
+    (define r1
+      (reduction-relation 
+       l1
+       #:domain D
+       (--> D D)))
+    (define-language l2
+      (D 0 1 2 3))
+    (define r2
+      (extend-reduction-relation r1 l2))
+    
+    ;; test that the domain is re-interpreted for the extended reduction-relation
+    (test (apply-reduction-relation r2 3)
+          '(3)))
+  
+  (let ()
+    (define-language l1
+      (D 0 1 2))
+    (define r1
+      (reduction-relation 
+       l1
+       #:domain (D D)
+       (--> (D_1 D_2) (D_2 D_1))))
+    
+    ;; test that duplicated identifiers in the domain contract do not have to be equal
+    (test (apply-reduction-relation r1 (term (1 2)))
+          (list (term (2 1)))))
+  
+  ;;test that #:arrow keyword works
+  (test (apply-reduction-relation 
+         (reduction-relation 
+          empty-language
+          #:arrow :->
+          (:-> 1 2))
+         1)
+        '(2))
+  
   (parameterize ([current-namespace syn-err-test-namespace])
     (eval (quote-syntax
            (define-language grammar
@@ -1004,6 +1141,58 @@
     (test (apply-reduction-relation red2 (term (X b))) (list (term (X (b b)))))
     (test (apply-reduction-relation red2 (term (X q))) (list (term (X z)) 
                                                              (term (X w)))))
+  
+  (test (reduction-relation->rule-names
+         (reduction-relation
+          empty-language
+          (--> x y a)))
+        '(a))
+  
+  (test (reduction-relation->rule-names
+         (reduction-relation
+          empty-language
+          (--> x y a)
+          (--> y z b)
+          (--> z w c)))
+        '(a b c))
+  
+  (test (reduction-relation->rule-names
+         (reduction-relation
+          empty-language
+          (--> x y a)
+          (--> y z b)
+          (--> z w c)
+          (--> p q z)
+          (--> q r y)
+          (--> r p x)))
+        '(a b c z y x))
+  
+  (test (reduction-relation->rule-names
+         (extend-reduction-relation
+          (reduction-relation
+           empty-language
+           (--> x y a)
+           (--> y z b)
+           (--> z w c))
+          empty-language
+          (--> p q z)
+          (--> q r y)
+          (--> r p x)))
+        '(a b c z y x))
+  
+    (test (reduction-relation->rule-names
+           (union-reduction-relations
+            (reduction-relation
+             empty-language
+             (--> x y a)
+             (--> y z b)
+             (--> z w c))
+            (reduction-relation
+             empty-language
+             (--> p q z)
+             (--> q r y)
+             (--> r p x))))
+        '(a b c z y x))
   
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;
@@ -1281,4 +1470,82 @@
       (test (sort (covered-cases c) <)
             '(("shortcut" . 1) ("side-condition" . 2) ("unnamed" . 1)))))
   
+  
+;                                                                       
+;                                                                       
+;                                                                       
+;                                                                       
+;                                                 ;;;                   
+;   ;;                ;;           ;             ;; ;;                  
+;   ;;                ;;            ;            ;; ;;                  
+;  ;;;;;  ;;;    ;;; ;;;;;           ;;           ;;;      ;;;;   ;;;;  
+;   ;;   ;; ;;  ;; ;  ;;  ;;;;;;;;     ;;        ;;;      ;; ;   ;;  ;; 
+;   ;;   ;;;;;  ;;;   ;;              ;;;       ;;  ;  ;; ;;     ;;  ;; 
+;   ;;   ;;       ;;  ;;            ;;;         ;;  ;;;;  ;;     ;;  ;; 
+;   ;;   ;;  ;  ; ;;  ;;           ;;           ;;   ;;   ;; ;   ;;  ;; 
+;   ;;;;  ;;;   ;;;   ;;;;         ;             ;;;;; ;;  ;;;;   ;;;;  
+;                                                                       
+;                                                                       
+;                                                                       
+
+  
+  (define-syntax-rule 
+    (capture-output arg1 args ...)
+    (let ([p (open-output-string)])
+      (parameterize ([current-output-port p]
+                     [current-error-port p])
+        arg1 args ...)
+      (get-output-string p)))
+  
+  (let ()
+    (define red (reduction-relation empty-language (--> 1 2)))
+    (test (capture-output (test-->> red 1 2) (test-results))
+          "One test passed.\n")
+    (test (capture-output (test-->> red 2 3) (test-results))
+          #rx"FAILED tl-test.ss:[0-9.]+\nexpected: 3\n  actual: 2\n1 test failed \\(out of 1 total\\).\n"))
+    
+  (let ()
+    (define red-share (reduction-relation 
+                       empty-language
+                       (--> a b)
+                       (--> a c)
+                       (--> c d)
+                       (--> b d)))
+    (test (capture-output (test-->> red-share (term a) (term d)) (test-results))
+          "One test passed.\n"))
+  
+  (let ()
+    (define red-cycle (reduction-relation 
+                       empty-language
+                       (--> a a)))
+    (test (capture-output (test-->> red-cycle #:cycles-ok (term a)) (test-results))
+          "One test passed.\n")
+    (test (capture-output (test-->> red-cycle (term a)) (test-results))
+          #rx"FAILED tl-test.ss:[0-9.]+\nfound a cycle in the reduction graph\n1 test failed \\(out of 1 total\\).\n"))
+  
+  (let ()
+    (define-metafunction empty-language [(f any) ((any))])
+    (test (capture-output (test-equal (term (f 1)) (term ((1))))
+                          (test-results))
+          "One test passed.\n"))
+  
+  (let ()
+    (test (capture-output (test-predicate odd? 1)
+                          (test-results))
+          "One test passed.\n"))
+  
+  (let ()
+    (define red (reduction-relation empty-language (--> any (any))))
+    (test (capture-output (test--> red (term (1 2 3)) (term ((1 2 3)))) (test-results))
+          "One test passed.\n"))
+  
+  (let ()
+    (define red (reduction-relation empty-language 
+                                    (--> any (any))
+                                    (--> (any) any)))
+    (test (capture-output (test--> red (term (x)) (term ((x))) (term x)) (test-results))
+          "One test passed.\n")
+    (test (capture-output (test--> red (term (x)) (term x) (term ((x)))) (test-results))
+          "One test passed.\n"))
+
   (print-tests-passed 'tl-test.ss))

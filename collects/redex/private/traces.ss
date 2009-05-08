@@ -245,7 +245,12 @@
   (define exprs (if multiple? pre-exprs (list pre-exprs)))
   (define main-eventspace (current-eventspace))
   (define saved-parameterization (current-parameterization))
-  (define graph-pb (new (extra-graph-pasteboard-mixin graph-pasteboard%) [layout layout] [edge-label-font edge-label-font] [edge-labels? edge-labels?]))
+  (define graph-pb
+    (let ([pb (new (extra-graph-pasteboard-mixin graph-pasteboard%)
+                   [layout layout] [edge-label-font edge-label-font]
+                   [edge-labels? edge-labels?])])
+      (send pb set-flip-labels? #f)
+      pb))
   (define user-char-width (initial-char-width))
   (define f (instantiate red-sem-frame% ()
               (label "PLT Redex Reduction Graph")
@@ -483,23 +488,59 @@
     (send reduce-button set-label "Reducing...")
     (thread
      (lambda ()
-       (do-some-reductions)
-       (queue-callback
-        (lambda () ;; =eventspace main thread=
-          (send graph-pb begin-edit-sequence)
-          (send graph-pb re-run-layout)
-          (send graph-pb end-edit-sequence)
-          (when show-all-at-once? (send graph-pb end-edit-sequence))
-          (scroll-to-rightmost-snip)
-          (send reduce-button set-label "Reduce")
-          (cond
-            [(null? frontier)
-             (send status-message set-label (term-count (count-snips)))]
-            [else
-             (send status-message set-label 
-                   (string-append (term-count (count-snips))
-                                  "(possibly more to find)"))
-             (send reduce-button enable #t)]))))))
+       (let ([update-gui
+              (λ (failed?)
+                (queue-callback
+                 (lambda () ;; =eventspace main thread=
+                   (send graph-pb begin-edit-sequence)
+                   (send graph-pb re-run-layout)
+                   (send graph-pb end-edit-sequence)
+                   (when show-all-at-once? (send graph-pb end-edit-sequence))
+                   (scroll-to-rightmost-snip)
+                   (send reduce-button set-label "Reduce")
+                   (cond
+                     [failed? 
+                      (send status-message set-label "Error while reducing")]
+                     [(null? frontier)
+                      (send status-message set-label (term-count (count-snips)))]
+                     [else
+                      (send status-message set-label 
+                            (string-append (term-count (count-snips))
+                                           "(possibly more to find)"))
+                      (send reduce-button enable #t)]))))])
+         (with-handlers ((exn:fail? (λ (x) (update-gui #t) (raise x))))
+           (do-some-reductions)
+           (update-gui #f))))))
+  
+  #;
+  (define (reduce-button-callback show-all-at-once?)
+    (when show-all-at-once? (send graph-pb begin-edit-sequence))
+    (send reduce-button enable #f)
+    (send reduce-button set-label "Reducing...")
+    (thread
+     (lambda ()
+       (let ([update-gui
+              (λ (failed?)
+                (queue-callback
+                 (lambda () ;; =eventspace main thread=
+                   (scroll-to-rightmost-snip)
+                   (cond
+                     [failed? 
+                      (send status-message set-label "Error while reducing")
+                      (send reduce-button set-label "Reduce")]
+                     [else
+                      (send reduce-button set-label "Reduce")
+                      (cond
+                        [(null? frontier)
+                         (send status-message set-label (term-count (count-snips)))]
+                        [else
+                         (send status-message set-label 
+                               (string-append (term-count (count-snips))
+                                              "(possibly more to find)"))
+                         (send reduce-button enable #t)])]))))])
+         (with-handlers ((exn:fail? (λ (x) (update-gui #t) (raise x))))
+           (do-some-reductions)
+           (update-gui #f))))))
   
   (define (term-count n)
     (format "found ~a term~a" n (if (equal? n 1) "" "s")))

@@ -18,16 +18,14 @@ before the pattern compiler is invoked.
 
 (define-struct compiled-pattern (cp))
 
-(define count 0)
-
 (define caching-enabled? (make-parameter #t))
 
 ;; lang = (listof nt)
 ;; nt = (make-nt sym (listof rhs))
-;; rhs = (make-rhs single-pattern (listof var-info??))
+;; rhs = (make-rhs single-pattern)
 ;; single-pattern = sexp
 (define-struct nt (name rhs) #:inspector (make-inspector))
-(define-struct rhs (pattern var-info) #:inspector  (make-inspector))
+(define-struct rhs (pattern) #:inspector  (make-inspector))
 
 ;; var = (make-var sym sexp)
 ;; patterns are sexps with `var's embedded
@@ -195,6 +193,9 @@ before the pattern compiler is invoked.
       [`any (void)]
       [`number (void)]
       [`string (void)]
+      [`natural (void)]
+      [`integer (void)]
+      [`real (void)]
       [`variable (void)]
       [`(variable-except ,s ...) (void)]
       [`(variable-prefix ,s) (void)]
@@ -230,6 +231,9 @@ before the pattern compiler is invoked.
        [`number #f]
        [`string #f]
        [`variable #f] 
+       [`natural #f]
+       [`integer #f]
+       [`real #f]
        [`(variable-except ,vars ...) #f]
        [`(variable-prefix ,var) #f]
        [`variable-not-otherwise-mentioned #f]
@@ -296,7 +300,7 @@ before the pattern compiler is invoked.
             (if (eq? (nt-name nt1) (nt-name nt2))
                 (make-nt (nt-name compat-nt)
                          (cons
-                          (make-rhs 'hole '())
+                          (make-rhs 'hole)
                           (nt-rhs compat-nt)))
                 compat-nt)))
         lang))
@@ -346,7 +350,7 @@ before the pattern compiler is invoked.
                  (cond
                    [(zero? i) null]
                    [else (let ([nts (build-across-nts (nt-name nt) count (- i 1))])
-                           (cons (make-rhs (maker (box nts)) '())
+                           (cons (make-rhs (maker (box nts)))
                                  (loop (- i 1))))]))))
            (nt-rhs nt)))))
 
@@ -375,6 +379,9 @@ before the pattern compiler is invoked.
          [`any (lambda (l) 'any)]
          [`number (lambda (l) 'number)]
          [`string (lambda (l) 'string)]
+         [`natural (lambda (l) 'natural)]
+         [`integer (lambda (l) 'integer)]
+         [`real (lambda (l) 'real)]
          [`variable (lambda (l) 'variable)] 
          [`(variable-except ,vars ...) (lambda (l) pattern)]
          [`(variable-prefix ,var) (lambda (l) pattern)]
@@ -482,6 +489,9 @@ before the pattern compiler is invoked.
     [`number #f]
     [`string #f]
     [`variable #f] 
+    [`natural #f]
+    [`integer #f]
+    [`real #f]
     [`(variable-except ,vars ...) #f]
     [`variable-not-otherwise-mentioned #f]
     [`(variable-prefix ,var) #f]
@@ -528,7 +538,10 @@ before the pattern compiler is invoked.
     [`any #t]
     [`number #t]
     [`string #t]
-    [`variable #t] 
+    [`variable #t]
+    [`natural #t]
+    [`integer #t]
+    [`real #t]
     [`(variable-except ,vars ...) #t]
     [`variable-not-otherwise-mentioned #t]
     [`(variable-prefix ,prefix) #t]
@@ -612,7 +625,7 @@ before the pattern compiler is invoked.
        (mtch-context match)
        (mtch-hole match)))))
 
-;; compile-pattern : compiled-lang pattern boolean (listof sym) -> compiled-pattern
+;; compile-pattern : compiled-lang pattern boolean -> compiled-pattern
 (define (compile-pattern clang pattern bind-names?)
   (let-values ([(pattern has-hole?) (compile-pattern/cross? clang pattern #t bind-names?)])
     (make-compiled-pattern pattern)))
@@ -803,10 +816,13 @@ before the pattern compiler is invoked.
   ;; compile-id-pattern : symbol[with-out-underscore] -> (values <compiled-pattern-proc> boolean)
   (define (compile-id-pattern pat)
     (match pat
-      [`any (simple-match 'any (λ (x) #t))]
-      [`number (simple-match 'number number?)]
-      [`string (simple-match 'string string?)]
-      [`variable (simple-match 'variable symbol?)]
+      [`any (simple-match (λ (x) #t))]
+      [`number (simple-match number?)]
+      [`string (simple-match string?)]
+      [`variable (simple-match symbol?)]
+      [`natural (simple-match (λ (x) (and (integer? x) (exact? x) (not (negative? x)))))]
+      [`integer (simple-match (λ (x) (and (integer? x) (exact? x))))]
+      [`real (simple-match real?)]
       [(? is-non-terminal?)
        (values
         (lambda (exp hole-info)
@@ -825,9 +841,9 @@ before the pattern compiler is invoked.
   
   (define (is-non-terminal? sym) (hash-maps? clang-ht sym))
   
-  ;; simple-match : sym (any -> bool) -> (values <compiled-pattern> boolean)
+  ;; simple-match : (any -> bool) -> (values <compiled-pattern> boolean)
   ;; does a match based on a built-in Scheme predicate
-  (define (simple-match binder pred)
+  (define (simple-match pred)
     (values (lambda (exp hole-info) 
               (and (pred exp) 
                    (list (make-mtch

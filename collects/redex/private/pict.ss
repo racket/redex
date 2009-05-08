@@ -127,7 +127,7 @@
 (define current-label-extra-space (make-parameter 0))
 (define reduction-relation-rule-separation (make-parameter 4))
 
-(define (rule-picts->pict/horizontal rps)
+(define ((rule-picts->pict/horizontal left-column-align) rps)
   (let* ([sep 2]
          [max-rhs (apply max
                          0
@@ -160,8 +160,8 @@
                            (blank)
                            sep (blank) (blank) (blank))))
                  rps))
-           (list* rtl-superimpose ctl-superimpose ltl-superimpose)
-           (list* rtl-superimpose ctl-superimpose ltl-superimpose)
+           (list* left-column-align ctl-superimpose ltl-superimpose)
+           (list* left-column-align ctl-superimpose ltl-superimpose)
            (list* sep sep (+ sep (current-label-extra-space))) 2)))
 
 (define arrow-space (make-parameter 0))
@@ -326,7 +326,10 @@
     [(compact-vertical) rule-picts->pict/compact-vertical]
     [(vertical-overlapping-side-conditions)
      rule-picts->pict/vertical-overlapping-side-conditions]
-    [else rule-picts->pict/horizontal]))
+    [(horizontal-left-align)
+     (rule-picts->pict/horizontal ltl-superimpose)]
+    [else ;; horizontal
+     (rule-picts->pict/horizontal rtl-superimpose)]))
 
 (define (mk-arrow-pict sz style)
   (let ([cache (make-hash)])
@@ -344,6 +347,8 @@
 (define short-curvy-arrow-pict (mk-arrow-pict "m" 'curvy))
 (define double-arrow-pict (mk-arrow-pict "xxx" 'straight-double))
 (define short-double-arrow-pict (mk-arrow-pict "m" 'straight-double))
+(define map-arrow-pict (mk-arrow-pict "m" 'map))
+(define long-map-arrow-pict (mk-arrow-pict "xxx" 'map))
 
 (define user-arrow-table (make-hasheq))
 (define (set-arrow-pict! arr thunk)
@@ -362,7 +367,14 @@
           [(>->) (basic-text "\u21a3" (default-style))]
           [(~~>) (curvy-arrow-pict)]
           [(~>) (short-curvy-arrow-pict)]
-          [(:->) (basic-text "\u21a6" (default-style))]
+          [(:->) 
+           (if STIX?
+               (basic-text "\u21a6" (default-style))
+               (map-arrow-pict))]
+          [(:-->) 
+           (if STIX?
+               (basic-text "\u27fc" (default-style))
+               (long-map-arrow-pict))]
           [(c->) (basic-text "\u21aa" (default-style))]
           [(-->>) (basic-text "\u21a0" (default-style))]
           [(>--) (basic-text "\u291a" (default-style))]
@@ -445,6 +457,7 @@
   (let ([ps-setup (make-object ps-setup%)])
     (send ps-setup copy-from (current-ps-setup))
     (send ps-setup set-file filename)
+    (send ps-setup set-mode 'file)
     (parameterize ([current-ps-setup ps-setup])
       (make-object post-script-dc% #f #f))))
 
