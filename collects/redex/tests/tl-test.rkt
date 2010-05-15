@@ -6,7 +6,21 @@
            "../private/struct.ss")
   
   (reset-count)
-  
+
+  (parameterize ([current-namespace syn-err-test-namespace])
+    (eval (quote-syntax
+           (define-language grammar
+             (M (M M)
+                number)
+             (E hole
+                (E M)
+                (number E))
+             (X (number any)
+                (any number))
+             (Q (Q ...)
+                variable)
+             (UN (add1 UN)
+                 zero)))))
   
 ;                                                          
 ;                                                          
@@ -232,6 +246,21 @@
       (y (variable-prefix a_b)))
     (test (pair? (redex-match L x (term a_c))) #t)
     (test (pair? (redex-match L y (term a_bc))) #t))
+  
+  ; underscores allowed on built-in non-terminals and names bound
+  (let ([m (redex-match 
+            grammar 
+            (any_1 number_1 natural_1 integer_1
+                   real_1 string_1 variable_1
+                   variable-not-otherwise-mentioned_1)
+            '(1 2 3 4 5 "s" s t))])
+    (test (if m
+              (map bind-exp
+                   (sort (match-bindings (car m))
+                         string<=?
+                         #:key (compose symbol->string bind-name)))
+              '())
+          '(1 4 3 2 5 "s" t s)))
   
   ;; test caching
   (let ()
@@ -615,13 +644,15 @@
     
     (let ([sp (open-output-string)])
       (parameterize ([current-output-port sp]
-                     [current-traced-metafunctions 'all])
+                     [current-traced-metafunctions 'all]
+                     [print-as-expression #f])
         (term (f 1)))
       (test (get-output-string sp) ">(f 1)\n<0\n"))
     
     (let ([sp (open-output-string)])
       (parameterize ([current-output-port sp]
-                     [current-traced-metafunctions '(f)])
+                     [current-traced-metafunctions '(f)]
+                     [print-as-expression #f])
         (term (f 1)))
       (test (get-output-string sp) ">(f 1)\n<0\n")))
   
@@ -673,6 +704,12 @@
     
     (test (term (f 8)) 12345))
   
+  
+  (let ()
+    (test-syn-err
+     (define-metafunction grammar
+       [(f x)])
+     #rx"expected a pattern and a right-hand side"))
   
 ;                                                                                                 
 ;                                                                                                 
@@ -1022,21 +1059,6 @@
            (reduction-relation n-lang [--> any ,(length (redex-match n-lang n 1))])
            11)
           '(1)))
-  
-  (parameterize ([current-namespace syn-err-test-namespace])
-    (eval (quote-syntax
-           (define-language grammar
-             (M (M M)
-                number)
-             (E hole
-                (E M)
-                (number E))
-             (X (number any)
-                (any number))
-             (Q (Q ...)
-                variable)
-             (UN (add1 UN)
-                 zero)))))
   
   (test-syn-err (reduction-relation 
                  grammar
@@ -1733,7 +1755,7 @@
            [c (make-coverage T)])
       (parameterize ([relation-coverage (list c)])
         (apply-reduction-relation T (term q))
-        (test (and (regexp-match #px"tl-test.ss:\\d+:\\d+" (caar (covered-cases c))) #t)
+        (test (and (regexp-match #px"tl-test.(?:.+):\\d+:\\d+" (caar (covered-cases c))) #t)
               #t))))
   
   (let* ([R (reduction-relation
@@ -1752,7 +1774,7 @@
                               second
                               (curry regexp-match #px".*:(\\d+):\\d+"))])
                 (< (line-no (car c)) (line-no (car d)))))]
-         [src-ok? (curry regexp-match? #px"tl-test.ss:\\d+:\\d+")]
+         [src-ok? (curry regexp-match? #px"tl-test.(?:.+):\\d+:\\d+")]
          [sorted-counts (λ (cc) (map cdr (sort (covered-cases cc) <)))])
     (define-metafunction empty-language
       [(f 1) 1]
@@ -1831,7 +1853,7 @@
     (test (capture-output (test-->> red 1 2) (test-results))
           "One test passed.\n")
     (test (capture-output (test-->> red 2 3) (test-results))
-          #rx"FAILED tl-test.ss:[0-9.]+\nexpected: 3\n  actual: 2\n1 test failed \\(out of 1 total\\).\n"))
+          #rx"FAILED tl-test.(?:.+):[0-9.]+\nexpected: 3\n  actual: 2\n1 test failed \\(out of 1 total\\).\n"))
     
   (let ()
     (define red-share (reduction-relation 
@@ -1850,7 +1872,7 @@
     (test (capture-output (test-->> red-cycle #:cycles-ok (term a)) (test-results))
           "One test passed.\n")
     (test (capture-output (test-->> red-cycle (term a)) (test-results))
-          #rx"FAILED tl-test.ss:[0-9.]+\nfound a cycle in the reduction graph\n1 test failed \\(out of 1 total\\).\n"))
+          #rx"FAILED tl-test.(?:.+):[0-9.]+\nfound a cycle in the reduction graph\n1 test failed \\(out of 1 total\\).\n"))
   
   (let ()
     (define-metafunction empty-language [(f any) ((any))])
@@ -1876,5 +1898,35 @@
           "One test passed.\n")
     (test (capture-output (test--> red (term (x)) (term x) (term ((x)))) (test-results))
           "One test passed.\n"))
+  
+  (let ()
+    (define-language L
+      (i integer))
+    
+    (define R
+      (reduction-relation
+       L
+       (--> i i)
+       (--> i ,(add1 (term i)))))
+    
+    (define (mod2=? i j)
+      (= (modulo i 2) (modulo j 2)))
+    
+    (test (capture-output (test--> R #:equiv mod2=? 7 1 0) (test-results))
+          "One test passed.\n")
+    (test (capture-output (test--> R #:equiv mod2=? 7 1) (test-results))
+          #rx"FAILED tl-test.(?:.+):[0-9.]+\nexpected: 1\n  actual: 8\n  actual: 7\n1 test failed \\(out of 1 total\\).\n"))
+  
+  (let-syntax ([test-bad-equiv-arg
+                (λ (stx)
+                  (syntax-case stx ()
+                    [(_ test-form)
+                     #'(test (with-handlers ([exn:fail:contract? exn-message])
+                               (test-form (reduction-relation empty-language (--> any any))
+                                          #:equiv 1 2)
+                               "no error raised")
+                             #rx"expected argument of type")]))])
+    (test-bad-equiv-arg test-->)
+    (test-bad-equiv-arg test-->>))
 
   (print-tests-passed 'tl-test.ss))
