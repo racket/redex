@@ -5,11 +5,11 @@
 
 (reset-count)
 
-(let* ([formals `((#:b . ,#'1) (#:c . ,#'2))]
+(let* ([formals `((#:b ,#'1) (#:c ,#'2))]
        [parse 
         (λ (actuals) 
           (map syntax-e 
-               (parse-kw-args formals (cdr (syntax-e actuals)) actuals)))])
+               (parse-kw-args formals (cdr (syntax-e actuals)) actuals 'dontcare)))])
   (let-syntax ([msg-src
                 (syntax-rules ()
                   [(_ expr)
@@ -42,5 +42,24 @@
                     [(msg src) (msg-src (parse #`(a #:b 3 #,kw 4)))])
         (test msg #rx"a: invalid keyword")
         (test src (list kw))))))
+
+(define-namespace-anchor test-module)
+
+(let* ([default #'3]
+       [formals `((#:a ,default (,#'(-> number? string?) "#:a arg")))]
+       [form 'test-form]
+       [parse (λ (actuals) (parse-kw-args formals actuals actuals form))])
+  (test (first (parse #'())) default)
+  (define arg
+    (eval (first (parse #'(#:a (λ (x) 3)))) 
+          (namespace-anchor->namespace test-module)))
+  (test-contract-violation
+   (arg 3)
+   #:blaming "keyword-macros-test"
+   #:message "#:a arg")
+  (test-contract-violation
+   (arg "NaN")
+   #:blaming (format "~a" form)
+   #:message "#:a arg"))
 
 (print-tests-passed 'keyword-macros-test.ss)
