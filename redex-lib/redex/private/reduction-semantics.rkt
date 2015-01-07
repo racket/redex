@@ -1177,6 +1177,7 @@
 (define-for-syntax (internal-define-metafunction orig-stx prev-metafunction stx)
   (not-expression-context orig-stx)
   (syntax-case stx ()
+    [() (raise-syntax-error 'define-metafunction "expected the name of a language" stx)]
     [(lang . rest)
      (let ([syn-error-name (if prev-metafunction
                                'define-metafunction/extension

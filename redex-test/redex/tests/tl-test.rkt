@@ -1290,6 +1290,16 @@
             (define-metafunction L [(q) ()])
             #f))
         #rx"^q: undefined;\n[^\n]*use[^\n]*before")
+  (test (let ([on (current-namespace)])
+          (parameterize ([current-namespace (make-base-namespace)])
+            (namespace-attach-module on 'redex/reduction-semantics)
+            (namespace-require 'racket/base)
+            (with-handlers ([exn:fail? exn-message])
+              (eval '(module m racket
+                       (require redex/reduction-semantics)
+                       (define-metafunction)))
+              "no exn raised")))
+        #rx"define-metafunction: expected the name of a language")
 
 (let ()
   ;; named ellipses in where clauses
