@@ -1020,14 +1020,14 @@
       [(I)
        (unless (match-pattern contracts input-term)
          (redex-error form-name (string-append "judgment input values do not match its contract;\n"
-                                               " (unknown output values indicated by _)\n  contract: ~a\n  values: ~a")
+                                               " (unknown output values indicated by _)\n  contract: ~s\n  values: ~s")
                       (cons form-name orig-ctcs)
                       (cons form-name (assemble modes input-term (build-list (length modes)
                                                                              (λ (_) '_))))))]
       [(O)
        (define io-term (assemble modes input-term o-term))
        (unless (match-pattern contracts io-term)
-         (redex-error form-name "judgment values do not match its contract;\n  contract: ~a\n  values: ~a"
+         (redex-error form-name "judgment values do not match its contract;\n  contract: ~s\n  values: ~s"
                       (cons form-name orig-ctcs) (cons form-name io-term)))]))
   #;
   (when contracts
