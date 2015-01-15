@@ -3246,6 +3246,16 @@ The @racket['left-right/beside-side-conditions] variant is like
 @racket['left-right], except it puts the side-conditions on the 
 same line, instead of on a new line below the case.}
 
+@defparam[metafunction-up/down-indent indent (>=/c 0)]{
+  Controls the indentation of the right-hand side clauses
+  when typesetting metafunctions in one of the up/down
+  styles (see @racket[metafunction-pict-style]). 
+  
+  The value is the amount to indent and it defaults to @racket[0].
+ 
+  @history[#:added "1.2"]
+}
+
 @defparam[delimit-ellipsis-arguments? delimit? any/c]{
 This parameter controls the typesetting of metafunction definitions
 and applications. When it is non-@racket[#f] (the default), commas

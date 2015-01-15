@@ -111,6 +111,8 @@
                         'up-down
                         'up-down/vertical-side-conditions
                         'up-down/compact-side-conditions))]
+ [metafunction-up/down-indent (parameter/c (>=/c 0))]
+ 
  [delimit-ellipsis-arguments? (parameter/c any/c)]
  
  [default-white-square-bracket (-> boolean? pict?)]

@@ -76,6 +76,7 @@
          arrow-space
          label-space
          metafunction-pict-style
+         metafunction-up/down-indent
          metafunction-cases
          judgment-form-cases
          compact-vertical-min-width
@@ -878,6 +879,8 @@
 
 (define metafunction-pict-style (make-parameter 'left-right))
 (define metafunction-cases (make-parameter #f))
+(define metafunction-up/down-indent (make-parameter 0))
+
 (define (select-mf-cases contracts eqns case-labelss)
   (define mf-cases (metafunction-cases))
   (cond
@@ -1218,7 +1221,9 @@
                         (list lhs/contract)]
                        [else
                         (cons
-                         (vl-append (htl-append lhs/contract =-pict) rhs)
+                         (vl-append (htl-append lhs/contract =-pict)
+                                    (hbl-append (blank (metafunction-up/down-indent) 0)
+                                                rhs))
                          (if (not sc)
                              null
                              (list sc)))]))))]))
