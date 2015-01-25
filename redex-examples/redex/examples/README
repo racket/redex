@@ -35,6 +35,8 @@ to demonstrate various different uses of PLT Redex:
   '07 paper "Adding Delimited and Composable Control to a Production
   Programming Environment"
   
+  lazy.rkt: big step semantics for lazy evaluation by Launchbury, POPL'93
+
   let-poly.rkt: lambda calculus with list constants, let-polymorphism
   and type inference
 
