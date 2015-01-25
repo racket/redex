@@ -141,6 +141,15 @@
   [(rename-all (any ...) x y) ((rename-all any x y) ...)]
   [(rename-all any x y) any])
 
+;; The ^ function freshens all of the bound
+;; variables in the 'e' argument, making sure
+;; that none of the new variables appear in Δ.
+;; For example, (λ (x) x) turns into (λ (x1) x1)
+;; (assuming that x appears in Δ).
+;; The function is part of preserving the invariant
+;; that there are no duplicate variables bound
+;; in the environment in the first and third
+;; positions in the semantics.
 (define-metafunction L
   ^ : Δ e -> e
   [(^ Δ e) 
