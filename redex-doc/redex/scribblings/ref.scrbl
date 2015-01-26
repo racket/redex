@@ -432,19 +432,21 @@ nested lists.
 
 @defparam[caching-enabled? on? boolean?]{
   When this parameter is @racket[#t] (the default), Redex caches the results of 
-  pattern matching and metafunction evaluation. There is a separate cache for
-  each pattern and metafunction; when one fills (see @racket[set-cache-size!]),
+  pattern matching, metafunction, and judgment-form evaluation. There is a separate cache for
+  each pattern, metafunction, and judgment-form; when one fills (see @racket[set-cache-size!]),
   Redex evicts all of the entries in that cache.
 
   Caching should be disabled when matching a pattern that depends on values
-  other than the in-scope pattern variables or evaluating a metafunction
-  that reads or writes mutable external state.
+  other than the in-scope pattern variables or evaluating a metafunction or
+  judgment-form that reads or writes mutable external state.
+  
+  @history[#:changed "1.6" @list{Extended caching to cover judgment forms.}]
 }
 
 @defproc[(set-cache-size! [size positive-integer?]) void?]{
 Changes the size of the per-pattern and per-metafunction caches.
 
-The default size is @racket[350].
+The default size is @racket[63].
 }
 
 @defparam[check-redudancy check? boolean?]{
@@ -1577,7 +1579,6 @@ in the first column if the result is just returned from the cache and a
 space is printed if the metafunction call is actually performed.
 
 Defaults to @racket['()].
-
 }
 
 @section{Testing}

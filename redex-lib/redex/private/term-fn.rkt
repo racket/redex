@@ -44,7 +44,8 @@
              [else #f])))
 
 (define-struct judgment-form (name mode proc mk-proc lang lws rule-names 
-                                   gen-clauses mk-gen-clauses term-proc relation?)
+                                   gen-clauses mk-gen-clauses term-proc relation?
+                                   cache)
   #:transparent)
 
 (define-struct defined-term (value))

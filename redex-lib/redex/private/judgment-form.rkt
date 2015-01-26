@@ -257,7 +257,8 @@
               (define (make-traced input)
                 (quasisyntax/loc premise
                   (call-judgment-form 'form-name #,judgment-proc '#,mode #,input
-                                      #,(if jf-results-id #''() #f))))
+                                      #,(if jf-results-id #''() #f)
+                                      #,(judgment-form-cache judgment-form))))
               (if under-ellipsis?
                   #`(repeated-premise-outputs #,input (λ (x) #,(make-traced #'x)))
                   (make-traced input))))
@@ -325,8 +326,25 @@
             (for*/list ([o output] [os (repeated-premise-outputs (cdr inputs) premise)])
               (cons o os))))))
 
-(define (call-judgment-form form-name form-proc mode input derivation-init)
+(define not-in-cache (gensym))
+(define (call-judgment-form form-name form-proc mode input derivation-init boxed-cache)
+  (when (caching-enabled?)
+    (when (>= (hash-count (unbox boxed-cache)) cache-size)
+      (set-box! boxed-cache (make-hash))))
   (define traced (current-traced-metafunctions))
+  (define cache (unbox boxed-cache))
+  (define in-cache? (and (caching-enabled?)
+                         (not (eq? (hash-ref cache input not-in-cache) not-in-cache))))
+  (define p-a-e (print-as-expression))
+  (define (form-proc/cache recur input derivation-init)
+    (parameterize ([print-as-expression p-a-e])
+      (cond
+        [(caching-enabled?)
+         (hash-ref!
+          cache
+          input
+          (λ () (form-proc recur input derivation-init)))]
+        [else (form-proc recur input derivation-init)])))
   (define vecs
     (if (or (eq? 'all traced) (memq form-name traced))
         (let ([outputs #f])
@@ -334,12 +352,27 @@
             (for/fold ([s '()]) ([m mode])
               (case m [(I) s] [(O) (cons '_ s)])))
           (define (wrapped . _)
-            (set! outputs (form-proc form-proc input derivation-init))
+            (set! outputs (form-proc/cache form-proc/cache input derivation-init))
             (for/list ([output (in-list outputs)])
               (cons form-name (assemble mode input (derivation-with-output-only-output output)))))
-          (apply trace-call form-name wrapped (assemble mode input spacers))
+          (define otr (current-trace-print-results))
+          (define ot (current-trace-print-args))
+          (if in-cache?
+              (display "c")
+              (display " "))
+          (define (result-tracer name results level)
+            (display " ")
+            (otr name results level))
+          (parameterize ([print-as-expression #f]
+                         [current-trace-print-results
+                          ;; this 'if' condition is a strange hack 
+                          ;; that I don't understand the need for
+                          (if (equal? (object-name otr) 'result-tracer)
+                              otr
+                              result-tracer)])
+            (apply trace-call form-name wrapped (assemble mode input spacers)))
           outputs)
-        (form-proc form-proc input derivation-init)))
+        (form-proc/cache form-proc/cache input derivation-init)))
   (remove-duplicates
    (for/list ([v (in-list vecs)])
      (define subs (derivation-with-output-only-subs v))
@@ -615,21 +648,26 @@
           (define-syntax #,judgment-form-name 
             (judgment-form '#,judgment-form-name '#,(cdr (syntax->datum mode)) #'judgment-form-runtime-proc
                            #'mk-judgment-form-proc #'#,lang #'jf-lws
-                           '#,rule-names #'judgment-runtime-gen-clauses #'mk-judgment-gen-clauses #'jf-term-proc #,is-relation?))
+                           '#,rule-names #'judgment-runtime-gen-clauses #'mk-judgment-gen-clauses #'jf-term-proc #,is-relation?
+                           #'jf-cache))
           (define-values (mk-judgment-form-proc mk-judgment-gen-clauses)
             (compile-judgment-form #,judgment-form-name #,mode #,lang #,clauses #,rule-names #,position-contracts #,invariant
                                    #,orig #,stx #,syn-err-name judgment-runtime-gen-clauses))
           (define judgment-form-runtime-proc (mk-judgment-form-proc #,lang))
           (define jf-lws (compiled-judgment-form-lws #,clauses #,judgment-form-name #,stx))
           (define judgment-runtime-gen-clauses (mk-judgment-gen-clauses #,lang (λ () (judgment-runtime-gen-clauses))))
-          (define jf-term-proc (make-jf-term-proc #,judgment-form-name #,syn-err-name #,lang #,nts #,mode)))))
+          (define jf-term-proc (make-jf-term-proc #,judgment-form-name #,syn-err-name #,lang #,nts #,mode))
+          (define jf-cache (box (make-hash))))))
   (syntax-property
    (values ;prune-syntax
     (if (eq? 'top-level (syntax-local-context))
         ; Introduce the names before using them, to allow
         ; judgment form definition at the top-level.
         #`(begin 
-            (define-syntaxes (judgment-form-runtime-proc judgment-runtime-gen-clauses jf-term-proc jf-lws) (values))
+            (define-syntaxes (judgment-form-runtime-proc 
+                              judgment-runtime-gen-clauses 
+                              jf-term-proc jf-lws jf-cache) 
+              (values))
             #,definitions)
         definitions))
    'disappeared-use

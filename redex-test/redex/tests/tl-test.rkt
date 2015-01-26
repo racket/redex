@@ -2551,24 +2551,44 @@
                                  expr)
                                (get-output-string trace))
                              expected)])])
-        (test-trace (judgment-holds (sumi (s z) (s (s z)) n) n)
+        (test-trace (parameterize ([caching-enabled? #f])
+                      (judgment-holds (sumi (s z) (s (s z)) n) n))
                     '(sumi)
                     #reader scribble/reader
-                    @string-append{>(sumi '(s z) '(s (s z)) '_)
-                                   > (sumi 'z '(s (s z)) '_)
-                                   < '((sumi z (s (s z)) (s (s z))))
-                                   <'((sumi (s z) (s (s z)) (s (s (s z)))))
+                    @string-append{ >(sumi (s z) (s (s z)) _)
+                                    > (sumi z (s (s z)) _)
+                                    < ((sumi z (s (s z)) (s (s z))))
+                                    <((sumi (s z) (s (s z)) (s (s (s z)))))
                             
                                   })
-        (test-trace (judgment-holds (sumo n_1 n_2 (s z)))
+        (test-trace (parameterize ([caching-enabled? #t])
+                      (judgment-holds (sumi (s z) (s (s z)) n) n)
+                      (judgment-holds (sumi (s z) (s (s z)) n) n))
+                    '(sumi)
+                    #reader scribble/reader
+                    @string-append{ >(sumi (s z) (s (s z)) _)
+                                    > (sumi z (s (s z)) _)
+                                    < ((sumi z (s (s z)) (s (s z))))
+                                    <((sumi (s z) (s (s z)) (s (s (s z)))))
+                                   c>(sumi (s z) (s (s z)) _)
+                                    <((sumi (s z) (s (s z)) (s (s (s z)))))
+                            
+                                  })
+        (test-trace (parameterize ([caching-enabled? #f])
+                      (judgment-holds (sumo n_1 n_2 (s z))))
                     'all
                     #reader scribble/reader
-                    @string-append{>(sumo '_ '_ '(s z))
-                                   > (sumo '_ '_ 'z)
-                                   < '((sumo z z z))
-                                   <'((sumo (s z) z (s z)) (sumo z (s z) (s z)))
+                    @string-append{ >(sumo _ _ (s z))
+                                    > (sumo _ _ z)
+                                    < ((sumo z z z))
+                                    <((sumo (s z) z (s z)) (sumo z (s z) (s z)))
                             
                                   })
+        
+        ;; the leading space in the #t line in the
+        ;; trace below is questionable; it probably
+        ;; shouldn't be there, but I'm leaving this
+        ;; test case as for now
         (test-trace (letrec ([f (match-lambda
                                   ['z #t]
                                   [`(s ,n) (f n)])])
@@ -2578,16 +2598,17 @@
                         [(ext-trace (s n_1) n_2)
                          (ext-trace n_1 n_2)])
                       (trace f)
-                      (judgment-holds (ext-trace (s z) (s z))))
+                      (parameterize ([caching-enabled? #f])
+                        (judgment-holds (ext-trace (s z) (s z)))))
                     'all
                     #reader scribble/reader
-                    @string-append{>(ext-trace '(s z) '(s z))
-                                   > (ext-trace 'z '(s z))
+                    @string-append{ >(ext-trace (s z) (s z))
+                                    > (ext-trace z (s z))
                                    > >(f '(s z))
                                    > >(f 'z)
-                                   < <#t
-                                   < '((ext-trace z (s z)))
-                                   <'((ext-trace (s z) (s z)))
+                                    < <#t
+                                    < ((ext-trace z (s z)))
+                                    <((ext-trace (s z) (s z)))
                                   
                                   })))
     
