@@ -1,48 +1,28 @@
 #lang racket/base
-(require data/enumerate
+(require data/enumerate/lib
          racket/function
          racket/list
          racket/contract/base)
-(provide enum
-         enum?
-         size
+(provide enum?
+         enum-size
+         finite-enum?
          (contract-out
           (rename to-nat encode (-> enum? any/c exact-nonnegative-integer?))
           (rename from-nat decode (-> enum? exact-nonnegative-integer? any/c)))
          empty/e
-         const/e
-         from-list/e
          fin/e
-         disj-sum/e
-         disj-append/e
+         single/e
+         or/e
+         append/e
          cons/e
-         elegant-cons/e
-         dep/e
-         dep2/e ;; requires size (eventually should replace dep/e with this)
          map/e
-         filter/e ;; very bad, only use for small enums
          except/e 
          thunk/e
-         fix/e
-         many/e
-         many1/e
          list/e
-         vec/e
-
-         cantor-vec/e
-         cantor-list/e
-
-         box-vec/e
-         box-list/e
-         
-         traverse/e
+         listof/e
          hash-traverse/e
          
-         fail/e
-         
-         approximate
-         to-list
-         to-stream
+         enum->list
          take/e
          fold-enum
 
@@ -55,10 +35,10 @@
          any/e
          (rename-out [symbol/e var/e])
          var-prefix/e
-         num/e
+         two-way-number/e
          integer/e
          bool/e
-         real/e
+         two-way-real/e
          string/e)
 
 (define (var-prefix/e s)
@@ -71,8 +51,25 @@
                   (curry (flip drop) (string-length as-str))
                   string->list
                   symbol->string)
-         symbol/e))
+         symbol/e
+         #:contract (and/c symbol?
+                           (let ([reg (regexp (format "^~a" (regexp-quote as-str)))])
+                             (λ (x) 
+                               (regexp-match? reg (symbol->string x)))))))
 
 (define (flip f)
   (λ (x y)
      (f y x)))
+
+(define base/e
+  (or/e (fin/e '())
+        (cons two-way-number/e number?)
+        string/e
+        bool/e
+        symbol/e))
+
+(define any/e
+  (delay/e
+   (or/e (cons base/e (negate pair?))
+         (cons (cons/e any/e any/e) pair?))
+   #:size +inf.0))

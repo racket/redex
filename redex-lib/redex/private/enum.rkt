@@ -17,13 +17,14 @@
          "preprocess-lang.rkt")
 
 (provide 
+ enum-size
+ finite-enum?
  (contract-out
   [lang-enumerators (-> (listof nt?) (promise/c (listof nt?)) lang-enum?)]
   [pat-enumerator (-> lang-enum?
                       any/c ;; pattern
                       (or/c #f enum?))]
   [enum-ith (-> enum? exact-nonnegative-integer? any/c)]
-  [enum-size (-> enum? (or/c +inf.0 exact-nonnegative-integer?))]
   [lang-enum? (-> any/c boolean?)]
   [enum? (-> any/c boolean?)]))
 
@@ -41,11 +42,6 @@
 
 ;; Top level exports
 (define enum-ith decode)
-(define (enum-size e)
-  (define s (size e))
-  (if (equal? s +inf.f)
-      +inf.0
-      s))
 
 (define (lang-enumerators lang cc-lang)
   (define (make-lang-table! ht lang)
@@ -62,7 +58,7 @@
                         (enumerate-rhss rhs l-enum)))
     (enumerate-lang! rec-lang
                      (λ (rhs enums)
-                        (thunk/e +inf.f
+                        (thunk/e #:size +inf.f
                                  (λ ()
                                     (enumerate-rhss rhs l-enum)))))
     ht)
@@ -88,16 +84,18 @@
       to-term
       (λ (_)
         (redex-error 'pat-enum "Enumerator is not a  bijection"))
-      (pat/e pat l-enum))]
+      (pat/e pat l-enum)
+      #:contract any/c)]
     [else #f]))
 
 (define (enumerate-rhss rhss l-enum)
   (define (with-index i e)
-    (cons (map/e (curry production i)
+    (cons (map/e (λ (x) (production i x))
                  production-term
-                 e)
+                 e
+                 #:contract any/c)
           (λ (nd-x) (= i (production-n nd-x)))))
-  (apply disj-sum/e
+  (apply or/e
          (for/list ([i (in-naturals)]
                     [production (in-list rhss)])
            (with-index i
@@ -106,12 +104,13 @@
 (define (pat/e pat l-enum)
   (match-define (ann-pat nv pp-pat) (preprocess pat))
   (map/e
-   ann-pat
+   (λ (l) (apply ann-pat l))
    (λ (ap)
-      (values (ann-pat-ann ap)
-              (ann-pat-pat ap)))
-   (env/e nv l-enum)
-   (pat-refs/e pp-pat l-enum)))
+      (list (ann-pat-ann ap)
+            (ann-pat-pat ap)))
+   (list/e (env/e nv l-enum)
+           (pat-refs/e pp-pat l-enum))
+   #:contract any/c))
 
 ;; (: pat-refs/e : Pat (HashTable Symbol (Enum Pat)) (Enum Symbol) -> Enum RefPat)
 (define (pat-refs/e pat l-enum)
@@ -119,11 +118,11 @@
     (match-a-pattern
      pat
      [`any any/e]
-     [`number num/e]
+     [`number two-way-number/e]
      [`string string/e]
      [`natural nat/e]
      [`integer integer/e]
-     [`real real/e]
+     [`real two-way-real/e]
      [`boolean bool/e]
      [`variable var/e]
      [`(variable-except ,s ...)
@@ -132,24 +131,31 @@
       (var-prefix/e s)]
      [`variable-not-otherwise-mentioned
       (lang-enum-unused-var/e l-enum)]
-     [`hole (const/e the-hole)]
+     
+     ;; not sure this is the right equality function, 
+     ;; but it matches the plug-hole function (above)
+     [`hole (single/e the-hole #:equal? eq?)]
+     
      [`(nt ,id)
       (lang-enum-get-nt-enum l-enum id)]
      [`(name ,n ,pat)
-      (const/e (name-ref n))]
+      (single/e (name-ref n))]
      [`(mismatch-name ,n ,tag)
-      (const/e (misname-ref n tag))]
+      (single/e (misname-ref n tag))]
      [`(in-hole ,p1 ,p2)
-      (map/e decomp
-             (match-lambda
-              [(decomp ctx term)
-               (values ctx term)])
-             (loop p1)
-             (loop p2))]
+      (map/e (λ (l) (apply decomp l))
+             (λ (d)
+               (match d
+                 [(decomp ctx term)
+                  (list ctx term)]))
+             (list/e (loop p1)
+                     (loop p2))
+             #:contract any/c)]
      [`(hide-hole ,p)
       (map/e hide-hole
              hide-hole-term
-             (loop p))]
+             (loop p)
+             #:contract any/c)]
      [`(side-condition ,p ,g ,e)
       (unsupported pat)]
      [`(cross ,s)
@@ -165,14 +171,15 @@
                         ts))
              (λ (rep)
                 (repeat-terms rep))
-             (many/e (loop pat)))]
+             (list/e (loop pat))
+             #:contract any/c)]
            [`(repeat ,tag ,n #f)
-            (const/e (nrep-ref n tag))]
+            (single/e (nrep-ref n tag))]
            [`(repeat ,pat ,n ,m)
             (unimplemented "mismatch repeats (..._!_)")]
            [else (loop sub-pat)])))]
      [(? (compose not pair?)) 
-      (const/e pat)]))
+      (single/e pat)]))
   (loop pat))
 
 (define/match (env/e nv l-enum)
@@ -186,33 +193,37 @@
       (fold-enum (λ (ts-excepts tag)
                     (define excepts
                       (map cdr ts-excepts))
-                    (cons/e (const/e tag)
-                            (apply except/e p/e excepts)))
-                 (set->list ts))])
+                    (cons/e (fin/e tag)
+                            (apply except/e p/e excepts
+                                   #:contract any/c)))
+                 (set->list ts)
+                 #:f-range-finite? (finite-enum? p/e))])
    
    (define/match (reprec/e nv-t)
      [((cons nv tpats))
       (define tpats/e
-        (hash-traverse/e val/e tpats))
-      (many/e
+        (hash-traverse/e val/e tpats #:get-contract (λ (x) any/c)))
+      (list/e
        (cons/e (env/e nv l-enum)
                tpats/e))])
    (define names-env
-     (hash-traverse/e val/e names))
+     (hash-traverse/e val/e names #:get-contract (λ (x) any/c)))
 
    (define misnames-env
-     (hash-traverse/e misvals/e misnames))
+     (hash-traverse/e misvals/e misnames #:get-contract (λ (x) any/c)))
    
    (define nreps-env
-     (hash-traverse/e reprec/e nreps))
+     (hash-traverse/e reprec/e nreps #:get-contract (λ (x) any/c)))
    (map/e
-    t-env
-    (match-lambda
-     [(t-env  names misnames nreps)
-      (values names misnames nreps)])
-    names-env
-    misnames-env
-    nreps-env)])
+    (λ (v) (apply t-env v))
+    (λ (t-e)
+      (match t-e
+        [(t-env  names misnames nreps)
+         (list names misnames nreps)]))
+    (list/e names-env
+            misnames-env
+            nreps-env)
+    #:contract t-env?)])
 
 ;; to-term : (ann-pat t-env pat-with-refs) -> redex term
 (define/match (to-term ap)
