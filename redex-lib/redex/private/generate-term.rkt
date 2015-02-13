@@ -4,6 +4,7 @@
          "error.rkt"
          "enum.rkt"
          "reduction-semantics.rkt"
+         "lang-struct.rkt"
          "struct.rkt"
          "term.rkt"
          "matcher.rkt"

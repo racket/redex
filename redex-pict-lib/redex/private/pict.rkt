@@ -15,6 +15,7 @@
          redex/private/struct
          redex/private/loc-wrapper
          redex/private/matcher
+         redex/private/lang-struct
          redex/private/arrow
          "core-layout.rkt")
 (require (prefix-in lw/ct: redex/private/loc-wrapper-ct)

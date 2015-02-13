@@ -4,6 +4,7 @@
 (require "private/reduction-semantics.rkt"
          "private/judgment-form.rkt"
          "private/matcher.rkt"
+         "private/lang-struct.rkt"
          "private/term.rkt"
          "private/rg.rkt"
          "private/error.rkt"

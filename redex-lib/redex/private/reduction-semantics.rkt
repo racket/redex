@@ -1,6 +1,7 @@
 #lang racket/base
 
 (require "matcher.rkt"
+         "lang-struct.rkt"
          "struct.rkt"
          "term.rkt"
          "fresh.rkt"

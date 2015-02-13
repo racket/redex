@@ -104,31 +104,6 @@ See match-a-pattern.rkt for more details
     (make-none)))
 (define (none? x) (eq? x none))
 
-;; compiled-lang : (make-compiled-lang (listof nt) 
-;;                                     hash[sym -o> compiled-pattern]
-;;                                     hash[sym -o> compiled-pattern]
-;;                                     hash[sym -o> compiled-pattern]
-;;                                     hash[sym -o> boolean])
-;;                                     hash[sexp[pattern] -o> (cons compiled-pattern boolean)]
-;;                                     hash[sexp[pattern] -o> (cons compiled-pattern boolean)]
-;;                                     pict-builder
-;;                                     (listof symbol)
-;;                                     (listof (listof symbol)) -- keeps track of `primary' non-terminals
-;;                                     hash[sym -o> pattern]
-;;                                     (hash/c symbol? enum?)) ;; see enum.rkt
-
-(define-struct compiled-lang (lang delayed-cclang ht list-ht raw-across-ht raw-across-list-ht
-                                   has-hole-or-hide-hole-ht cache bind-names-cache pict-builder
-                                   literals nt-map collapsible-nts
-                                   enum-table))
-(define (compiled-lang-cclang x) (force (compiled-lang-delayed-cclang x)))
-(define (compiled-lang-across-ht x)
-  (compiled-lang-cclang x) ;; ensure this is computed
-  (compiled-lang-raw-across-ht x))
-(define (compiled-lang-across-list-ht x) 
-  (compiled-lang-cclang x) ;; ensure this is computed
-  (compiled-lang-raw-across-list-ht x))
-
 ;; lookup-binding : bindings (union sym (cons sym sym)) [(-> any)] -> any
 (begin-encourage-inline
   (define (lookup-binding bindings
@@ -2037,10 +2012,7 @@ See match-a-pattern.rkt for more details
          (struct-out mismatch-bind)
          (struct-out compiled-pattern))
 
-(provide (struct-out compiled-lang)
-         compiled-lang-cclang
-         
-         lookup-binding
+(provide lookup-binding
          
          compiled-pattern
          

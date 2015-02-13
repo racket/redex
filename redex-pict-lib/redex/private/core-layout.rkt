@@ -4,6 +4,7 @@
          redex/private/matcher
          redex/private/reduction-semantics
          redex/private/underscore-allowed
+         redex/private/lang-struct
          
          texpict/utils
          texpict/mrpict
