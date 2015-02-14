@@ -58,7 +58,8 @@
 (define-struct compiled-lang (lang delayed-cclang ht list-ht raw-across-ht raw-across-list-ht
                                    has-hole-or-hide-hole-ht cache bind-names-cache pict-builder
                                    literals nt-map collapsible-nts
-                                   enum-table))
+                                   ambiguity-cache enum-table))
+
 (define (compiled-lang-cclang x) (force (compiled-lang-delayed-cclang x)))
 (define (compiled-lang-across-ht x)
   (compiled-lang-cclang x) ;; ensure this is computed

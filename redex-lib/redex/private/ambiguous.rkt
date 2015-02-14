@@ -2,11 +2,34 @@
 
 (require racket/set
          racket/match
+         racket/contract
          "match-a-pattern.rkt"
          "lang-struct.rkt"
          "build-nt-property.rkt"
          unstable/2d/match)
 
+(provide 
+ (contract-out
+  
+  ;; expects the lang, literals, and list-ht fields of the clang to be filled in.
+  [build-ambiguity-cache (-> compiled-lang? hash?)]
+  
+  [ambiguous-pattern? (-> any/c hash? boolean?)]))
+
+;; provided only for the test suite
+(provide build-can-match-var-ht
+         overlapping-patterns? 
+         build-overlapping-productions-table
+         konsts
+         prefixes
+         build-ambiguous-ht)
+
+(define (build-ambiguity-cache clang)
+  (define can-match-var-ht (build-can-match-var-ht clang))
+  (define overlapping-productions-ht (build-overlapping-productions-table clang))
+  (define ambiguous-ht (build-ambiguous-ht clang overlapping-productions-ht))
+  ambiguous-ht)
+  
 ;; returns #f when they definitely do NOT overlap
 ;; returns #t when the might overlap 
 ;;    or they might not and we cannot tell
@@ -41,8 +64,8 @@
   ║                   ║                               ║                ║              ║     ║         ║            ║               ║                   ║             ║                  ║            ║         #f        ║  t u)       ║
   ║                   ║                               ║                ║              ║     ║         ║            ║               ║                   ║             ║                  ║            ║                   ║             ║
   ╠═══════════════════╣                               ╚════════════════╬══════════════╬═════╬═════════╣            ║               ║                   ║             ║                  ║            ╠═══════════════════╬═════════════╣
-  ║  (? var-pat?)     ║                                                ║(v-overlap?   ║ #f  ║(v-nt    ║            ║               ║                   ║             ║                  ║            ║                   ║ (symbol? u) ║
-  ║                   ║                                                ║ t u clang)   ║     ║ t id    ║            ║               ║                   ║             ║                  ║            ║         #f        ║             ║
+  ║  (? var-pat?)     ║                                                ║(v-overlap? t ║ #f  ║(v-nt    ║            ║               ║                   ║             ║                  ║            ║                   ║ (symbol? u) ║
+  ║                   ║                                                ║            u)║     ║ t id    ║            ║               ║                   ║             ║                  ║            ║         #f        ║             ║
   ║                   ║                                                ║              ║     ║ vari)   ║            ║               ║                   ║             ║                  ║            ║                   ║             ║
   ╠═══════════════════╣                                                ╚══════════════╬═════╬═════════╣            ║               ║                   ║             ║                  ║            ╠═══════════════════╬═════════════╣
   ║     `hole         ║                                                               ║ #t  ║    #t   ║            ║               ║                   ║             ║                  ║            ║         #f        ║    #f       ║
@@ -348,112 +371,3 @@ konsts and prefixes must not have empty sets in them.
        [else #f]))
    (λ (x y) (or x y))))
 
-(module+ test
-  (require (only-in "../reduction-semantics.rkt" define-language)
-           rackunit)
-  
-  (define-language L1
-    (E (E e) hole) ;; cbn
-    (e (e e) (λ (x) e) x)
-    (x-or-w x w)
-    (x variable-not-otherwise-mentioned)
-    (w (variable-except ω))
-    (y (variable-prefix :))
-    (z (variable-prefix !))
-    (q y z)
-    (n e q)
-    (v (λ (x) e)))
-  
-  (define L1-vari (build-can-match-var-ht L1))
-  
-    
-  (check-equal? L1-vari
-                (make-hash (list (cons 'E #f)
-                                 (cons 'n #t)
-                                 (cons 'v #f)
-                                 (cons 'e (konsts (set 'λ)))
-                                 (cons 'x-or-w #t)
-                                 (cons 'x (konsts (set 'λ)))
-                                 (cons 'w (konsts (set 'ω)))
-                                 (cons 'y (prefixes (set ':)))
-                                 (cons 'z (prefixes (set '!)))
-                                 (cons 'q (prefixes (set ': '!))))))
-  
-  (check-equal? (overlapping-patterns?
-                 `(list (name e (nt e)) (name e (nt e)))
-                 `(list λ ((name x x)) (name e e))
-                 L1-vari
-                 L1)
-                #f)
-  (define L1-overlapping-productions-ht (build-overlapping-productions-table L1))
-  
-  (check-equal? L1-overlapping-productions-ht
-                (make-hash (list (cons 'E #f)
-                                 (cons 'n #t)
-                                 (cons 'v #f)
-                                 (cons 'e #f)
-                                 (cons 'x-or-w #t)
-                                 (cons 'x #f)
-                                 (cons 'w #f)
-                                 (cons 'y #f)
-                                 (cons 'z #f)
-                                 (cons 'q #t))))
-  
-  (define non-terminal-ambiguous-L1 (build-ambiguous-ht L1 L1-overlapping-productions-ht))
-  (check-equal? non-terminal-ambiguous-L1
-                (make-hash (list (cons 'E #f)
-                                 (cons 'n #t)
-                                 (cons 'v #f)
-                                 (cons 'e #f)
-                                 (cons 'x-or-w #t)
-                                 (cons 'x #f)
-                                 (cons 'w #f)
-                                 (cons 'y #f)
-                                 (cons 'z #f)
-                                 (cons 'q #t))))
-  
-  (check-equal? (ambiguous-pattern? `(nt e) non-terminal-ambiguous-L1)
-                #f)
-  (check-equal? (ambiguous-pattern? `(in-hole E e) non-terminal-ambiguous-L1)
-                #t)
-  (check-equal? (ambiguous-pattern? `(list (repeat any #f #f)) non-terminal-ambiguous-L1)
-                #f)
-  (check-equal? (ambiguous-pattern? `(list (repeat any #f #f)
-                                           (repeat any #f #f))
-                                    non-terminal-ambiguous-L1)
-                #t)
-  
-  (define-language L2
-    (e (e e ...) (λ (x ...) e) x)
-    (x variable-not-otherwise-mentioned))
-  
-  (define L2-vari (build-can-match-var-ht L2))
-
-  (check-equal? L2-vari
-                (make-hash (list (cons 'e (konsts (set 'λ)))
-                                 (cons 'x (konsts (set 'λ))))))
-  
-  (check-equal? (overlapping-patterns?
-                 `(list (nt e))
-                 `(list λ)
-                 L2-vari
-                 L2)
-                #f)
-  
-  (check-equal? (overlapping-patterns?
-                 `(list (nt e) any)
-                 `(list λ any)
-                 L2-vari
-                 L2)
-                #f)
-  
-  (check-equal? (overlapping-patterns?
-                 `(list (nt e) (repeat (nt e) #f #f))
-                 `(list λ any any)
-                 L2-vari
-                 L2)
-                #f)
-  
-  (check-equal? (build-overlapping-productions-table L2)
-                (make-hash (list (cons 'e #f)
-                                 (cons 'x #f)))))

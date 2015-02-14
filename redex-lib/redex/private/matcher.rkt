@@ -50,7 +50,8 @@ See match-a-pattern.rkt for more details
          "underscore-allowed.rkt"
          "match-a-pattern.rkt"
          "lang-struct.rkt"
-         "enum.rkt")
+         "enum.rkt"
+         "ambiguous.rkt")
 
 (define-struct compiled-pattern (cp binds-names? skip-dup-check?) #:transparent)
 
@@ -138,6 +139,7 @@ See match-a-pattern.rkt for more details
                                     literals
                                     nt-map
                                     collapsible-nts
+                                    'uninitialized-ambiguity-info
                                     #f)]
          [non-list-nt-table (build-non-list-nt-label lang)]
          [list-nt-table (build-list-nt-label lang)]
@@ -184,10 +186,12 @@ See match-a-pattern.rkt for more details
           (do-compilation across-ht across-list-ht compatible-context-language)
           compatible-context-language)))
     (do-compilation clang-ht clang-list-ht lang)
+    (define the-ambiguity-cache (build-ambiguity-cache clang))
     (define enumerators
       (lang-enumerators lang compatible-context-language))
     (struct-copy compiled-lang clang [delayed-cclang compatible-context-language]
-                                     [enum-table enumerators])))
+                                     [enum-table enumerators]
+                                     [ambiguity-cache the-ambiguity-cache])))
 
 ;; mk-uf-sets : (listof (listof sym)) -> (hash[symbol -o> uf-set?])
 ;; in the result hash, each nt maps to a uf-set that represents

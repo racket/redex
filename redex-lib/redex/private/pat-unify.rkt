@@ -941,7 +941,7 @@
 (define empty-lang
   (compiled-lang
    #f #f #f #f #f #f #f #f #f #f '() #f (hash)
-   (lang-enumerators '() (delay '()))))
+   (make-hash) (lang-enumerators '() (delay '()))))
 
 (define unique-name-nums (make-parameter 0))
 
