@@ -3033,10 +3033,11 @@ This function sets @racket[dc-for-text-size]. See also
 @history[#:changed "1.3" @list{Added @racket[#:contract?] keyword argument.}]
 }
 
-@defform[(metafunction->pict metafunction-name)]{
-  This produces a pict, but without setting @racket[dc-for-text-size].
+@defform[(metafunction->pict metafunction-name maybe-contract?)]{
+  Produces a pict like @racket[render-metafunction], but without setting @racket[dc-for-text-size].
   It is suitable for use in Slideshow or other libraries that combine
   @racketmodname[pict]s.
+  @history[#:changed "1.3" @list{Added @racket[#:contract?] keyword argument.}]
 }
 
 @defform[(metafunctions->pict metafunction-name ...)]{

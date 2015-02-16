@@ -816,10 +816,11 @@
 (define (make-=) (basic-text " = " (default-style)))
 
 (define-syntax (metafunction->pict stx)
-  (syntax-case stx ()
-    [(_ name)
+  (syntax-parse stx
+    [(_ name:id (~optional (~seq #:contract? contract-e:expr) #:defaults ([contract-e #'#f])))
      (identifier? #'name)
-     #'(metafunctions->pict name)]))
+     #'(metafunctions->pict name
+                            #:contract? contract-e)]))
 
 (define-syntax (metafunctions->pict stx)
   (syntax-parse stx 
