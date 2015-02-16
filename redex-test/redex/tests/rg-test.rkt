@@ -810,7 +810,7 @@
   (let ([generated '()]
         [fixed '()]
         [fix add1])
-    (redex-check lang number (set! fixed (cons (term number) fixed))
+    (redex-check lang number #:ad-hoc (set! fixed (cons (term number) fixed))
                  #:prepare (λ (n) 
                              (set! generated (cons n generated))
                              (fix n))
@@ -819,21 +819,21 @@
     (test fixed (map fix generated)))
   (test (parameterize ([generation-decisions 
                         (decisions #:num (list (λ _ 0)))])
-          (redex-check lang number (= 0 (term number)) 
+          (redex-check lang number #:ad-hoc (= 0 (term number))
                        #:prepare add1
                        #:print? #f))
         (counterexample 1))
   (test (raised-exn-msg
          exn:fail?
-         (redex-check lang 0 #t #:prepare (λ (_) (error 'fixer)) #:print? #f))
+         (redex-check lang 0 #:ad-hoc #t #:prepare (λ (_) (error 'fixer)) #:print? #f))
         #rx"fixing 0")
   (test (raised-exn-msg 
          exn:fail:redex?
-         (redex-check lang natural #t #:prepare (compose - add1)))
+         (redex-check lang natural #:ad-hoc #t #:prepare (compose - add1)))
         #rx"does not match natural")
   (test (raised-exn-msg 
          exn:fail:redex?
-         (redex-check lang natural #t
+         (redex-check lang natural #:ad-hoc #t
                       #:prepare -
                       #:source (reduction-relation lang (--> 47 1))))
         #rx"-47 does not match natural")
