@@ -7,8 +7,10 @@
          racket/match
          racket/promise
          racket/set
-
-         "enumerator.rkt"
+         data/enumerate/lib/unsafe
+         data/enumerate/unsafe
+         
+         
          "env.rkt"
          "error.rkt"
          "lang-struct.rkt"
@@ -41,7 +43,7 @@
 (struct hide-hole (term) #:transparent)
 
 ;; Top level exports
-(define enum-ith decode)
+(define (enum-ith e x) (from-nat e x))
 
 (define (lang-enumerators lang cc-lang)
   (define (make-lang-table! ht lang)
@@ -52,49 +54,45 @@
                    (nt-name nt)
                    (if (hash-ref cant-enumerate-table (nt-name nt))
                        #f
-                       (enum-f (nt-rhs nt) nt-enums)))))
+                       (enum-f (nt-rhs nt) ht)))))
     (enumerate-lang! fin-lang
                      (λ (rhs enums)
                         (enumerate-rhss rhs l-enum)))
     (enumerate-lang! rec-lang
                      (λ (rhs enums)
-                        (thunk/e #:size +inf.f
-                                 (λ ()
-                                    (enumerate-rhss rhs l-enum)))))
-    ht)
+                       (thunk/e #:size +inf.f
+                                (λ ()
+                                  (enumerate-rhss rhs l-enum))))))
   (define nt-enums (make-hash))
-  (define cc-enums (delay (make-hash)))
+  (define cc-enums (make-hash))
   (define unused-var/e
     (apply except/e
-           var/e
+           symbol/e
            (used-vars lang)))
-  (define l-enum
-    (lang-enum nt-enums cc-enums unused-var/e))
   
-  (make-lang-table! nt-enums lang)
   (define filled-cc-enums
-    (delay (make-lang-table! (force cc-enums) (force cc-lang))))
-
-  (struct-copy lang-enum l-enum [delayed-cc-enums filled-cc-enums]))
+    (delay (begin
+             (make-lang-table! cc-enums (force cc-lang))
+             cc-enums)))
+  (define l-enum
+    (lang-enum nt-enums filled-cc-enums unused-var/e))
+  (make-lang-table! nt-enums lang)
+  l-enum)
 
 (define (pat-enumerator l-enum pat)
   (cond
     [(can-enumerate? pat (lang-enum-nt-enums l-enum) (lang-enum-delayed-cc-enums l-enum))
-     (map/e
-      to-term
-      (λ (_)
-        (redex-error 'pat-enum "Enumerator is not a  bijection"))
-      (pat/e pat l-enum)
-      #:contract any/c)]
+     (pam/e to-term (pat/e pat l-enum) #:contract any/c)]
     [else #f]))
 
 (define (enumerate-rhss rhss l-enum)
   (define (with-index i e)
-    (cons (map/e (λ (x) (production i x))
-                 production-term
-                 e
-                 #:contract any/c)
-          (λ (nd-x) (= i (production-n nd-x)))))
+    (map/e (λ (x) (production i x))
+           production-term
+           e
+           #:contract 
+           (and/c production?
+                  (λ (p) (= i (production-n p))))))
   (apply or/e
          (for/list ([i (in-naturals)]
                     [production (in-list rhss)])
@@ -124,9 +122,9 @@
      [`integer integer/e]
      [`real two-way-real/e]
      [`boolean bool/e]
-     [`variable var/e]
+     [`variable symbol/e]
      [`(variable-except ,s ...)
-      (apply except/e var/e s)]
+      (apply except/e symbol/e s)]
      [`(variable-prefix ,s)
       (var-prefix/e s)]
      [`variable-not-otherwise-mentioned
@@ -305,3 +303,33 @@
 ;; lang-enum-get-cross-enum : lang-enum Symbol -> (or/c Enum #f)
 (define (lang-enum-get-cross-enum l-enum s)
   (hash-ref (force (lang-enum-delayed-cc-enums l-enum)) s))
+
+(define (var-prefix/e s)
+  (define as-str (symbol->string s))
+  (define ((flip f) x y) (f y x))
+  (map/e (compose string->symbol
+                  (curry string-append as-str)
+                  symbol->string)
+         (compose string->symbol
+                  list->string
+                  (curry (flip drop) (string-length as-str))
+                  string->list
+                  symbol->string)
+         symbol/e
+         #:contract (and/c symbol?
+                           (let ([reg (regexp (format "^~a" (regexp-quote as-str)))])
+                             (λ (x) 
+                               (regexp-match? reg (symbol->string x)))))))
+
+(define base/e
+  (or/e (fin/e '())
+        (cons two-way-number/e number?)
+        string/e
+        bool/e
+        symbol/e))
+
+(define any/e
+  (delay/e
+   (or/e (cons base/e (negate pair?))
+         (cons (cons/e any/e any/e) pair?))
+   #:size +inf.0))
