@@ -248,10 +248,7 @@ logging facilities (see @secref{log}).
 
 @section[#:tag "sec:finding"]{Finding the Benchmark Models}
 
-The models included in the distribution of the benchmark are in the
-@filepath{redex/benchmark/models} subdirectory of the @racket[redex-benchmark]
-package. Each such subdirectory contains an info file named according to the
-pattern @filepath{<name>-info.rkt}, defining a module that provides the function:
+@defmodule[redex/benchmark/models/all-info]
 
 @defproc[(all-mods)
          (listof (list/c string? module-path? module-path?))]{Returns a list of 
@@ -259,8 +256,12 @@ pattern @filepath{<name>-info.rkt}, defining a module that provides the function
 pair the first element is the name of the model, the second is a module defining a 
 generator, and the third is a module defining a @tech{check} function.}
 
-The file @filepath{redex/benchmark/models/all-info.rkt} provides an @racket[all-mods]
-function listing all of the @tech{generate} and @tech{check} pairs included in the benchmark.
+The models included in the distribution of the benchmark are in the
+@filepath{redex/benchmark/models} subdirectory of the @racket[redex-benchmark]
+package. In addition to the @racketmodname[redex/benchmark/models/all-info] library
+documented here, each such subdirectory contains an info file named according to the
+pattern @filepath{<name>-info.rkt}, defining a module that provides a model-specific
+@racket[all-mods] function.
 
 A command line interface is provided by the file 
 @filepath{redex/benchmark/run-benchmark.rkt}, 
