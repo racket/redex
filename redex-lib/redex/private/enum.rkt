@@ -118,7 +118,7 @@
      [`any any/e]
      [`number two-way-number/e]
      [`string string/e]
-     [`natural nat/e]
+     [`natural natural/e]
      [`integer integer/e]
      [`real two-way-real/e]
      [`boolean bool/e]
