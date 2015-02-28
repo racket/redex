@@ -46,7 +46,11 @@
     [(_ mod-path new-name rws ...)
      (syntax-case (include-mod #'mod-path stx) (module)
        [(module old-name . body)
-        (apply-to #'(rws ...) #'(module new-name . body))])]))
+        (apply-to #'(rws ...) (datum->syntax
+                               stx
+                               `(module ,#'new-name . ,#'body)
+                               stx
+                               stx))])]))
 
 (define-for-syntax (include-mod mod-path context-stx)
   (define file (resolve-path-spec mod-path mod-path mod-path))

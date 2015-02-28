@@ -4,6 +4,7 @@
                      racket/syntax
                      racket/list
                      (only-in syntax/path-spec resolve-path-spec))
+         syntax/strip-context
          (for-template racket/base))
 
 (provide rewriter/ids
@@ -39,12 +40,20 @@
         (define (loop-id stx)
           (syntax-case stx (ctx)
             [(ctx rest (... ...))
-             (with-syntax ([(-rest (... ...)) (next #'(rest (... ...)))])
-               #'(ctx -rest (... ...)))]
+             (let ([-rest (next (datum->syntax
+                                 stx
+                                 (syntax->list #'(rest (... ...)))
+                                 stx
+                                 stx))])
+               (datum->syntax stx
+                              (cons (car (syntax-e stx))
+                                    -rest)
+                              stx
+                              stx))]
             [(a . b)
-             (with-syntax ([-a (loop-id #'a)]
-                           [-b (loop-id #'b)])
-               #'(-a . -b))]
+             (let ([-a (loop-id #'a)]
+                   [-b (loop-id #'b)])
+               (datum->syntax stx (cons -a -b) stx stx))]
             [_ stx])) ...
         (define (rewrite-here stx)
           (syntax-case stx #,ids
@@ -57,11 +66,11 @@
                                                          '#,to)
                                        stx))
                  (set! applied? #t))
-               #'#,to)]
+               (replace-context stx #'#,to))]
             [(a . b)
-             (with-syntax ([-a (rewrite-here #'a)]
-                           [-b (rewrite-here #'b)])
-               #'(-a . -b))]
+             (let ([-a (rewrite-here #'a)]
+                   [-b (rewrite-here #'b)])
+               (datum->syntax stx (cons -a -b) stx stx))]
             [_
              stx]))
         (begin0 (first-loop-id stx)
@@ -120,9 +129,9 @@
                  (equal? ".." (syntax-e #'p))))
            stx]
           [(a . b)
-           (with-syntax ([a-rw (loop #'a in-require?)]
+           (let ([a-rw (loop #'a in-require?)]
                          [b-rw (loop #'b in-require?)])
-             #'(a-rw . b-rw))]
+             (datum->syntax stx (cons a-rw b-rw) stx))]
           [relative-path
            (and in-require?
                 (string? (syntax-e #'relative-path))
@@ -133,7 +142,7 @@
                                (cleanse-path
                                 (build-path #,mod-directory-path
                                             (string->path p-string)))))])
-             #`(file #,full-path))]
+             (datum->syntax stx (list 'file full-path) stx))]
           [_ stx]))))
 
 (define-syntax (path-spec-rewriter stx)
@@ -198,12 +207,12 @@
            ;; pre-existing complete paths (shouldn't see anything else here, right?...)
            (if (equal? #,full-path-candidate
                        (syntax-e #'full-path))
-               #'#,local-mod
+               (replace-context stx #'#,local-mod)
                stx)]
           [(a . b)
-           (with-syntax ([a-rw (loop #'a in-require?)]
-                         [b-rw (loop #'b in-require?)])
-             #'(a-rw . b-rw))]
+           (let ([a-rw (loop #'a in-require?)]
+                 [b-rw (loop #'b in-require?)])
+             (datum->syntax stx (cons a-rw b-rw) stx))]
           [_ stx]))))
 
 (define-for-syntax (module-body-context-rw-stx full-stx body-rw-stx)
@@ -211,11 +220,11 @@
       (syntax-case stx (module)
         [(module . body)
          (with-syntax ([body-rw (#,body-rw-stx #'body)])
-           #'(module . body-rw))]
+           (datum->syntax stx (cons 'module #'body-rw) stx stx))]
         [(a . b)
-         (with-syntax ([a-rw (loop #'a)]
-                       [b-rw (loop #'b)])
-           #'(a-rw . b-rw))]
+         (let ([a-rw (loop #'a)]
+               [b-rw (loop #'b)])
+           (datum->syntax stx (cons a-rw b-rw) stx))]
         [_
          stx])))
 
