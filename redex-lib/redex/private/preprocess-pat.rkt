@@ -2,8 +2,8 @@
 
 (require racket/match
          racket/set
+         unstable/hash
 
-         "2set.rkt"
          "env.rkt"
          "error.rkt"
          "match-a-pattern.rkt")
@@ -73,9 +73,7 @@
   res)
 
 (define (remove-names pat)
-  (define names-2set (find-names pat))
-  (define names (2set-ones names-2set))
-  (define 2names (2set-manys names-2set))
+  (define-values (names 2names) (2set-partition (find-names pat)))
   (define badnames (set-subtract names 2names))
   (define (strip-named name subpat con)
     (define sub-stripped (strip subpat))
@@ -100,17 +98,37 @@
        `(side-condition ,(strip p) ,c ,s)]
       [`(list ,sub-pats ...)
        (cons 'list
-             (map (match-lambda
-                   [`(repeat ,p ,n ,m)
-                    (define sub (strip p))
-                    (define s-n (keep-if-good n))
-                    (define s-m (keep-if-good m))
-                    `(repeat ,sub ,s-n ,s-m)]
-                   [sub-pat (strip sub-pat)])
-                  sub-pats))]
+             (for/list ([sub-pat (in-list sub-pats)])
+               (match sub-pat
+                 [`(repeat ,p ,n ,m)
+                  (define sub (strip p))
+                  (define s-n (keep-if-good n))
+                  (define s-m (keep-if-good m))
+                  `(repeat ,sub ,s-n ,s-m)]
+                 [sub-pat (strip sub-pat)])))]
       [_ pat]))
   (strip pat))
 
+;; first is values that occured once, second is more than once
+;; (Map[A] -O> Bool) -> (Values (Listof A) (Listof A))
+(define (2set-partition ht)
+  (for/fold ([onces  (list)]
+             [multis (list)])
+            ([(k b) (in-hash ht)])
+    (cond [b    (values onces (cons k multis))]
+          [else (values (cons k onces) multis)])))
+
+;; (Map[A] -O> Bool) A ... -> Map[A] -O> Bool
+(define (2set-add ht . xs)
+  (for/fold ([ht ht])
+            ([x (in-list xs)])
+    (hash-update ht x (λ (_) #t) #f)))
+
+;; (Map[A] -O> Bool) (Map[A] -O> Bool) -> Map[A] -O> Bool
+(define (2set-union h1 h2)
+  (hash-union h1 h2 #:combine (λ (_l _r) #t)))
+
+; pat -> (Map[Symbol] -O> Bool)
 (define (find-names pat)
   (match-a-pattern/single-base-case pat
     [`(name ,n ,subpat)
@@ -127,14 +145,15 @@
     [`(side-condition ,p ,c ,s)
      (find-names p)]
     [`(list ,sub-pats ...)
-     (foldr 2set-union
-            (2set)
-            (map (match-lambda
-                  [`(repeat ,p ,n ,m)
-                   (2set-add (find-names p) n m)]
-                  [sub-pat (find-names sub-pat)])
-                 sub-pats))]
-    [_ (2set)]))
+     (for/fold ([2set (hash)])
+               ([sub-pat (in-list sub-pats)])
+       (2set-union
+        2set
+        (match sub-pat
+          [`(repeat ,p ,n ,m)
+           (2set-add (find-names p) n m)]
+          [sub-pat (find-names sub-pat)])))]
+    [_ (hash)]))
 
 ;; Patterns annotated with variable/name/repeat information
 (struct ann-pat (ann pat)
