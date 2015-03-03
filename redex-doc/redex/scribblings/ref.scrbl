@@ -774,9 +774,9 @@ extends all of them.
                     (if e e e)
                     true 
                     false))
-               (define-union-language L L1 L2)]
+               (define-union-language L1-plus-L2 L1 L2)]
   is equivalent to this one:
-  @racketblock[(define-language L
+  @racketblock[(define-language L1-plus-L2
                  (e ::=
                     (+ e e) 
                     number
