@@ -110,23 +110,23 @@
   (strip pat))
 
 ;; first is values that occured once, second is more than once
-;; (Map[A] -O> Bool) -> (Values (Listof A) (Listof A))
+;; (Map[A] -O> 0 or 1) -> (Values (Listof A) (Listof A))
 (define (2set-partition ht)
   (for/fold ([onces  (list)]
              [multis (list)])
             ([(k b) (in-hash ht)])
-    (cond [b    (values onces (cons k multis))]
-          [else (values (cons k onces) multis)])))
+    (cond [(= b 0) (values (cons k onces) multis)]
+          [else    (values onces (cons k multis))])))
 
 ;; (Map[A] -O> Bool) A ... -> Map[A] -O> Bool
 (define (2set-add ht . xs)
   (for/fold ([ht ht])
             ([x (in-list xs)])
-    (hash-update ht x (λ (_) #t) #f)))
+    (hash-update ht x (λ (x) (min 1 (add1 x))) -1)))
 
 ;; (Map[A] -O> Bool) (Map[A] -O> Bool) -> Map[A] -O> Bool
 (define (2set-union h1 h2)
-  (hash-union h1 h2 #:combine (λ (_l _r) #t)))
+  (hash-union h1 h2 #:combine (λ (_l _r) 1)))
 
 ; pat -> (Map[Symbol] -O> Bool)
 (define (find-names pat)
