@@ -3653,9 +3653,9 @@ appears as the first thing in the file):
 
 @racketblock[
      (build-lw (list (build-lw "(" 0 0 0 1)
-                              (build-lw 'a 0 0 1 1)
-                              (build-lw ")" 0 0 2 1))
-                        0 0 0 3)
+                     (build-lw 'a 0 0 1 1)
+                     (build-lw ")" 0 0 2 1))
+               0 0 0 3)
 ]
 
 If there is some whitespace in the sequence, like this one:
