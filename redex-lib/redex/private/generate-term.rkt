@@ -311,7 +311,7 @@
   (cond
     [enum
      (define in-bounds (if (finite-enum? enum)
-                           (λ (x) (modulo x (enum-size enum)))
+                           (λ (x) (modulo x (enum-count enum)))
                            (λ (x) x)))
      (define start-time (current-inexact-milliseconds))
      (define interleave-start-attempt #f)
@@ -349,7 +349,7 @@
   (cond
     [enum-bound
      (define bound (if (finite-enum? enum)
-                       (min enum-bound (enum-size enum))
+                       (min enum-bound (enum-count enum))
                        enum-bound))
      (λ (_size _attempt _retries)
        (values (enum-ith enum (random-natural bound))
@@ -358,7 +358,7 @@
      (cond
        [(finite-enum? enum)
         (λ (_size _attempt _retries)
-          (values (enum-ith enum (random-natural (enum-size enum)))
+          (values (enum-ith enum (random-natural (enum-count enum)))
                   'ignored))]
        [else
         (λ (_size _attempt _retries)
@@ -371,7 +371,7 @@
   (unless enum (error 'redex-check "cannot enumerate the pattern ~s" pat))
   (λ (_size _attempt _retries)
     (values (enum-ith enum (if (finite-enum? enum)
-                               (modulo (- _attempt 1) (enum-size enum))
+                               (modulo (- _attempt 1) (enum-count enum))
                                (- _attempt 1)))
             'ignored)))
 
@@ -695,7 +695,7 @@
   (define enum-lang (compiled-lang-enum-table lang))
   (define enum (pat-enumerator enum-lang pat))
   (unless enum (error 'generate-term "cannot enumerate ~s" pat))
-  (define the-size (and (finite-enum? enum) (enum-size enum)))
+  (define the-size (and (finite-enum? enum) (enum-count enum)))
   (λ (i)
     (unless (exact-nonnegative-integer? i)
       (raise-argument-error 'generate-term

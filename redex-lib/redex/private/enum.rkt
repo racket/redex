@@ -19,7 +19,7 @@
          "preprocess-lang.rkt")
 
 (provide 
- enum-size
+ enum-count
  finite-enum?
  (contract-out
   [lang-enumerators (-> (listof nt?) (promise/c (listof nt?)) lang-enum?)]
@@ -60,9 +60,8 @@
                         (enumerate-rhss rhs l-enum)))
     (enumerate-lang! rec-lang
                      (λ (rhs enums)
-                       (thunk/e #:size +inf.f
-                                (λ ()
-                                  (enumerate-rhss rhs l-enum))))))
+                       (delay/e (enumerate-rhss rhs l-enum)
+                                #:count +inf.f))))
   (define nt-enums (make-hash))
   (define cc-enums (make-hash))
   (define unused-var/e
@@ -332,4 +331,4 @@
   (delay/e
    (or/e (cons base/e (negate pair?))
          (cons (cons/e any/e any/e) pair?))
-   #:size +inf.0))
+   #:count +inf.0))
