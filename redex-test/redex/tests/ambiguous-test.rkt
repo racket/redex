@@ -2,7 +2,7 @@
 
 (require racket/set
          rackunit
-         (only-in redex/reduction-semantics define-language)
+         (only-in redex/reduction-semantics define-language ::=)
          redex/private/ambiguous)
 
 (define-language L1
@@ -13,6 +13,7 @@
   (w (variable-except ω))
   (y (variable-prefix :))
   (z (variable-prefix !))
+  (abc-prefix (variable-prefix abc))
   (q y z)
   (n e q)
   (v (λ (x) e)))
@@ -29,6 +30,7 @@
                                (cons 'x (konsts (set 'λ)))
                                (cons 'w (konsts (set 'ω)))
                                (cons 'y (prefixes (set ':)))
+                               (cons 'abc-prefix (prefixes (set 'abc)))
                                (cons 'z (prefixes (set '!)))
                                (cons 'q (prefixes (set ': '!))))))
 
@@ -50,6 +52,7 @@
                                (cons 'w #f)
                                (cons 'y #f)
                                (cons 'z #f)
+                               (cons 'abc-prefix #f)
                                (cons 'q #t))))
 
 (define non-terminal-ambiguous-L1 (build-ambiguous-ht L1 L1-overlapping-productions-ht))
@@ -63,7 +66,15 @@
                                (cons 'w #f)
                                (cons 'y #f)
                                (cons 'z #f)
+                               (cons 'abc-prefix #f)
                                (cons 'q #t))))
+
+(let ()
+  (define-language Foo
+    (bar ::= baz variable)
+    (baz ::= (foo variable ...)))
+  (check-equal? (build-overlapping-productions-table Foo)
+                (make-hash (list (cons 'bar #f) (cons 'baz #f)))))
 
 (check-equal? (ambiguous-pattern? `(nt e) non-terminal-ambiguous-L1)
               #f)
@@ -106,6 +117,22 @@
                L2-vari
                L2)
               #f)
+     
+(check-equal? (overlapping-patterns? `variable `(nt w) L1-vari L1)
+              #t)
+(check-equal? (overlapping-patterns? `(variable-prefix abq) `(nt abc-prefix) L1-vari L1)
+              #f)
+(check-equal? (overlapping-patterns? `(variable-prefix abc) `(nt abc-prefix) L1-vari L1)
+              #t)
+(check-equal? (overlapping-patterns? `(variable-prefix abcd) `(nt abc-prefix) L1-vari L1)
+              #t)
+(check-equal? (overlapping-patterns? `(variable-prefix ab) `(nt abc-prefix) L1-vari L1)
+              #t)
+(check-equal? (overlapping-patterns? `(variable-except elephant) `(nt e) L1-vari L1)
+              #t)
+(check-equal? (overlapping-patterns? `variable-not-otherwise-mentioned `(nt e) L1-vari L1)
+              #t)
+              
 
 (check-equal? (build-overlapping-productions-table L2)
               (make-hash (list (cons 'e #f)

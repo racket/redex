@@ -99,8 +99,32 @@
   ║ (? not-pair?)     ║                                                                                                                                                                                                  ║(equal? t u) ║
   ╚═══════════════════╩══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╩═════════════╝)
 
-(define (v-nt nt sym vari)
-  (set-member? (hash-ref vari nt) sym))
+(define (v-nt v-pat nt vari)
+  (define nt-info (hash-ref vari nt))
+  (cond
+    [(equal? nt-info #t) #t]
+    [(equal? nt-info #f) #f]
+    [(konsts? nt-info) #t]
+    [(prefixes? nt-info)
+     (match v-pat
+       [`(variable-prefix ,prefix)
+        (define prefixes-as-lists-of-chars
+          (for/list ([s (in-set (prefixes-prefixes nt-info))])
+            (string->list (symbol->string s))))
+        (let loop ([prefixes prefixes-as-lists-of-chars]
+                   [prefix (string->list (symbol->string prefix))])
+          (cond
+            [(ormap null? prefixes) #t]
+            [(null? prefix) #t]
+            [else
+             (define new-prefixes
+               (for/list ([a-prefix (in-list prefixes)]
+                          #:when (equal? (car a-prefix) (car prefix)))
+                 (cdr a-prefix)))
+             (cond
+               [(null? new-prefixes) #f]
+               [else (loop new-prefixes (cdr prefix))])]))]
+       [_ #t])]))
 
 ;; returns #f when the nt definitely does NOT match a list
 ;; returns #t when the nt might match a list
