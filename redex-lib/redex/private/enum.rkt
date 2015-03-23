@@ -168,7 +168,7 @@
                         ts))
              (λ (rep)
                 (repeat-terms rep))
-             (list/e (loop pat))
+             (listof/e (loop pat))
              #:contract any/c)]
            [`(repeat ,tag ,n #f)
             (single/e (nrep-ref n tag))]
@@ -200,7 +200,7 @@
      [((cons nv tpats))
       (define tpats/e
         (hash-traverse/e val/e tpats #:get-contract (λ (x) any/c)))
-      (list/e
+      (listof/e
        (cons/e (env/e nv l-enum)
                tpats/e))])
    (define names-env

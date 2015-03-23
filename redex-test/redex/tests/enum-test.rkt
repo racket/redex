@@ -150,6 +150,11 @@
 (try-it rec e)
 (try-it rec v)
 
+(define-language self-ellipses
+  (tree (node tree ...)
+        #f))
+(try-it self-ellipses tree)
+
 ;; Hole/in-hole test
 (define-language Holes
   (h hole)
@@ -180,4 +185,3 @@
 (try-it CrossLang (cross x))
 (try-it CrossLang (in-hole (cross x) e))
 (try-it CrossLang (in-hole (cross e) x))
-
