@@ -137,3 +137,16 @@
 (check-equal? (build-overlapping-productions-table L2)
               (make-hash (list (cons 'e #f)
                                (cons 'x #f))))
+
+(let ()
+  (define-language prefix-with-constants-lang
+    [mm (variable-prefix mm)]
+    [ff-or-mm ff mm]
+    [m-or-mm m mm]
+    [mmm-or-mm mmm mm])
+
+  (check-equal? (build-overlapping-productions-table prefix-with-constants-lang)
+                (make-hash (list (cons 'mm #f)
+                                 (cons 'ff-or-mm #f)
+                                 (cons 'm-or-mm #f)
+                                 (cons 'mmm-or-mm #t)))))

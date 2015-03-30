@@ -257,8 +257,8 @@
         (not (set-member? (konsts-syms nt-info) v))]
        [(prefixes? nt-info)
         (for/or ([prefix (in-set (prefixes-prefixes nt-info))])
-          (regexp-match (format "^" (regexp-quote (symbol->string prefix)))
-                        (symbol->string v)))])]
+          (regexp-match? (format "^~a" (regexp-quote (symbol->string prefix)))
+                         (symbol->string v)))])]
     [else #t]))
 
 (define (build-overlapping-productions-table clang)
