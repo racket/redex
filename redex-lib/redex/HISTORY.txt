@@ -1,4 +1,4 @@
-v6.1.1
+v6.2
 
   * Performance improvements for example generation, both for 
     enumerators (#:i-th in generate-term) and judgment forms
