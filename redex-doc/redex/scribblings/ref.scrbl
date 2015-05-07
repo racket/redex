@@ -3,7 +3,9 @@
           scribble/bnf
           scribble/struct
           scribble/eval
-          (for-syntax racket/base)
+          scribble/racket
+          (for-syntax racket/base
+                      racket/syntax)
           (for-label racket/base
                      (except-in racket/gui make-color)
                      racket/pretty
@@ -18,14 +20,17 @@
    (syntax-case stx ()
      [(_ arg)
       (identifier? #'arg)
-      (let ([as (symbol->string (syntax-e #'arg))])
-        #`(index '("Redex Pattern" #,as) (deftech #:style? #f @racket[arg])))]))
+      (let ([as (symbol->string (syntax-e #'arg))]
+            [pat:arg (format-id #'arg "pat:~a" (syntax-e #'arg))]
+            [arg-str (symbol->string (syntax-e #'arg))])
+        #`(index '("Redex Pattern" #,as) (deftech #:style? #f #:key #,arg-str @racket[#,pat:arg])))]))
 
 @(define-syntax (pattech stx)
    (syntax-case stx ()
      [(_ arg)
       (identifier? #'arg)
-      #`(tech #,(symbol->string (syntax-e #'arg)))]))
+      (with-syntax ([pat:arg (format-id #'arg "pat:~a" (syntax-e #'arg))])
+        #'@racket[pat:arg])]))
 
 @(define-syntax (ttpattern stx)
    (syntax-case stx ()
@@ -73,15 +78,53 @@
 @(define redex-eval (make-base-eval))
 @(interaction-eval #:eval redex-eval (require redex/reduction-semantics))
 
+@(define-syntax (define-pattern-form stx)
+   (syntax-case stx ()
+     [(_ id)
+      (with-syntax ([pat:id (format-id #'id "pat:~a" (syntax-e #'id))]
+                    [id-str (symbol->string (syntax-e #'id))])
+        #`(define-syntax pat:id (make-element-id-transformer
+                                 (lambda (stx)
+                                   #'(tech @racketidfont[id-str])))))]))
+@(define-syntax-rule (define-pattern-forms id ...)
+   (begin (define-pattern-form id) ...))
+
+@(define-pattern-forms
+   any _ number natural integer
+   real string boolean variable
+   variable-except variable-prefix
+   variable-not-otherwise-mentioned
+   hole name in-hole hide-hole
+   side-condition cross)
+
+@(define-syntax pat:symbol
+   (make-element-id-transformer
+    (lambda (stx)
+      #'(tech @racketvarfont{symbol}))))
+@(define-syntax pat:pattern-sequence
+   (make-element-id-transformer
+    (lambda (stx)
+      #'(tech @racketvarfont{pattern-sequence}))))
+@(define-syntax pat:other-literal
+   (make-element-id-transformer
+    (lambda (stx)
+      #'(tech @racketvarfont{other-literal}))))
+
+@(define can-underscore
+   @list{Like @racket[pat:number], this @pattern can be suffixed with an underscore
+         and additional characters to create a binding.})
+
 @title{The Redex Reference}
 
-To load Redex use: @defmodule*/no-declare[(redex)] which provides all of
-the names documented in this library.
+@defmodule*/no-declare[(redex)]
+
+The @racketmodname[redex] library provides all of
+the names documented here.
 
 Alternatively, use the @racketmodname[redex/reduction-semantics] and 
-@racketmodname[redex/pict] modules, which provide only non-GUI 
+@racketmodname[redex/pict] libraries, which provide only non-GUI 
 functionality (i.e., everything except @racketmodname[redex/gui]), 
-making them suitable for programs which should not depend on 
+making them suitable for programs that should not depend on 
 @racketmodname[racket/gui/base].
 
 @section{Patterns}
@@ -89,110 +132,111 @@ making them suitable for programs which should not depend on
 @defmodule*/no-declare[(redex/reduction-semantics)]
 @declare-exporting[redex/reduction-semantics redex]
 
-This section covers Redex's @deftech{pattern} language, used in many
-of Redex's forms.
+This section covers Redex's @deftech{pattern} language, which is used
+in many of Redex's forms. Patterns are matched against @tech{terms},
+which are represented as S-expressions.
 
-Note that pattern matching is caching (including caching the results
-of side-conditions). This means that once a pattern has matched a
-given term, Redex assumes that it will always match that term. 
+Pattern matching uses a cache---including caching the results of
+side-conditions---so after a pattern has matched a given term, Redex
+assumes that the pattern will always match the term.
 
-This is the grammar for the Redex pattern language. Non-terminal
-references are wrapped with angle brackets; otherwise identifiers
-in the grammar are terminals.
+In the following grammar, literal identifiers (such as
+@racket[pat:any]) are matched symbolically, as opposed to using the
+identifier's lexical binding:
 
 @(racketgrammar*
-   [pattern any 
-            _
-            number 
-            natural
-            integer
-            real
-            string 
-            boolean
-            variable 
-            (variable-except <id> ...)
-            (variable-prefix <id>)
-            variable-not-otherwise-mentioned
-            hole
-            symbol
-            (name <id> <pattern>)
-            (in-hole <pattern> <pattern>)
-            (hide-hole <pattern>)
-            (side-condition <pattern> guard)
-            (cross <id>)
-            (<pattern-sequence> ...)
-            <racket-constant>]
+   #:literals (pat:any pat:_ pat:number pat:natural pat:integer
+               pat:real pat:string pat:boolean pat:variable
+               pat:variable-except pat:variable-prefix
+               pat:variable-not-otherwise-mentioned
+               pat:hole pat:symbol pat:name pat:in-hole pat:hide-hole
+               pat:side-condition pat:cross
+               pat:pattern-sequence pat:other-literal)
+   [pattern pat:any
+            pat:_
+            pat:number 
+            pat:natural
+            pat:integer
+            pat:real
+            pat:string 
+            pat:boolean
+            pat:variable 
+            (pat:variable-except id ...)
+            (pat:variable-prefix id)
+            pat:variable-not-otherwise-mentioned
+            pat:hole
+            pat:symbol
+            (pat:name id pattern)
+            (pat:in-hole pattern pattern)
+            (pat:hide-hole pattern)
+            (pat:side-condition pattern guard-expr)
+            (pat:cross id)
+            (pat:pattern-sequence ...)
+            pat:other-literal]
    [pattern-sequence 
-     <pattern> 
+     pattern
      (code:line ... (code:comment "literal ellipsis"))
      ..._id])
 
 @itemize[
 
-@item{The @defpattech[any] @pattern matches any sexpression.
+@item{The @defpattech[any] @pattern matches any term.
 This @pattern may also be suffixed with an underscore and another
-identifier, in which case they bind the full name (as if it
+identifier, in which case a match bindes the full name (as if it
 were an implicit @pattech[name] @pattern) and match the portion
 before the underscore.
 }
 
-@item{The @defpattech[_] @pattern matches any sexpression,
+@item{The @defpattech[_] @pattern matches any term,
 but does not bind @pattech[_] as a name, nor can it be suffixed to bind a name.
 }
 
 @item{The @defpattech[number] @pattern matches any number.
-This @pattern may also be suffixed with an underscore and another
-identifier, in which case they bind the full name (as if it
-were an implicit @pattech[name] @pattern) and match the portion
-before the underscore.
+
+      The @racket[pat:number] identifier can be suffixed with an underscore and additional
+         characters, in which case the @pattern binds the full name (as if it
+         were an implicit @pattech[name] @pattern) when matching the portion
+         before the underscore. For example, the pattern
+
+          @racketblock[number_1]
+
+         matches the same as @racket[pat:number], but it also binds the
+         identifier @racket[number_1] to the matching portion of a term.
+
+         When the same underscore suffix is used for multiple
+         instances if @racket[pat:number] within a larger pattern, then the
+         overall pattern matches only when all of the instances match the
+         same number.
 }
 
 @item{The @defpattech[natural] @pattern matches any exact 
 non-negative integer.
-This @pattern may also be suffixed with an underscore and another
-identifier, in which case they bind the full name (as if it
-were an implicit @pattech[name] @pattern) and match the portion
-before the underscore.
+      @can-underscore
 }
 
 @item{The @defpattech[integer] @pattern matches any exact integer.
-This @pattern may also be suffixed with an underscore and another
-identifier, in which case they bind the full name (as if it
-were an implicit @pattech[name] @pattern) and match the portion
-before the underscore.
+      @can-underscore
 }
 
 @item{The @defpattech[real] @pattern matches any real number.
-This @pattern may also be suffixed with an underscore and another
-identifier, in which case they bind the full name (as if it
-were an implicit @pattech[name] @pattern) and match the portion
-before the underscore.
+      @can-underscore
 }
 
 @item{The @defpattech[string] @pattern matches any string. 
-This @pattern may also be suffixed with an underscore and another
-identifier, in which case they bind the full name (as if it
-were an implicit @pattech[name] @pattern) and match the portion
-before the underscore.
+      @can-underscore
 }
 
 @item{The @defpattech[boolean] @pattern matches @racket[#true] and @racket[#false]
 (which are the same as @racket[#t] and @racket[#f], respectively).
-This @pattern may also be suffixed with an underscore and another
-identifier, in which case they bind the full name (as if it
-were an implicit @pattech[name] @pattern) and match the portion
-before the underscore.
+@can-underscore
 }
 
 @item{The @defpattech[variable] @pattern matches any symbol.
-This @pattern may also be suffixed with an underscore and another
-identifier, in which case they bind the full name (as if it
-were an implicit @pattech[name] @pattern) and match the portion
-before the underscore.
+      @can-underscore
 }
 
 @item{The @defpattech[variable-except] @pattern matches any symbol except those
-listed in its argument. This is useful for ensuring that
+listed in its argument. This @pattern is useful for ensuring that
 keywords in the language are not accidentally captured by
 variables. 
 }
@@ -214,13 +258,13 @@ it matches only a hole.
 match exactly, unless it is the name of a non-terminal in a
 relevant language or contains an underscore. 
 
-If it is a non-terminal, it matches any of the right-hand
-sides of that non-terminal. If the non-terminal appears
+If @racket[pat:symbol] is a non-terminal, it matches any of the right-hand
+sides of the non-terminal. If the non-terminal appears
 twice in a single pattern, then the match is constrained
 to expressions that are the same, unless the pattern is part
 of a grammar, in which case there is no constraint.
 
-If the symbol is a non-terminal followed by an underscore,
+If @racket[pat:symbol] is a non-terminal followed by an underscore,
 for example @tt{e_1}, it is implicitly the same as a name @pattern
 that matches only the non-terminal, @tt{(@pattech[name] e_1 e)} for the
 example. Accordingly, repeated uses of the same name are
@@ -254,8 +298,8 @@ variables.
 If the symbol otherwise has an underscore, it is an error.
 }
 
-@item{The @pattern @tt{(@defpattech[name] symbol @ttpattern)}
-matches @ttpattern and binds using it to the name @tt{symbol}. 
+@item{The @pattern @tt{(@defpattech[name] _id @ttpattern)}
+matches @ttpattern and binds using it to the name @racket[_id]. 
 }
 
 @item{The @tt{(@defpattech[in-hole] @ttpattern @ttpattern)} @pattern
@@ -264,7 +308,7 @@ against the second @|ttpattern|. If there are zero matches or more
 than one match, an exception is raised.
 
 When matching the first argument of in-hole, the @racket[hole] @pattern
-matches any sexpression. Then, the sexpression that matched the hole
+matches any term. Then, the term that matched the hole
 @pattern is used to match against the second @|pattern|.
 }
 
@@ -274,24 +318,24 @@ looking for a decomposition, it ignores any holes found in
 that @|ttpattern|.
 }
 
-@item{The @tt{(@defpattech[side-condition] @ttpattern guard)} @pattern
-matches what the embedded @ttpattern matches, and then the guard
-expression is evaluated. If it returns @racket[#f], the @pattern fails
-to match, and if it returns anything else, the @pattern matches. Any
-occurrences of @racket[name] in the @pattern (including those implicitly
-there via @tt{_} patterns) are bound using @racket[term-let] in the
-guard. 
+@item{The @tt{(@defpattech[side-condition] @ttpattern _guard-expr)} @pattern
+matches what the embedded @ttpattern matches, and then @racket[_guard-expr]
+is evaluated. If @racket[_guard-expr] produces @racket[#f], the @pattern fails
+to match, otherwise the @pattern matches. Any
+occurrences of @racket[pat:name] in the @pattern (including those implicitly
+present via @tt{_} patterns) are bound using @racket[term-let] in
+@racket[_guard-expr]. 
 }
 
-@item{The @tt{(@defpattech[cross] symbol)} @pattern is used for the compatible
+@item{The @tt{(@defpattech[cross] _id)} @pattern is used for the compatible
 closure functions. If the language contains a non-terminal with the
-same name as @racket[symbol], the @pattern @racket[(cross symbol)] matches the
+same name as @racket[_id], the @pattern @racket[(cross _id)] matches the
 context that corresponds to the compatible closure of that
 non-terminal.
 }
 
 @item{The @tt{(@defpattech[pattern-sequence] ...)}
-@pattern matches a sexpression
+@pattern matches a term
 list, where each pattern-sequence element matches an element
 of the list. In addition, if a list @pattern contains an
 ellipsis, the ellipsis is not treated as a literal, instead
@@ -308,9 +352,9 @@ Multiple ellipses are allowed. For example, this @|pattern|:
 
 @racketblock[((name x a) ... (name y a) ...)]
 
-matches this sexpression:
+matches this term:
 
-@racketblock[(@#,tttterm (a a))]
+@racketblock[(term (a a))]
 
 three different ways. One where the first @tt{a} in the @pattern
 matches nothing, and the second matches both of the
@@ -328,9 +372,9 @@ As an example, this @|pattern|:
 
 @racketblock[((name x a) ..._1 (name y a) ..._1)]
 
-only matches this sexpression:
+only matches this term:
 
-@racketblock[(@#,tttterm (a a))]
+@racketblock[(term (a a))]
 
 one way, with each named @pattern matching a single a. Unlike
 the above, the two @|pattern|s with mismatched lengths is ruled
@@ -354,24 +398,26 @@ two matches occur, one where @tt{x} is bound to @racket['()] and
 bound to @racket['()].
 
 }
+
+@item{The @defpattech[other-literal] @pattern stands for a literal
+      value---such as a number, boolean, or string---that must match
+      exactly.}
 ]
 
-@defform*[[(redex-match lang @#,ttpattern any)
+@defform*[[(redex-match lang @#,ttpattern term-expr)
            (redex-match lang @#,ttpattern)]]{
           
-If @racket[redex-match] receives three arguments, it
-matches the pattern (in the language) against its third
-argument. If it matches, this returns a list of match
+If @racket[redex-match] is given a @racket[term-expr], it
+matches the pattern (in the language) against the result of
+@racket[term-expr]. The result is @racket[#f] or a list of match
 structures describing the matches (see @racket[match?] and 
-@racket[match-bindings]). If it fails, it returns
-@racket[#f].
+@racket[match-bindings]).
 
-If @racket[redex-match] receives only two arguments, it
-builds a procedure for efficiently testing if expressions
-match the pattern, using the language @racket[lang]. The
-procedures accepts a single expression and if the expression
-matches, it returns a list of match structures describing the
-matches. If the match fails, the procedure returns @racket[#f].
+If @racket[redex-match] has only a @racket[lang] and @ttpattern,
+the result is a procedure for efficiently testing whether terms
+match the pattern with respect to the language @racket[lang]. The
+procedure accepts a single term and returns @racket[#f] or
+a list of match structures describing the matches.
 
 @examples[#:eval 
           redex-eval
@@ -393,8 +439,8 @@ matches. If the match fails, the procedure returns @racket[#f].
 @defform*[[(redex-match? lang @#,ttpattern any)
            (redex-match? lang @#,ttpattern)]]{
           
-Like @racket[redex-match], except it returns only a boolean
-indicating if the match was successful.
+Like @racket[redex-match], but returns only a boolean
+indicating whether the match was successful.
 
 @examples[#:eval 
           redex-eval
@@ -412,12 +458,12 @@ indicating if the match was successful.
 
 @defproc[(match? [val any/c]) boolean?]{
 
-Determines if a value is a @tt{match} structure.
+Determines whether a value is a @tt{match} structure.
 }
 
 @defproc[(match-bindings [m match?]) (listof bind?)]{
 
-This returns a list of @racket[bind] structs that
+Returns a list of @racket[bind] structs that
 binds the pattern variables in this match.
 }
 
@@ -425,7 +471,7 @@ binds the pattern variables in this match.
 
 Instances of this struct are returned by @racket[redex-match].
 Each @racket[bind] associates a name with an s-expression from the
-language, or a list of such s-expressions, if the @tt{(@pattech[name] ...)}
+language, or a list of such s-expressions if the corresponding @pattech[name]
 clause is followed by an ellipsis.  Nested ellipses produce
 nested lists.
 }
@@ -453,7 +499,7 @@ The default size is @racket[63].
   Ambiguous patterns can slow down
   Redex's pattern matching implementation significantly. To help debug
   such performance issues, set the @racket[check-redundancy]
-  parameter to @racket[#t]. This causes Redex to, at runtime,
+  parameter to @racket[#t]. A true value causes Redex to, at runtime,
   report any redundant matches that it encounters.
 }
 
@@ -472,14 +518,14 @@ stands for repetition unless otherwise indicated):
 @(racketgrammar* #:literals (in-hole hole unquote unquote-splicing) 
    [term identifier
          (term-sequence ...)
-         ,racket-expression
+         ,expr
          (in-hole term term)
          hole
          #t #f
          string]
    [term-sequence 
      term
-     ,@racket-expression
+     ,@expr
      (code:line ... (code:comment "literal ellipsis"))])
 
 @itemize[
@@ -492,12 +538,12 @@ the identifier is @tt{hole} (as below).}
 @item{A term written @racket[(_term-sequence ...)] constructs a list of
 the terms constructed by the sequence elements.}
 
-@item{A term written @racket[,_racket-expression] evaluates the
-@racket[racket-expression] and substitutes its value into the term at
+@item{A term written @racket[,_expr] evaluates
+@racket[_expr] and substitutes its value into the term at
 that point.}
 
-@item{A term written @racket[,@_racket-expression] evaluates the
-@racket[racket-expression], which must produce a list. It then splices
+@item{A term written @racket[,@_expr] evaluates the
+@racket[_expr], which must produce a list. It then splices
 the contents of the list into the expression at that point in the sequence.}
 
 @item{A term written @racket[(in-hole #,tttterm #,tttterm)]
@@ -515,7 +561,7 @@ produces the boolean or the string.}
 
 Used for construction of a term.
 
-It behaves similarly to @racket[quasiquote], except for a few special
+The @racket[term] form behaves similarly to @racket[quasiquote], except for a few special
 forms that are recognized (listed below) and that names bound by
 @racket[term-let] are implicitly substituted with the values that
 those names were bound to, expanding ellipses as in-place sublists (in
@@ -612,7 +658,7 @@ Defines @racket[identifier] for use in @|tterm| templates.}
 
 @defform[(term-match language [@#,ttpattern expression] ...)]{
 
-This produces a procedure that accepts term (or quoted)
+Produces a procedure that accepts term (or quoted)
 expressions and checks them against each pattern. The
 function returns a list of the values of the expression
 where the pattern matches. If one of the patterns matches
@@ -626,13 +672,13 @@ result multiple times to avoid compiling the patterns multiple times.
 
 @defform[(term-match/single language [@#,ttpattern expression] ...)]{
 
-This produces a procedure that accepts term (or quoted)
+Produces a procedure that accepts term (or quoted)
 expressions and checks them against each pattern. The
 function returns the expression behind the first successful
 match. If that pattern produces multiple matches, an error
 is signaled. If no patterns match, an error is signaled.
 
-Raises an exception recognized by @racket[exn:fail:redex?] if
+The @racket[term-match/single] form raises an exception recognized by @racket[exn:fail:redex?] if
 no clauses match or if one of the clauses matches multiple ways.
 
 When evaluating a @racket[term-match/single] expression, the patterns
@@ -642,29 +688,30 @@ result multiple times to avoid compiling the patterns multiple times.
 
 @defproc[(plug [context any/c] [expression any/c]) any]{
 
-The first argument to this function is an sexpression to
-plug into. The second argument is the sexpression to replace
+The first argument to this function is an term to
+plug into. The second argument is the term to replace
 in the first argument. It returns the replaced term. This is
 also used when a @racket[term] sub-expression contains @tt{in-hole}.
 }
 
-@defproc[(variable-not-in [t any/c] [var symbol?]) symbol?]{
+@defproc[(variable-not-in [t any/c] [prefix symbol?]) symbol?]{
 
-This helper function accepts an sexpression and a
-variable. It returns a variable not in the sexpression with
-a prefix the same as the second argument.
+A helper function that accepts a term and a
+variable. It returns a symbol that not in the term, where the
+variable has @racket[prefix] as a prefix.
 
 }
 
 @defproc[(variables-not-in [t any/c] [vars (listof symbol?)]) (listof symbol?)]{
 
-This function, like variable-not-in, makes variables that do
-no occur in its first argument, but it returns a list of
+Like @racket[variable-not-in], create variables that do
+no occur in @racket[t]---but returning a list of
 such variables, one for each variable in its second
 argument. 
 
-Does not expect the input symbols to be distinct, but does
-produce variables that are always distinct.
+The @racket[variables-not-in] function does not expect the symbols in
+@racket[vars] to be distinct, but it does produce a list of distinct
+symbols.
 }
 
 @defproc[(exn:fail:redex? [v any/c]) boolean?]{
@@ -683,7 +730,7 @@ produce variables that are always distinct.
                                  (non-terminal-name @#,ttpattern ...+)
                                  ((non-terminal-name ...+) @#,ttpattern ...+)])]{
 
-This form defines the grammar of a language. It allows the
+Defines the grammar of a language. The @racket[define-language] form supports the
 definition of recursive @|pattern|s, much like a BNF, but for
 regular-tree grammars. It goes beyond their expressive
 power, however, because repeated @racket[name] @|pattern|s and
@@ -723,7 +770,7 @@ Use of the @racket[::=] keyword outside a language definition is a syntax error.
                                  (non-terminal-name @#,ttpattern ...+)
                                  ((non-terminal-name ...+) @#,ttpattern ...+)])]{
 
-This form extends a language with some new, replaced, or
+Extends a language with some new, replaced, or
 extended non-terminals. For example, this language:
 
 @racketblock[
@@ -1128,7 +1175,7 @@ reduce it further).
                                    (code:line or @#,tttterm)])]{
 
 The @racket[define-metafunction] form builds a function on
-sexpressions according to the pattern and right-hand-side
+terms according to the pattern and right-hand-side
 expressions. The first argument indicates the language used
 to resolve non-terminals in the pattern expressions. Each of
 the rhs-expressions is implicitly wrapped in @|tttterm|. 
@@ -1904,7 +1951,7 @@ Generates terms in a number of different ways:
                            (for/list ([i (in-range 10)])
                              (generate-term L unused #:i-th i))]
 
-                 Finally, the @racket[any] pattern enumerates sexpressions of the above base types.
+                 Finally, the @racket[any] pattern enumerates terms of the above base types.
                  @examples[#:eval
                            redex-eval
                            (for/list ([i (in-range 20)])
