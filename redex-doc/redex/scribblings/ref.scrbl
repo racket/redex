@@ -237,7 +237,7 @@ non-negative integer.
 
 @item{The @defpattech[variable-except] @pattern matches any symbol except those
 listed in its argument. This @pattern is useful for ensuring that
-keywords in the language are not accidentally captured by
+reserved words in the language are not accidentally captured by
 variables. 
 }
 
@@ -3400,25 +3400,25 @@ case, only the numbers are used).
 These parameters determine the font used for various text in
 the picts. See @racket[text] in the texpict collection for
 documentation explaining @racket[text-style/c]. One of the more
-useful things it can be is one of the symbols @racket['roman],
-@racket['swiss], or @racket['modern], which are a serif, sans-serif, and
-monospaced font, respectively. (It can also encode style
-information, too.)
+useful things a style can be is the symbol @racket['roman],
+@racket['swiss], or @racket['modern], which corresponds to serif, sans-serif, and
+monospaced font, respectively. (A style can encode additional
+information, too, such as boldface or italic configuration.)
 
-The @racket[label-style] is used for the reduction rule label
-names. The @racket[literal-style] is used for names that aren't
+The @racket[label-style] parameter is used for reduction-rule labels.
+The @racket[literal-style] parameter is used for names that aren't
 non-terminals that appear in patterns. The
-@racket[metafunction-style] is used for the names of
+@racket[metafunction-style] parameter is used for the names of
 metafunctions. 
-The @racket[paren-style] is used for the parentheses 
+The @racket[paren-style] parameter is used for parentheses 
 (including ``['', ``]'', ``@"{"'', and ``@"}"'',
-as well as ``('' and ``)''), but not for the square brackets used for
-in-hole decompositions, which use the @racket[default-style].
-The @racket[grammar-style] is used for the ``::='' and ``|''
+as well as ``('' and ``)'') and for keywords, but it is not used for the square brackets of
+in-hole decompositions, which use the @racket[default-style] parameter.
+The @racket[grammar-style] parameter is used for the ``::='' and ``|''
 in grammars.
 
 The @racket[non-terminal-style] parameter is used for the names of non-terminals.
-Two parameters style the text in the (optional) "underscore" component
+Two parameters style the text in the (optional) ``underscore'' component
 of a non-terminal reference. The first, @racket[non-terminal-subscript-style],
 applies to the segment between the underscore and the first caret (@racket[^]) 
 to follow it; the second, @racket[non-terminal-superscript-style], applies
@@ -3427,10 +3427,12 @@ reference @racket[x_y^z], @racket[x] has style @racket[non-terminal-style],
 @racket[y] has style @racket[non-terminal-subscript-style], and @racket[z]
 has style @racket[non-terminal-superscript-style].
 
-The @racket[default-style] is used for parenthesis, the dot in dotted
+The @racket[default-style] parameter is used for parenthesis, the dot in dotted
 lists, spaces, the
-"where" and "fresh" in side-conditions, and other places
+``where'' and ``fresh'' in side-conditions, and other places
 where the other parameters aren't used.
+
+@history[#:changed "1.4" @elem{Use @racket[paren-style] for keywords.}]
 }
 
 @deftogether[[
@@ -3439,7 +3441,7 @@ where the other parameters aren't used.
                                              integer?)]{}
 @defparam[default-font-size size (and/c (between/c 1 255) integer?)]{}]]{
 
-These parameters control the various font sizes. The
+Parameters that control the various font sizes. The
 default-font-size is used for all of the font sizes except
 labels and metafunctions.
 }
@@ -3453,14 +3455,14 @@ relation. Defaults to 4.
 @defparam[curly-quotes-for-strings on? boolean?]{
 
 Controls if the open and close quotes for strings are turned
-into “ and ” or are left as merely ".
+into @litchar{“} and @litchar{”} or are left as merely @litchar{"}.
 
 Defaults to @racket[#t].
 }
 
 @defparam[current-text proc (-> string? text-style/c number? pict?)]{
 
-This parameter's function is called whenever Redex typesets
+A parameter whose value is a function to be called whenever Redex typesets
 some part of a grammar, reduction relation, or
 metafunction. It defaults to the @racketmodname[pict] 
 library's @racket[text] function.
@@ -3472,7 +3474,7 @@ library's @racket[text] function.
 
 @defproc[(set-arrow-pict! [arrow symbol?] [proc  (-> pict?)]) void?]{
 
-This functions sets the pict for a given reduction-relation
+Sets the pict for a given reduction-relation
 symbol. When typesetting a reduction relation that uses the
 symbol, the thunk will be invoked to get a pict to render
 it. The thunk may be invoked multiple times when rendering a
@@ -3481,7 +3483,7 @@ single reduction relation.
 
 @defparam[white-bracket-sizing proc (-> string? number? (values number? number? number? number?))]{
 
-  This parameter is used when typesetting metafunctions to
+  A parameter whose value is a function to be used when typesetting metafunctions to
   determine how to create the @"\u301a\u301b"
   characters. Rather than using those characters directly
   (since glyphs tend not to be available in PostScript
@@ -3571,7 +3573,7 @@ Its result should be the rewritten version version of the input.
                                string-or-thunk-returning-pict
                                expression)]{
 
-This extends the current set of atomic-rewriters with one
+Extends the current set of atomic-rewriters with one
 new one that rewrites the value of name-symbol to
 @racket[string-or-pict-returning-thunk] (applied, in the case of a
 thunk), during the evaluation of expression.
@@ -3585,7 +3587,7 @@ appears in a pattern.
                                  proc
                                  expression)]{
 
-This extends the current set of compound-rewriters with one
+Extends the current set of compound-rewriters with one
 new one that rewrites the value of name-symbol via proc,
 during the evaluation of expression.
 
@@ -3678,7 +3680,7 @@ do not represent unquoted expressions or metafunction applications.
 
 @defform[(to-lw arg)]{
 
-This form turns its argument into @racket[lw] structs that
+Turns @racket[arg] into @racket[lw] structs that
 contain all of the spacing information just as it would appear
 when being used to typeset.
 
@@ -3779,7 +3781,7 @@ the empty string and the @racket[x] in the typeset output.
 }
 
 @defproc[(to-lw/stx [stx syntax?]) lw?]{
-  This is the runtime variant on @racket[to-lw]; it accepts a 
+  A procedure variant of @racket[to-lw]; it accepts a 
   syntax object and returns the corresponding @racket[lw] structs.
   It only uses the location information in the syntax object,
   so metafunctions will not be rendered properly.
@@ -3805,7 +3807,7 @@ the empty string and the @racket[x] in the typeset output.
   of the identifiers in the @racket[lw] argument are
   non-terminals.
 
-  This does not set the @racket[dc-for-text-size] parameter. See also
+  This function does not set the @racket[dc-for-text-size] parameter. See also
   @racket[render-lw].
 }
 

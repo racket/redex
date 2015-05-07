@@ -735,7 +735,11 @@
       [(symbol? atom)
        (list (or (rewrite-atomic col span atom literal-style)
                  (make-string-token col span (symbol->string atom) (literal-style))))]
-      [(member atom '("(" ")" "[" "]" "{" "}"))
+      [(or (member atom '("(" ")" "[" "]" "{" "}"))
+           ;; Typeset keywords in the same font as parentheses:
+           (and (string? atom)
+                ((string-length atom) . >= . 2)
+                (string=? "#:" (substring atom 0 2))))
        (list (make-string-token col span atom (paren-style)))]
       [(string? atom)
        (list (make-string-token col span atom (default-style)))]
