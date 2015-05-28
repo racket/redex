@@ -797,45 +797,10 @@
 
 (define white-square-bracket-cache (make-hash))
 (define (default-white-square-bracket open?)
-  (define key (list (current-text) (default-style) (default-font-size) open?))
-  (cond
-    [(hash-ref white-square-bracket-cache key #f) => values]
-    [else
-     (define candidate ((current-text) (if open? "〚" "〛") (default-style) (default-font-size)))
-     (define w (inexact->exact (ceiling (pict-width candidate))))
-     (define h (inexact->exact (ceiling (pict-height candidate))))
-     (define bmp (make-bitmap w h))
-     (define bdc (make-object bitmap-dc% bmp))
-     (draw-pict candidate bdc 0 0)
-     (define bytes (make-bytes (* w h 4)))
-     (send bmp get-argb-pixels 0 0 w h bytes)
-     (define (white-pixel? x y)
-       (define c (* 4 (+ (* y w) x)))
-       (= (bytes-ref bytes c) 0))
-     (define outermost-x
-       (let/ec k
-         (for ([x (if open?
-                      (in-range w)
-                      (in-range (- w 1) -1 -1))])
-           (define the-y
-             (for/or ([y (in-range h)])
-               (and (not (white-pixel? x y))
-                    y)))
-           (when the-y
-             (k x)))))
-     (define pict
-       (cond 
-         [(if open?
-              (<= 1/2 (/ outermost-x w))
-              (<= 1/2 (/ (- w outermost-x) w)))
-          ;; when the entire half is white
-          (if open?
-              (inset/clip candidate (- (/ w 3)) 0 0 0)
-              (inset/clip candidate 0 0 (- (/ w 3)) 0))]
-         [else
-          candidate]))
-     (hash-set! white-square-bracket-cache key pict)
-     pict]))
+  (let ([text (current-text)])
+    (text (if open? "⟦" "⟧") ; U+27E6 and U+27E7, mathematical
+          (default-style)
+          (default-font-size))))
 
 (define (homemade-white-square-bracket open?)
   (white-bracket (if open? "[" "]")))
