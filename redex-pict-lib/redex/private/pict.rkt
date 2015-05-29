@@ -65,6 +65,8 @@
          default-font-size
          metafunction-font-size
          reduction-relation-rule-separation
+         reduction-relation-rule-extra-separation
+         reduction-relation-rule-line-separation
 
          where-make-prefix-pict
          where-combine
@@ -73,6 +75,10 @@
          just-after         
          
          non-terminal-gap-space
+         metafunction-gap-space
+         metafunction-rule-gap-space
+         metafunction-line-gap-space
+         metafunction-combine-contract-and-rules
          rule-pict-style
          arrow-space
          label-space
@@ -185,6 +191,8 @@
 
 (define current-label-extra-space (make-parameter 0))
 (define reduction-relation-rule-separation (make-parameter 4))
+(define reduction-relation-rule-extra-separation (make-parameter 4))
+(define reduction-relation-rule-line-separation (make-parameter 2))
 
 (define ((rule-picts->pict/horizontal left-column-align side-conditions-same-line?) rps)
   (let* ([sep 2]
@@ -200,39 +208,63 @@
                                  (pict-width (arrow->pict (rule-pict-info-arrow rp)))
                                  (pict-width (rule-pict-info-rhs rp))))
                             rps))])
-    (table 4
-           (apply
-            append
-            (let ([len (length rps)])
-              (for/list ([rp (in-list rps)]
-                         [i (in-naturals 1)])
-                (let ([arrow (hbl-append (blank (arrow-space) 0)
-                                         (arrow->pict (rule-pict-info-arrow rp))
-                                         (blank (arrow-space) 0))]
-                      [lhs (rule-pict-info-lhs rp)]
-                      [rhs (rule-pict-info-rhs rp)]
-                      [spc (basic-text " " (default-style))]
-                      [label (hbl-append (blank (label-space) 0) (rp->pict-label rp))]
-                      [sep (blank 4)])
-                  (append 
-                   (if side-conditions-same-line?
-                       (list lhs arrow 
-                             (hbl-append
-                              rhs
-                              (let ([sc (rule-pict-info->side-condition-pict rp max-w)])
-                                (inset sc (min 0 (- max-rhs (pict-width sc))) 0 0 0)))
-                             label)
-                       (list lhs arrow rhs label
-                             (blank) (blank)
-                             (let ([sc (rule-pict-info->side-condition-pict rp max-w)])
-                               (inset sc (min 0 (- max-rhs (pict-width sc))) 0 0 0))
-                             (blank)))
-                   (if (= len i)
-                       '()
-                       (list sep (blank) (blank) (blank))))))))
-           (list* left-column-align ctl-superimpose ltl-superimpose)
-           (list* left-column-align ctl-superimpose ltl-superimpose)
-           (list* sep sep (+ sep (current-label-extra-space))) 2)))
+    (define rowss
+      (for/list ([rp (in-list rps)])
+        (let ([arrow (hbl-append (blank (arrow-space) 0)
+                                 (arrow->pict (rule-pict-info-arrow rp))
+                                 (blank (arrow-space) 0))]
+              [lhs (rule-pict-info-lhs rp)]
+              [rhs (rule-pict-info-rhs rp)]
+              [spc (basic-text " " (default-style))]
+              [label (hbl-append (blank (label-space) 0) (rp->pict-label rp))]
+              [sep (blank 4)])
+          (if side-conditions-same-line?
+              (list
+               (list lhs arrow 
+                     (hbl-append
+                      rhs
+                      (let ([sc (rule-pict-info->side-condition-pict rp max-w)])
+                        (inset sc (min 0 (- max-rhs (pict-width sc))) 0 0 0)))
+                     label))
+              (list
+               (list lhs arrow rhs label)
+               (list (blank) (blank)
+                     (let ([sc (rule-pict-info->side-condition-pict rp max-w)])
+                       (inset sc (min 0 (- max-rhs (pict-width sc))) 0 0 0))
+                     (blank)))))))
+    ;; Combine like `table`, but in a way that (adjust 'reduction-relation-rule)
+    ;; and (adjust 'reduction-relation-line) can be applied
+    (define all-cols
+      (for*/fold ([all-cols (list (blank) (blank) (blank) (blank))]) ([rows (in-list rowss)]
+                                                                      [row (in-list rows)])
+        (for/list ([col (in-list all-cols)]
+                   [p (in-list row)])
+          (ltl-superimpose col (blank (pict-width p) 0)))))
+    
+    (apply vl-append
+           (+ (reduction-relation-rule-extra-separation)
+              (reduction-relation-rule-separation))
+           (for/list ([rows (in-list rowss)])
+             ((adjust 'reduction-relation-rule)
+              (apply vl-append
+                     (reduction-relation-rule-line-separation)
+                     (for/list ([row (in-list rows)])
+                       ((adjust 'reduction-relation-line)
+                        (apply htl-append
+                               (for/list ([elem (in-list row)]
+                                          [col (in-list all-cols)]
+                                          [combine
+                                           (in-list
+                                            (list left-column-align 
+                                                  ctl-superimpose
+                                                  ltl-superimpose
+                                                  ltl-superimpose))]
+                                          [sep
+                                           (in-list (list 0
+                                                          sep
+                                                          sep
+                                                          (+ sep (current-label-extra-space))))])
+                                 (inset (combine elem col) sep 0 0 0)))))))))))
 
 (define arrow-space (make-parameter 0))
 (define label-space (make-parameter 0))
@@ -269,17 +301,20 @@
          vl-append
          (add-between
           (map (λ (rp)
-                 (side-condition-combiner
-                  (vl-append
-                   (ltl-superimpose 
-                    (htl-append (rule-pict-info-lhs rp)
-                                (basic-text " " (default-style))
-                                (arrow->pict (rule-pict-info-arrow rp)))
-                    (rtl-superimpose 
-                     spacer
-                     (rp->pict-label rp)))
-                   (rule-pict-info-rhs rp))
-                  (rule-pict-info->side-condition-pict rp +inf.0)))
+                 ((adjust 'reduction-relation-rule)
+                  (side-condition-combiner
+                   (vl-append
+                    ((adjust 'reduction-relation-line)
+                     (ltl-superimpose 
+                      (htl-append (rule-pict-info-lhs rp)
+                                  (basic-text " " (default-style))
+                                  (arrow->pict (rule-pict-info-arrow rp)))
+                      (rtl-superimpose 
+                       spacer
+                       (rp->pict-label rp))))
+                    ((adjust 'reduction-relation-line)
+                     (rule-pict-info-rhs rp)))
+                   (rule-pict-info->side-condition-pict rp +inf.0))))
                rps)
           (blank 0 (reduction-relation-rule-separation)))))))
 
@@ -311,78 +346,87 @@
                                         (+ max-w 2 (label-space) (pict-width lbl)))
                                       labels)))]
          [one-line
-          (lambda (sep?)
-            (lambda (rp sc label)
-              (let ([arrow (hbl-append (arrow->pict (rule-pict-info-arrow rp))
-                                       (blank (arrow-space) 0))]
-                    [lhs (rule-pict-info-lhs rp)]
-                    [rhs (rule-pict-info-rhs rp)]
-                    [spc (basic-text " " (default-style))]
-                    [sep (blank (compact-vertical-min-width)
-                                (reduction-relation-rule-separation))]
-                    [add-label (lambda (p label)
-                                 (htl-append 
-                                  p
-                                  (inset label (- total-w (pict-width p) (pict-width label))
-                                         0 0 0)))])
-                (append
-                 (if ((apply + (map pict-width (list lhs spc arrow spc rhs)))
-                      . < .
-                      max-w)
-                     (list 
-                      (blank) (add-label (hbl-append lhs spc arrow spc rhs) label)
-                      (blank) sc)
-                     (list (blank) (add-label lhs label)
-                           arrow rhs
-                           (blank) sc))
-                 (if sep? (list (blank) sep) null)))))])
-    (if (null? rps)
-        (blank)
-        (table 2
-               (append
-                (apply
-                 append
-                 (map (one-line #t)
-                      (drop-right rps 1) 
-                      (drop-right scs 1)
-                      (drop-right labels 1)))
-                ((one-line #f) (last rps) (last scs) (last labels)))
-               ltl-superimpose ltl-superimpose
-               2 2))))
+          (lambda (rp sc label)
+            (let ([arrow (hbl-append (arrow->pict (rule-pict-info-arrow rp))
+                                     (blank (arrow-space) 0))]
+                  [lhs (rule-pict-info-lhs rp)]
+                  [rhs (rule-pict-info-rhs rp)]
+                  [spc (basic-text " " (default-style))]
+                  [sep (blank (compact-vertical-min-width)
+                              (reduction-relation-rule-separation))]
+                  [add-label (lambda (p label)
+                               (htl-append 
+                                p
+                                (inset label (- total-w (pict-width p) (pict-width label))
+                                       0 0 0)))])
+              (if ((apply + (map pict-width (list lhs spc arrow spc rhs)))
+                   . < .
+                   max-w)
+                  (list 
+                   (list (blank) (add-label (hbl-append lhs spc arrow spc rhs) label))
+                   (list (blank) sc))
+                  (list 
+                   (list (blank) (add-label lhs label))
+                   (list arrow rhs)
+                   (list (blank) sc)))))])
+    (define rowss
+      (map one-line rps scs  labels))
+    (define all-cols
+      (let ([min-left (blank (compact-vertical-min-width) 0)])
+        (for*/fold ([all-cols (list min-left (blank))]) ([rows (in-list rowss)]
+                                                         [row (in-list rows)])
+          (for/list ([col (in-list all-cols)]
+                     [p (in-list row)])
+            (ltl-superimpose col (blank (pict-width p) 0))))))
+    (apply vl-append
+           (+ (reduction-relation-rule-extra-separation)
+              (reduction-relation-rule-separation))
+           (for/list ([rows (in-list rowss)])
+             ((adjust 'reduction-relation-rule)
+              (apply vl-append
+                     (reduction-relation-rule-line-separation)
+                     (for/list ([row (in-list rows)])
+                       ((adjust 'reduction-relation-line)
+                        (apply htl-append
+                               (reduction-relation-rule-line-separation)
+                               (for/list ([elem (in-list row)]
+                                          [col (in-list all-cols)])
+                                 (ltl-superimpose col elem)))))))))))
 
 ;; side-condition-pict : (listof pict) (listof pict) number -> pict
 (define (side-condition-pict fresh-vars pattern-binds/sc max-w)
-  (let* ([frsh 
-          (if (null? fresh-vars)
-              null
-              (list
-               (hbl-append
-                (apply 
-                 hbl-append
-                 (add-between
-                  fresh-vars
-                  (basic-text ", " (default-style))))
-                (basic-text " fresh" (default-style)))))]
-         [lst (add-between
-               (append
-                pattern-binds/sc
-                frsh)
-               'comma)])
-    (if (null? lst)
-        (blank)
-        (let ([where ((where-make-prefix-pict))])
-          (let ([max-w (- max-w (pict-width where))])
-            (htl-append where
-                        (let loop ([p (car lst)][lst (cdr lst)])
-                          (cond
-                            [(null? lst) p]
+  ((adjust 'side-conditions)
+   (let* ([frsh 
+           (if (null? fresh-vars)
+               null
+               (list
+                (hbl-append
+                 (apply 
+                  hbl-append
+                  (add-between
+                   fresh-vars
+                   (basic-text ", " (default-style))))
+                 (basic-text " fresh" (default-style)))))]
+          [lst (add-between
+                (append
+                 (map (adjust 'side-condition) pattern-binds/sc)
+                 frsh)
+                'comma)])
+     (if (null? lst)
+         (blank)
+         (let ([where ((where-make-prefix-pict))])
+           (let ([max-w (- max-w (pict-width where))])
+             (htl-append where
+                         (let loop ([p (car lst)][lst (cdr lst)])
+                           (cond
+                            [(null? lst) ((adjust 'side-condition-line) p)]
                             [(eq? (car lst) 'comma)
                              (loop (htl-append p (basic-text ", " (default-style)))
                                    (cdr lst))]
                             [((+ (pict-width p) (pict-width (car lst))) . > . max-w)
-                             (vl-append p
+                             (vl-append ((adjust 'side-condition-line) p)
                                         (loop (car lst) (cdr lst)))]
-                            [else (loop (htl-append p (car lst)) (cdr lst))]))))))))
+                            [else (loop (htl-append p (car lst)) (cdr lst))])))))))))
 
 (define where-make-prefix-pict
   (make-parameter (lambda ()
@@ -597,11 +641,13 @@
     (apply vl-append
            (non-terminal-gap-space)
            (map (λ (line)
-                  (htl-append 
-                   (rc-superimpose term-space (sequence-of-non-terminals (car line)))
-                   (lw->pict
-                    all-nts
-                    (find-enclosing-loc-wrapper (add-bars-and-::= (cdr line))))))
+                  ((adjust 'language-production)
+                   (htl-append 
+                    (rc-superimpose term-space (sequence-of-non-terminals (car line)))
+                    (lw->pict
+                     all-nts
+                     (find-enclosing-loc-wrapper (add-bars-and-::= (cdr line)))
+                     (adjust 'language-line)))))
                 info))))
 
 (define (sequence-of-non-terminals nts)
@@ -890,32 +936,29 @@
      (define i 0)
      (define sorted-cases (remove-duplicates (sort (filter number? mf-cases) <)))
      (define named-cases (apply set (filter string? mf-cases)))
-     (apply 
-      append
-      (for/list ([eqns (in-list eqns)]
-                 [contract (in-list contracts)]
-                 [case-labels (in-list case-labelss)])
-        (filter
-         values
-         (cons 
-          contract
-          (for/list ([eqn (in-list eqns)]
-                     [case-label (in-list case-labels)])
-            (begin0
-              (cond
-                [(and (pair? sorted-cases) (= i (car sorted-cases)))
-                 (set! sorted-cases (cdr sorted-cases))
-                 eqn]
-                [(set-member? named-cases case-label)
-                 eqn]
-                [else #f])
-              (set! i (+ i 1))))))))]
-    [else (apply append 
-                 (for/list ([eqns (in-list eqns)]
-                            [contract (in-list contracts)])
-                   (if contract
-                       (cons contract eqns)
-                       eqns)))]))
+     (for/list ([eqns (in-list eqns)]
+                [contract (in-list contracts)]
+                [case-labels (in-list case-labelss)])
+       (filter
+        values
+        (cons 
+         contract
+         (for/list ([eqn (in-list eqns)]
+                    [case-label (in-list case-labels)])
+           (begin0
+            (cond
+             [(and (pair? sorted-cases) (= i (car sorted-cases)))
+              (set! sorted-cases (cdr sorted-cases))
+              eqn]
+             [(set-member? named-cases case-label)
+              eqn]
+             [else #f])
+            (set! i (+ i 1)))))))]
+    [else (for/list ([eqns (in-list eqns)]
+                     [contract (in-list contracts)])
+            (if contract
+                (cons contract eqns)
+                eqns))]))
 
 (define judgment-form-cases (make-parameter #f))
 (define (select-jf-cases eqns conclusions eqn-names)
@@ -943,6 +986,16 @@
     [else 
      (values eqns conclusions eqn-names)]))
 
+(define metafunction-gap-space (make-parameter 2))
+(define metafunction-rule-gap-space (make-parameter 2))
+(define metafunction-line-gap-space (make-parameter 2))
+(define metafunction-combine-contract-and-rules
+  (make-parameter (lambda (c-p rule-p)
+                    (vl-append
+                     (metafunction-rule-gap-space)
+                     c-p
+                     rule-p))))
+
 (define (metafunctions->pict/proc mfs contract? name)
   (unless (andmap (λ (mf) (equal? (metafunc-proc-lang (metafunction-proc (car mfs)))
                                   (metafunc-proc-lang (metafunction-proc mf))))
@@ -950,7 +1003,7 @@
     (error name "expected metafunctions that are all drawn from the same language"))
   (define current-linebreaks (linebreaks))
   (define all-nts (language-nts (metafunc-proc-lang (metafunction-proc (car mfs)))))
-  (define sep 2)
+  (define hsep 2)
   (define style (metafunction-pict-style))
   (define (wrapper->pict lw) (lw->pict all-nts lw))
   (define contracts (for/list ([mf (in-list mfs)]) 
@@ -975,20 +1028,22 @@
          (metafunction-call (metafunc-proc-name (metafunction-proc mf))
                             (list-ref eqn 0))))))
   (define case-labels (map (λ (mf) (metafunc-proc-clause-names (metafunction-proc mf))) mfs))
-  (define eqns (select-mf-cases contracts all-eqns case-labels))
-  (define lhs/contracts (select-mf-cases contracts all-lhss case-labels))
+  (define eqnss (select-mf-cases contracts all-eqns case-labels))
+  (define lhs/contractss (select-mf-cases contracts all-lhss case-labels))
   
+  (define num-eqns (apply + (map length eqnss)))
   (unless (or (not current-linebreaks)
-              (= (length current-linebreaks) (length eqns)))
+              (= (length current-linebreaks) num-eqns))
     (error 'metafunction->pict
            (string-append
             "expected the current-linebreaks parameter to be a list"
             " whose length matches the number of cases in the metafunction"
             " plus one if there is a contract (~a), but got ~s")
-           (length eqns)
+           num-eqns
            current-linebreaks))
-  (define linebreak-list (or current-linebreaks
-                             (map (lambda (x) #f) eqns)))
+  (define linebreakss (unappend (or current-linebreaks
+                                    (for/list ([i (in-range num-eqns)]) #f))
+                                eqnss))
   (define mode (case style
                  [(left-right 
                    left-right/vertical-side-conditions
@@ -1050,7 +1105,10 @@
                       (define rhs (wrapper->pict (car cond-line)))
                       (define scs 
                         (if (and (= last-line i) (null? (cdr cond-line)))
-                            ((otherwise-make-pict))
+                            ((adjust 'side-conditions)
+                             ((adjust 'side-condition-line)
+                              ((adjust 'side-condition)
+                               ((otherwise-make-pict)))))
                             (handle-single-side-condition (cdr cond-line))))
                       (list rhs scs)))
     (define rhs (map car rhs+scs))
@@ -1093,155 +1151,226 @@
                 (/ top-bottom-diff 2))]
         [else (loop (+ i 1))])))
 
-  (define rhss (for/list ([eqn/contract (in-list eqns)])
-                 (cond
-                   [(pict? eqn/contract)
-                    'contract]
-                   [else
-                    (define sc-info (list-ref eqn/contract 1))
-                    (cond
-                      [(member 'or sc-info)
-                       (build-brace-based-rhs 
-                        (cons (list-ref eqn/contract 2)
-                              (reverse sc-info)))]
-                      [else
-                       (wrapper->pict (list-ref eqn/contract 2))])])))
+  (define rhsss
+    (for/list ([eqns (in-list eqnss)])
+      (for/list ([eqn/contract (in-list eqns)])
+        (cond
+         [(pict? eqn/contract)
+          'contract]
+         [else
+          (define sc-info (list-ref eqn/contract 1))
+          (cond
+           [(member 'or sc-info)
+            (build-brace-based-rhs 
+             (cons (list-ref eqn/contract 2)
+                   (reverse sc-info)))]
+           [else
+            (wrapper->pict (list-ref eqn/contract 2))])]))))
   
   (define max-line-w/pre-sc (and
                              compact-side-conditions?
-                             (for/fold ([biggest 0]) ([lhs/contract (in-list lhs/contracts)]
-                                                      [rhs (in-list rhss)]
-                                                      [linebreak? (in-list linebreak-list)])
-                               (cond
-                                 [(equal? rhs 'contract)
-                                  ;; this is a contract
-                                  (max biggest (pict-width lhs/contract))]
-                                 [(eq? mode 'vertical)
-                                  (max biggest
-                                       (+ (pict-width lhs/contract) (pict-width =-pict))
-                                       (pict-width rhs))]
-                                 [linebreak?
-                                  (max biggest
-                                       (pict-width lhs/contract)
-                                       (+ (pict-width rhs) sep (pict-width =-pict)))]
-                                 [else
-                                  (max biggest
-                                       (+ (pict-width lhs/contract)
-                                          (pict-width rhs)
-                                          (pict-width =-pict)
-                                          (* 2 sep)))]))))
+                             (for/fold ([biggest 0]) ([lhs/contracts (in-list lhs/contractss)]
+                                                      [rhss (in-list rhsss)]
+                                                      [linebreaks (in-list linebreakss)])
+                               (for/fold ([biggest 0]) ([lhs/contract (in-list lhs/contracts)]
+                                                        [rhs (in-list rhss)]
+                                                        [linebreak? (in-list linebreaks)])
+                                 (cond
+                                  [(equal? rhs 'contract)
+                                   ;; this is a contract
+                                   (max biggest (pict-width lhs/contract))]
+                                  [(eq? mode 'vertical)
+                                   (max biggest
+                                        (+ (pict-width lhs/contract) (pict-width =-pict))
+                                        (pict-width rhs))]
+                                  [linebreak?
+                                   (max biggest
+                                        (pict-width lhs/contract)
+                                        (+ (pict-width rhs) hsep (pict-width =-pict)))]
+                                  [else
+                                   (max biggest
+                                        (+ (pict-width lhs/contract)
+                                           (pict-width rhs)
+                                           (pict-width =-pict)
+                                           (* 2 hsep)))])))))
   
-  (define scs (for/list ([eqn (in-list eqns)])
-                (cond
-                  [(pict? eqn) #f]
-                  [else
-                   (define scs (reverse (list-ref eqn 1)))
+  (define scss (for/list ([eqns (in-list eqnss)])
+                 (for/list ([eqn (in-list eqns)])
                    (cond
-                     [(null? scs) #f]
-                     [(member 'or scs) #f]
-                     [else (handle-single-side-condition scs)])])))
+                    [(pict? eqn) #f]
+                    [else
+                     (define scs (reverse (list-ref eqn 1)))
+                     (cond
+                      [(null? scs) #f]
+                      [(member 'or scs) #f]
+                      [else (handle-single-side-condition scs)])]))))
   (case mode
     [(horizontal)
-     (define (adjust-for-fills rows)
+     (define (adjust-for-fills rowsss)
        ;; Some rows have the form (list <pict> 'fill 'fill),
        ;; in which case we want the <pict> to span all columns.
        ;; To do that, we need to know the total width of the first
        ;; two columns of non-spanning rows.
-       (define max-w-before-rhs (apply 
-                                 max
-                                 0
-                                 (map (lambda (row)
-                                        (match row
-                                          [(list lhs 'fill 'fill)
-                                           (+ sep sep)]
-                                          [else
-                                           (+ (pict-width (car row))
-                                              sep
-                                              (pict-width (cadr row))
-                                              sep)]))
-                                      rows)))
-       (apply
-        append
-        (map (lambda (row)
-               (match row
-                 [(list lhs 'fill 'fill)
-                  (list
-                   ;; pretend that content is zero-width:
-                   (inset lhs 0 0 (- (pict-width lhs)) 0)
-                   (blank)
-                   ;; blank that's wide enough to ensure that the
-                   ;; right column covers the spanning pict
-                   ;; (and no more)
-                   (blank (max 0 (- (pict-width lhs) max-w-before-rhs))
-                          0))]
-                 [else row]))
-             rows)))
-     (define table-elements
+       (define max-w-before-rhs (for*/fold ([max-w 0]) ([rowss (in-list rowsss)]
+                                                        [rows (in-list rowss)]
+                                                        [row (in-list rows)])
+                                  (max max-w
+                                       (match row
+                                         [(list lhs 'fill 'fill)
+                                          (+ hsep hsep)]
+                                         [else
+                                          (+ (pict-width (car row))
+                                             hsep
+                                             (pict-width (cadr row))
+                                             hsep)]))))
+       (for/list ([rowss (in-list rowsss)])
+         (for/list ([rows (in-list rowss)])
+           (for/list ([row (in-list rows)])
+             (match row
+               [(list lhs 'fill 'fill)
+                (list
+                 ;; pretend that content is zero-width:
+                 (inset lhs 0 0 (- (pict-width lhs)) 0)
+                 (blank)
+                 ;; blank that's wide enough to ensure that the
+                 ;; right column covers the spanning pict
+                 ;; (and no more)
+                 (blank (max 0 (- (pict-width lhs) max-w-before-rhs))
+                        0))]
+               [else row])))))
+     (define rowsss
+       ;; list of tables;
+       ;; table is a list of contracts and rules
+       ;; rule/contract is a list of rows
+       ;; row is a list of elements (= pict or 'fill)
        (adjust-for-fills
-        (apply append
-               (for/list ([lhs/contract (in-list lhs/contracts)]
-                          [sc (in-list scs)]
-                          [rhs (in-list rhss)]
-                          [linebreak? (in-list linebreak-list)])
-                 (append
-                  (list
-                   (cond
-                     [(equal? rhs 'contract) ;; contract
-                      (list lhs/contract 'fill 'fill)]
-                     [linebreak?
-                      (list lhs/contract 'fill 'fill)]
-                     [(and sc (eq? style 'left-right/beside-side-conditions))
-                      (list lhs/contract =-pict (htl-append 10 rhs sc))]
-                     [else
-                      (list lhs/contract =-pict rhs)]))
-                  (if linebreak?
-                      (list
-                       (list (htl-append sep =-pict rhs)
-                             'fill
-                             'fill))
-                      null)
-                  (if (or (not sc)
-                          (and (not linebreak?)
-                               (eq? style 'left-right/beside-side-conditions)))
-                      null
-                      (list
-                       (list sc 'fill 'fill))))))))
-     (if (null? table-elements)
-         (blank)
-         (table 3 table-elements 
-                ltl-superimpose ltl-superimpose
-                sep sep))]
+        (for/list ([lhs/contracts (in-list lhs/contractss)]
+                   [scs (in-list scss)]
+                   [rhss (in-list rhsss)]
+                   [linebreaks (in-list linebreakss)])
+          (for/list ([lhs/contract (in-list lhs/contracts)]
+                     [sc (in-list scs)]
+                     [rhs (in-list rhss)]
+                     [linebreak? (in-list linebreaks)])
+            (append
+             (list
+              (cond
+               [(equal? rhs 'contract) ;; contract
+                (list lhs/contract 'fill 'fill)]
+               [linebreak?
+                (list lhs/contract 'fill 'fill)]
+               [(and sc (eq? style 'left-right/beside-side-conditions))
+                (list lhs/contract =-pict (htl-append 10 rhs sc))]
+               [else
+                (list lhs/contract =-pict rhs)]))
+             (if linebreak?
+                 (list
+                  (list (htl-append hsep =-pict rhs)
+                        'fill
+                        'fill))
+                 null)
+             (if (or (not sc)
+                     (and (not linebreak?)
+                          (eq? style 'left-right/beside-side-conditions)))
+                 null
+                 (list
+                  (list sc 'fill 'fill))))))))
+     ;; We want to do the same thing as flattening into one list
+     ;; and using `table` with 3 columns, but we also want to adjust
+     ;; individual metafunctions and contracts.
+     (define all-cols
+       (for*/fold ([all-cols (list (blank) (blank) (blank))]) ([rowss (in-list rowsss)]
+                                                               [rows (in-list rowss)]
+                                                               [row (in-list rows)])
+         (for/list ([col (in-list all-cols)]
+                    [p (in-list row)])
+           (if (eq? p 'fill)
+               col
+               (ltl-superimpose col (blank (pict-width p) 0))))))
+     (define contractss
+       (for/list ([lhs/contracts (in-list lhs/contractss)]
+                  [rhss (in-list rhsss)])
+         (for/list ([lhs/contract (in-list lhs/contracts)]
+                    [rhs (in-list rhss)]
+                    #:when (equal? rhs 'contract))
+           lhs/contract)))
+     (apply vl-append
+            (metafunction-gap-space)
+            (for/list ([rowss (in-list rowsss)]
+                       [rhss (in-list rhsss)]
+                       [contracts (in-list contractss)])
+              ((adjust 'metafunctions-metafunction)
+               (maybe-add-contract
+                contracts
+                (apply
+                 vl-append
+                 (metafunction-rule-gap-space)
+                 (for/list ([rows (in-list rowss)]
+                            [rhs (in-list rhss)]
+                            #:unless (equal? rhs 'contract))
+                   ((adjust 'metafunction-rule)
+                    (apply
+                     vl-append
+                     (metafunction-line-gap-space)
+                     (for/list ([row (in-list rows)])
+                       ((adjust 'metafunction-line)
+                        (apply htl-append
+                               hsep
+                               (for/list ([e (in-list row)]
+                                          [col (in-list all-cols)])
+                                 (ltl-superimpose col e)))))))))))))]
     [(vertical)
      (apply vl-append
-            sep
-            (apply append
-                   (for/list ([lhs/contract (in-list lhs/contracts)]
-                              [sc (in-list scs)]
-                              [rhs (in-list rhss)])
-                     (cond
-                       [(equal? rhs 'contract) ;; contract
-                        (list lhs/contract)]
-                       [else
-                        (cons
-                         (vl-append (htl-append lhs/contract =-pict)
-                                    (hbl-append (blank (metafunction-up/down-indent) 0)
-                                                rhs))
-                         (if (not sc)
-                             null
-                             (list sc)))]))))]))
+            (metafunction-gap-space)
+            (for/list ([lhs/contracts (in-list lhs/contractss)]
+                       [scs (in-list scss)]
+                       [rhss (in-list rhsss)])
+              ((adjust 'metafunctions-metafunction)
+               (maybe-add-contract
+                contracts
+                (apply vl-append
+                       (metafunction-rule-gap-space)
+                       (for/list ([lhs/contract (in-list lhs/contracts)]
+                                  [sc (in-list scs)]
+                                  [rhs (in-list rhss)]
+                                  #:unless (equal? rhs 'contract))
+                         (define rule
+                           ((adjust 'metafunction-line)
+                            (vl-append (htl-append lhs/contract =-pict)
+                                       (hbl-append (blank (metafunction-up/down-indent) 0)
+                                                   rhs))))
+                         ((adjust 'metafunction-rule)
+                          (if (not sc)
+                              rule
+                              (vl-append (metafunction-line-gap-space)
+                                         rule
+                                         ((adjust 'metafunction-line)
+                                          sc))))))))))]))
+
+;; Combine a metafunction contract, if any, with its rules
+(define (maybe-add-contract contracts mf-p)
+  (cond
+   [(null? contracts)
+    mf-p]
+   [(= 1 (length contracts))
+    ((metafunction-combine-contract-and-rules)
+     (car contracts)
+     mf-p)]
+   [else (error 'render-metafunction "internal error: more than one contract")]))
 
 (define (render-metafunction-contract lang name doms rngs separators)
-  (hbl-append (basic-text (format "~a" name) (metafunction-style))
-              (basic-text " : " (default-style))
-              (apply hbl-append (add-between (map (λ (x) (lw->pict lang x)) doms) 
-                                             (basic-text " " (default-style))))
-              (basic-text " → " (default-style))
-              (apply hbl-append 
-                     (add-between (interleave-ctc-separators
-                                   (map (λ (x) (lw->pict lang x)) rngs)
-                                   (map (λ (x) (basic-text (format "~a" x) (default-style)))
-                                        separators))
-                                  (basic-text " " (default-style))))))
+  ((adjust 'metafunction-contract)
+   (hbl-append ((current-text) (format "~a" name) (metafunction-style) (metafunction-font-size))
+               (basic-text " : " (default-style))
+               (apply hbl-append (add-between (map (λ (x) (lw->pict lang x)) doms) 
+                                              (basic-text " " (default-style))))
+               (basic-text " → " (default-style))
+               (apply hbl-append 
+                      (add-between (interleave-ctc-separators
+                                    (map (λ (x) (lw->pict lang x)) rngs)
+                                    (map (λ (x) (basic-text (format "~a" x) (default-style)))
+                                         separators))
+                                   (basic-text " " (default-style)))))))
 
 (define (interleave-ctc-separators eles betweens)
   (cond
@@ -1515,3 +1644,16 @@
    (syntax->datum 
     (lw/ct:to-lw/proc stx #f))))
 
+
+;; Break an append-flattened `l` back out into a list of
+;; lists like `wrt`
+(define (unappend l wrt)
+  (cond
+   [(null? wrt)
+    (unless (null? l) (error 'unappend "mismatch"))
+    null]
+   [(null? (car wrt)) (cons null (unappend l (cdr wrt)))]
+   [else
+    (define r (unappend (cdr l) (cons (cdar wrt) (cdr wrt))))
+    (cons (cons (car l) (car r))
+          (cdr r))]))

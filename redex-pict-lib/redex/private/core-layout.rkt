@@ -59,6 +59,9 @@
          left-curly-bracket-middle-piece
          left-curly-bracket-lower-hook
          curly-bracket-extension
+
+         current-render-pict-adjust
+         adjust
          
          ;; for test suite
          build-lines
@@ -181,14 +184,15 @@
     (parameterize ([dc-for-text-size (make-object bitmap-dc% (make-object bitmap% 1 1))])
       (lw->pict nts lw)))
   
-  (define (lw->pict nts lw)
-    (lines->pict 
+  (define (lw->pict nts lw [extra-adjust values])
+    (lines->pict
      (setup-lines 
       (build-lines 
        (if (compiled-lang? nts)
            (language-nts nts)
            nts)
-       (apply-rewrites lw)))))
+       (apply-rewrites lw)))
+     extra-adjust))
   
   (define (apply-rewrites orig-lw)
     (define (ar/lw an-lw)
@@ -638,7 +642,7 @@
   
   ;; lines->pict : (non-empty-listof line) -> pict
   ;; expects the lines to be in order from bottom to top
-  (define (lines->pict lines)
+  (define (lines->pict lines extra-adjust)
     (let ([lines-ht (make-hash)])
       
       ;; this loop builds a pict with all of the lines 
@@ -671,7 +675,9 @@
       (let ([max (apply max (map line-n lines))]
             [min (apply min (map line-n lines))])
         (let loop ([i min])
-          (let ([lines (apply lbl-superimpose (reverse (hash-ref lines-ht i (list (blank)))))])
+          (let ([lines (extra-adjust
+                        ((adjust 'lw-line)
+                         (apply lbl-superimpose (reverse (hash-ref lines-ht i (list (blank)))))))])
             (cond
               [(= i max) lines]
               [else
@@ -795,10 +801,14 @@
   (define label-font-size (make-parameter 14))
   (define delimit-ellipsis-arguments? (make-parameter #t))
 
+  (define current-render-pict-adjust (make-parameter (lambda (p mode) p)))
+
+(define ((adjust mode) p) ((current-render-pict-adjust) p mode))
+
 (define white-square-bracket-cache (make-hash))
 (define (default-white-square-bracket open?)
   (let ([text (current-text)])
-    (text (if open? "⟦" "⟧") ; U+27E6 and U+27E7, mathematical
+    (text (if open? "⟦" "⟧") ; U+27E6 and U+27E7
           (default-style)
           (default-font-size))))
 

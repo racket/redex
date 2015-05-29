@@ -77,6 +77,10 @@
 
 (provide/contract
  [non-terminal-gap-space (parameter/c real?)]
+ [metafunction-gap-space (parameter/c real?)]
+ [metafunction-rule-gap-space (parameter/c real?)]
+ [metafunction-line-gap-space (parameter/c real?)]
+ [metafunction-combine-contract-and-rules (parameter/c (pict? pict? . -> . pict?))]
  [label-style (parameter/c text-style/c)]
  [literal-style (parameter/c text-style/c)]
  [grammar-style (parameter/c text-style/c)]
@@ -123,7 +127,11 @@
  [label-font-size (parameter/c (and/c (between/c 1 255) integer?))]
  [default-font-size (parameter/c (and/c (between/c 1 255) integer?))]
  [metafunction-font-size (parameter/c (and/c (between/c 1 255) integer?))]
- [reduction-relation-rule-separation (parameter/c (and/c integer? positive? exact?))])
+ [reduction-relation-rule-separation (parameter/c real?)]
+ [reduction-relation-rule-extra-separation (parameter/c real?)]
+ [reduction-relation-rule-line-separation (parameter/c real?)]
+
+ [current-render-pict-adjust (parameter/c (pict? symbol? . -> . pict?))])
 
 (provide
  build-lw

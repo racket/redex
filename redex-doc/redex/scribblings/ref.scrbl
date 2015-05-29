@@ -13,7 +13,7 @@
                      mrlib/graph
                      (except-in 2htdp/image make-pen text)
                      (only-in pict pict? text dc-for-text-size text-style/c
-                              vc-append hbl-append)
+                              vc-append hbl-append vl-append)
                      redex))
 
 @(define-syntax (defpattech stx)
@@ -3446,11 +3446,31 @@ default-font-size is used for all of the font sizes except
 labels and metafunctions.
 }
 
-@defparam[reduction-relation-rule-separation sep (parameter/c (and/c integer? positive? exact?))]{  
+@defparam[reduction-relation-rule-separation sep (parameter/c real?)]{  
 
-Controls the amount of space between clauses in a reduction
+Controls the amount of space between rule in a reduction
 relation. Defaults to 4.
+
+Horizontal and compact-vertical renderings add this parameter's amount to
+@racket[(reduction-relation-rule-extra-separation)] to compute
+the full separation.
 }
+
+@defparam[reduction-relation-rule-extra-separation sep (parameter/c real?)]{  
+
+Controls the amount of space between rule in a reduction
+relation for a horizontal or compact-vertical rendering,
+in addition to @racket[(reduction-relation-rule-separation)].
+Defaults to 4.
+
+@history[#:added "1.7"]}
+
+@defparam[reduction-relation-rule-line-separation sep (parameter/c real?)]{  
+
+Controls the amount of space between lines within a reduction-relation rule.
+Defaults to 2.
+
+@history[#:added "1.7"]}
 
 @defparam[curly-quotes-for-strings on? boolean?]{
 
@@ -3484,14 +3504,13 @@ single reduction relation.
 @defparam[white-bracket-sizing proc (-> string? number? (values number? number? number? number?))]{
 
   A parameter whose value is a function to be used when typesetting metafunctions to
-  determine how to create the @"\u301a\u301b"
-  characters. Rather than using those characters directly
-  (since glyphs tend not to be available in PostScript
-  fonts), they are created by combining two ‘[’ characters
-  or two ‘]’ characters together.
+  determine how to create the @"\u27e6\u27e7"
+  characters with @racket[homemade-white-square-bracket], which
+  combines two @litchar{[} characters
+  or two @litchar{]} characters together.
   
   The procedure accepts a string that is either @racket["["]
-  or @racket["]"], and returns four numbers. The first two
+  or @racket["]"], and it returns four numbers. The first two
   numbers determine the offset (from the left and from the
   right respectively) for the second square bracket, and the
   second two two numbers determine the extra space added (to
@@ -3524,6 +3543,47 @@ single reduction relation.
   a relation (that was created by @racket[define-relation]). Defaults
   to @racket[4].
 }
+
+@defparam[metafunction-gap-space gap-space real?]{
+  Controls the amount of vertical space between different metafunctions
+  rendered together with @racket[render-metafunctions].
+  
+  Defaults to @racket[2].
+  
+  @history[#:added "1.7"]
+}
+
+@defparam[metafunction-rule-gap-space gap-space real?]{
+  Controls the amount of vertical space between different rules
+  within a metafunction as rendered with @racket[render-metafunction]
+  or @racket[render-metafunctions].
+  
+  Defaults to @racket[2].
+  
+  @history[#:added "1.7"]
+}
+
+@defparam[metafunction-line-gap-space gap-space real?]{
+  Controls the amount of vertical space between different lines
+  within a metafunction rule as rendered with @racket[render-metafunction]
+  or @racket[render-metafunctions].
+  
+  Defaults to @racket[2].
+  
+  @history[#:added "1.7"]
+}
+
+@defparam[metafunction-combine-contract-and-rules combine (pict? pict? . -> . pict?)]{
+  Controls the combination of a contract with the rules of a metafunction
+  when contract rendering is enabled. The first argument to the combining function
+  is a pict for the contract, and the second argument is a pict for the rules.
+
+  The default combining function uses @racket[vl-append] with a separation
+  of @racket[(metafunction-rule-gap-space)].
+
+ @history[#:added "1.7"]
+}
+
 @defparam[relation-clauses-combine combine 
                                    (parameter/c (-> (listof pict?) pict?))]{
   The @racket[combine] function is called with the list of picts that are obtained by rendering
@@ -3543,6 +3603,62 @@ single reduction relation.
   @racket[(λ (l r) (hbl-append l _=-pict r))], where @racket[_=-pict] is an equal
   sign surrounded by spaces using the default style.
 }
+
+@defparam[current-render-pict-adjust adjust (pict? symbol? . -> . pict?)]{
+ A parameter whose value is a function to adjusts picts generated as
+ various parts of a rendering. The symbol that is provided to the function
+ indicates the role of the pict. A pict-adjusting function might be installed
+ to ensure consistent spacing among multiple lines in a metafunction's
+ rendering, for example, or to adjust the color of side-condition terms.
+
+ The set of roles is meant to be extensible, and the currently
+ provided role symbols are as follows:
+
+ @itemlist[ 
+
+   @item{@racket['lw-line] --- a line with a render term (including
+         any term that fits on a single line)}
+
+   @item{@racket['language-line] --- a line on the right-hand side of
+         a production in a language grammar.}
+
+   @item{@racket['language-production] --- a production (possibly
+         multiple lines) within a language grammar.}
+
+   @item{@racket['side-condition-line] --- a line within a side condition
+         for a reduction-relation rule or metafunction rule}
+
+   @item{@racket['side-condition] --- a single side condition with a
+         group of side conditions for a reduction-relation rule or 
+         a metafunction rule}
+
+   @item{@racket['side-conditions] --- a group of side conditions
+         for a reduction-relation rule or a metafunction rule
+         including the ``where'' prefix added by
+         @racket[(where-make-prefix-pict)]}
+
+   @item{@racket['reduction-relation-line] --- a single line within a
+         reduction-relation rule}
+
+   @item{@racket['reduction-relation-rule] --- a single rule within a
+         reduction relation}
+
+   @item{@racket['metafunction-contract] --- a contract for a metafunction}
+
+   @item{@racket['metafunction-line] --- a line within a metafunction rule}
+
+   @item{@racket['metafunction-rule] --- a single rule within a metafunction}
+
+   @item{@racket['metafunctions-metafunction] --- a single
+        metafunction within a group of metafunctions that are rendered
+        together}
+
+ ]
+
+  @history[#:added "1.7"]
+}
+
+
 
 @subsection[#:tag "pink"]{Removing the Pink Background}
 
