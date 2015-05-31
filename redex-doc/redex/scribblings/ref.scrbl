@@ -182,7 +182,7 @@ identifier's lexical binding:
 
 @item{The @defpattech[any] @pattern matches any term.
 This @pattern may also be suffixed with an underscore and another
-identifier, in which case a match bindes the full name (as if it
+identifier, in which case a match binds the full name (as if it
 were an implicit @pattech[name] @pattern) and match the portion
 before the underscore.
 }
