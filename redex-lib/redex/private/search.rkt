@@ -28,6 +28,8 @@
          gen-state
          depth-dependent-order?)
 
+(provide clause-shuffle)
+
 ;; clause : head-pat eq/dqs (listof prem)
 (define-struct clause (head-pat eq/dqs prems lang name) #:transparent)
 ;; prem : (-> (listof clauses)) pat
@@ -84,7 +86,7 @@
                                 (list (make-partial-rule 
                                        fresh-pat 
                                        (if (shuffle-clauses?)
-                                           (shuffle-clauses clauses 0 bound)
+                                           ((clause-shuffle) clauses 0 bound)
                                            (order-clauses clauses))
                                        '() bound))
                                 bound)))
@@ -171,7 +173,7 @@
             (make-partial-rule (prem-pat prem) 
                                (if (positive? bound)
                                    (if (shuffle-clauses?)
-                                       (shuffle-clauses prem-cls depth bound)
+                                       ((clause-shuffle) prem-cls depth bound)
                                        (order-clauses prem-cls))
                                    (order-clauses prem-cls))
                                (cons n tr-loc)
@@ -186,6 +188,8 @@
   (if (depth-dependent-order?)
       (shuffle/binomial cs depth bound)
       (shuffle cs)))
+
+(define clause-shuffle (make-parameter shuffle-clauses))
 
 (define (shuffle/binomial clauses depth bound)
   (random-order clauses depth (+ depth bound) 
