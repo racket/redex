@@ -1204,6 +1204,13 @@
                       [(null? scs) #f]
                       [(member 'or scs) #f]
                       [else (handle-single-side-condition scs)])]))))
+  (define contractss
+    (for/list ([lhs/contracts (in-list lhs/contractss)]
+               [rhss (in-list rhsss)])
+      (for/list ([lhs/contract (in-list lhs/contracts)]
+                 [rhs (in-list rhss)]
+                 #:when (equal? rhs 'contract))
+        lhs/contract)))
   (case mode
     [(horizontal)
      (define (adjust-for-fills rowsss)
@@ -1287,13 +1294,6 @@
            (if (eq? p 'fill)
                col
                (ltl-superimpose col (blank (pict-width p) 0))))))
-     (define contractss
-       (for/list ([lhs/contracts (in-list lhs/contractss)]
-                  [rhss (in-list rhsss)])
-         (for/list ([lhs/contract (in-list lhs/contracts)]
-                    [rhs (in-list rhss)]
-                    #:when (equal? rhs 'contract))
-           lhs/contract)))
      (apply vl-append
             (metafunction-gap-space)
             (for/list ([rowss (in-list rowsss)]
@@ -1324,7 +1324,8 @@
             (metafunction-gap-space)
             (for/list ([lhs/contracts (in-list lhs/contractss)]
                        [scs (in-list scss)]
-                       [rhss (in-list rhsss)])
+                       [rhss (in-list rhsss)]
+                       [contracts (in-list contractss)])
               ((adjust 'metafunctions-metafunction)
                (maybe-add-contract
                 contracts
