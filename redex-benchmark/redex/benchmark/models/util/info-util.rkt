@@ -16,7 +16,8 @@
   (hash 'grammar 'adhoc-mod
         'enum 'enum-mod
         'ordered 'ordered-mod
-        'typed 'typed-mod))
+        'typed 'typed-mod
+        'typed+rr 'typed+rr-mod))
 
 (define (get-name/modpaths filename type path-root)
   (define model-name (first (regexp-split #rx"\\." (last (regexp-split #rx"/" filename)))))

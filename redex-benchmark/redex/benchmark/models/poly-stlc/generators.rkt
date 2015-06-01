@@ -42,6 +42,20 @@
                    [#f #f])
      (generate-term poly-stlc #:satisfying (typeof • M τ) 3))))
 
+(module+ typed+rr-mod
+  (require (only-in redex/private/generate-term
+                    gen-jf/rr))
+  (provide generate get-generator type)
+  (define type 'search+rr)
+  (define (get-generator) generate)
+  (define (generate)
+    ((match-lambda [`(typeof • ,M ,τ) M]
+                   [#f #f])
+     (gen-jf/rr
+      poly-stlc
+      (typeof • M σ)
+      #:pattern-source M red 3))))
+
 (module+ check-mod
   (provide check)
   (define (check term)
