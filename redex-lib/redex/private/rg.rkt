@@ -13,6 +13,7 @@
          racket/promise
          racket/unit
          racket/match
+         racket/set
          mrlib/tex-table)
 
 (define redex-pseudo-random-generator
@@ -155,6 +156,10 @@
          [min-size (apply min/f sizes)])
     (map cadr (filter (λ (x) (equal? min-size (car x))) (map list sizes prods)))))
 
+(define (has-base? nt base-table)
+  (not (equal? (apply min/f (hash-ref base-table nt))
+               'inf)))
+
 (define-struct rg-lang (non-cross delayed-cross base-cases))
 (define (rg-lang-cross x) (force (rg-lang-delayed-cross x)))
 (define (prepare-lang lang)
@@ -168,6 +173,8 @@
                      who what attempts (if (= attempts 1) "" "s"))])
     (raise (make-exn:fail:redex:generation-failure str (current-continuation-marks)))))
 
+;; TODO -- cache this? called repeatedly in a few different
+;; spots
 (define (compile lang what)
   (define-values/invoke-unit (generation-decisions)
     (import) (export decisions^))
@@ -471,11 +478,8 @@
               (generate/pred (unparse-pattern pat) g p? s a r)))
           generator)))
   (define (compile-non-terminals nts any?)
-    (make-immutable-hash
-     (map (λ (nt) (cons (nt-name nt)
-                        (map (λ (p) (compile (rhs-pattern p) any?))
-                             (nt-rhs nt))))
-          nts)))
+    (collect-non-terminals nts (lambda (rhsp)
+                                 (compile rhsp any?))))
   (define (compile-language lang bases any?)
     (make-rg-lang
      (compile-non-terminals (compiled-lang-lang lang) any?)
@@ -494,11 +498,20 @@
                       [else t])) 
               (bindings e)))))
 
+(define (collect-non-terminals nts rhs-op)
+  (make-immutable-hash
+   (map (λ (nt) (cons (nt-name nt)
+                      (map (λ (p) (rhs-op (rhs-pattern p)))
+                           (nt-rhs nt))))
+        nts)))
+
 (define-struct base-cases (delayed-cross non-cross))
 (define (base-cases-cross x) (force (base-cases-delayed-cross x)))
 
 ;; find-base-cases : (list/c nt) -> base-cases
-(define (find-base-cases lang)
+(define (find-base-cases lang 
+                         #:ground-value [ground-val (lambda (_) 0)]
+                         #:pat-min/max [pmn max/f])
   (define nt-table (make-hash))
   (define changed? #f)
   (define (nt-get nt) (hash-ref nt-table nt 'inf))
@@ -512,10 +525,11 @@
     (nt-set (cons cross? (nt-name nt)) (apply min/f (map process-rhs (nt-rhs nt)))))
   
   (define (process-rhs rhs)
-    (let ([nts (rhs->nts (rhs-pattern rhs))])
+    (let* ([rp (rhs-pattern rhs)]
+           [nts (rhs->nts rp)])
       (if (null? nts) 
-          0
-          (add1/f (apply max/f (map nt-get nts))))))
+          (ground-val rp)
+          (add1/f (apply pmn (map nt-get nts))))))
   
   ;; rhs->path : pattern -> (listof (cons/c boolean symbol))
   ;; determines all of the non-terminals in a pattern
@@ -738,6 +752,157 @@
                         (map (λ (v) (if (class? v) (rewrite v) v)) vars))]
         [(? list?) (map recur pat)]
         [_ pat]))))
+
+(define fbh-cache-size 5)
+(define fbh-table (hash))
+
+(define (find-hole-base-cases lang)
+  (cond
+   [(hash-ref fbh-table lang #f) => values]
+   [else
+    (define bcs
+      (find-base-cases lang
+                       #:ground-value (lambda (ground-pat)
+                                        (if (eq? ground-pat 'hole)
+                                            0
+                                            'inf))
+                       
+                       #:pat-min/max min/f))
+    (if ((length (hash-keys fbh-table)) . < . fbh-cache-size)
+        (set! fbh-table (hash-set fbh-table lang bcs))
+        (set! fbh-table (hash lang bcs)))
+    bcs]))
+       
+
+(define context-pat-size (make-parameter 1))
+
+(define (make-seeded-pattern-generator lang pattern id seed)
+  (define hole-base-table (base-cases-non-cross
+                           (find-hole-base-cases lang)))
+  (lambda ()
+    (generalize-nts
+            (pat-subst pattern id
+                       (eliminate-context (drop-side-conditions seed)
+                                          lang hole-base-table)))))  
+
+(define (eliminate-context pat lang [hole-base-table #f])
+  (unless hole-base-table
+    (set! hole-base-table (base-cases-non-cross
+                           (find-hole-base-cases lang))))
+  (let recur ([pat pat]
+              [in-context? #f])
+    (walk-a-pattern
+     pat
+     [`(in-hole ,p1 ,p2)
+      (plug-pat (pat-name-append (recur p1 #t) 'c)
+                (pat-name-append (wp-recur p2) 'p))]
+     [`(nt ,name)
+      (if (and in-context? 
+               (has-base? name hole-base-table))
+          (random-pat lang pat hole-base-table (context-pat-size))
+          pat)])))
+
+(define (replace-nt pat old-nt new-nt)
+  (walk-a-pattern
+   pat
+   [`(nt ,(? (lambda (id) (eq? id old-nt))))
+    `(nt ,new-nt)]))
+     
+(define (plug-pat pat hole-stuff)
+  (walk-a-pattern
+   pat
+   [`hole hole-stuff]))
+
+(define (pat-subst pat id s-pat)
+  (walk-a-pattern
+   pat
+   [`(name ,(? (lambda (nm) (eq? nm id))) ,p)
+    s-pat]))
+
+(define (drop-side-conditions pat)
+  (walk-a-pattern
+   pat
+   [`(side-condition ,p ,_ ,_)
+    (wp-recur p)]))
+
+(define (generalize-nts pat)
+  (walk-a-pattern
+   pat
+   [`(nt ,_) `any]))
+
+(define (pat-name-append pat app-id)
+  (walk-a-pattern
+   pat
+   [`(name ,id ,p)
+    `(name ,(string->symbol (string-append (symbol->string id) "_"
+                                           (symbol->string app-id)))
+      ,(wp-recur p))]))
+
+(define (pat-vars pat)
+    (walk-a-pattern
+     pat
+     #:base-func (λ (_) (set))
+     [`(name ,var ,pat)
+      (set-add (wp-recur pat) var)]
+     [`(in-hole ,p1 ,p2)
+      (set-union (wp-recur p2) (wp-recur p2))]
+     [`(mismatch-name ,var ,pat)
+      (set-add (wp-recur pat) var)]
+     [`(side-condition ,p ,_ ,_)
+      (wp-recur p)]
+     [`(list ,lpats ...)
+      (for/fold ([s (set)])
+                ([lpat (in-list lpats)])
+        (set-union
+         (match lpat
+           [`(repeat ,p ,name ,mismatch?)
+            (wp-recur p)]
+           [_ (wp-recur lpat)]) s))]))
+
+(define (random-pat lang pat base-table size)
+  (define nt->productions (collect-non-terminals
+                           (compiled-lang-lang lang)
+                           values))
+  (define (new-name/sz nt-name size-arg)
+    (string->symbol (string-append (symbol->string nt-name) "_"
+                                   (number->string size-arg))))
+  (let recur ([pat pat]
+              [size size])
+    (walk-a-pattern
+     pat
+     [`(nt ,name)
+      (define productions (hash-ref nt->productions name))
+      (if (has-base? name base-table)
+          (recur (pick-from-list
+                  (if (zero? size)
+                      (min-prods name productions base-table)
+                      productions))
+                 (sub1 size))
+          `(name ,(new-name/sz name size) ,pat))]
+     [`(name ,var ,pat)
+      `(name ,(new-name/sz var size) ,(wp-recur pat))]
+     [`(mismatch-name ,var ,pat)
+      `(mismatch-name ,(new-name/sz var size) ,(wp-recur pat))])))
+
+#|
+(require racket/trace)
+
+(trace make-seeded-pattern-generator
+       drop-side-conditions
+       eliminate-context
+       pat-subst)
+|#
+;; TODO
+(provide eliminate-context
+         random-pat
+         context-pat-size
+         base-cases-non-cross
+         find-hole-base-cases
+         has-base?
+         plug-pat
+         make-seeded-pattern-generator
+         replace-nt
+         generalize-nts)
 
 ;; used in generating the `any' pattern
 (define-language sexp (sexp variable string number hole (sexp ...) boolean))

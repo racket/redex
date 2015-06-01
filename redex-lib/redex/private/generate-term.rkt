@@ -832,12 +832,7 @@
                                  [`(,jf-name (,trms (... ...)))
                                   `(,jf-name ,@trms)]
                                  [#f #f])))
-                         #`(make-jf-gen/proc 'jf/mf-id #,clauses lang-id 'pat size)))))]
-          [_
-           (raise-syntax-error 'redex-generator 
-                               "expected an integer depth bound"
-                               stx
-                               #'rest)])]
+                         #`(make-jf-gen/proc 'jf/mf-id #,clauses lang-id 'pat size)))))])]
        [(metafunc #'jf/mf-id)
         (syntax-case #'rest ()
           [(= res size)
@@ -868,6 +863,46 @@
                          "expected an identifier in the language position"
                          stx
                          #'not-lang-id)]))
+
+(define-syntax (gen-jf/rr stx)
+  (syntax-case stx ()
+    [(_ lang-id (jf/mf-id . args) 
+        #:pattern-source nt rr size)
+     (let* ([j-f (lookup-judgment-form-id #'jf/mf-id)]
+            [clauses (judgment-form-gen-clauses j-f)]
+            [nts (definition-nts #'lang-id stx 'redex-generator)]
+            [relation? (judgment-form-relation? j-f)]
+            [args-stx (if relation?
+                          (syntax/loc #'args (args))
+                          #'args)])
+       (with-syntax* ([(syncheck-exp pat (names ...) (names/ellipses ...))
+                       (rewrite-side-conditions/check-errs #'lang-id 'redex-generator #t args-stx)]
+                      [pgs (make-pat-gens-stx #'pat #'nt #'rr)]
+                      [gen-pat #'((pick-from-list pgs))])
+         #`(begin
+             syncheck-exp
+             #,(if relation?
+                   #`(let ([gen-proc (make-jf-gen/proc 'jf/mf-id #,clauses lang-id gen-pat size)])
+                       (match (gen-proc)
+                         [`(,jf-name (,trms (... ...)))
+                          `(,jf-name ,@trms)]
+                         [#f #f]))
+                   #`((make-jf-gen/proc 'jf/mf-id #,clauses lang-id gen-pat size))))))]))
+                                                    
+(define-for-syntax (make-pat-gens-stx base-pat id source)
+    #`(map (lambda (rhs)
+             (make-seeded-pattern-generator (reduction-relation-lang #,source) 
+                                            '#,base-pat
+                                            '#,id rhs))
+           (get-rr-lhss #,source)))
+   
+
+(define (get-rr-lhss r)
+  (map (lambda (p) ((rewrite-proc-lhs p) (reduction-relation-lang r)))
+       (reduction-relation-make-procs r)))
+
+(define (make-jf-gen/pat-gen/proc jf-id mk-clauses lang make-pat size)
+  (make-jf-gen/proc jf-id mk-clauses lang (make-pat) size))
 
 (define (make-jf-gen/proc jf-id mk-clauses lang pat size)
   (define gen (search/next (mk-clauses) pat size lang))
@@ -915,3 +950,5 @@
          (struct-out exn:fail:redex:test)
          pick-an-index
          depth-dependent-order?)
+
+(provide gen-jf/rr)

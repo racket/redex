@@ -895,6 +895,7 @@
                            [(hash-has-key? (compiled-lang-collapsible-nts lang) id)
                             (loop (hash-ref (compiled-lang-collapsible-nts lang) id) (sub1 depth))]
                            [else pat])]
+                        ;; TODO: the following doesn't always return pat*'s
                         [`(name ,name ,npat)
                          (if (bound? npat)
                              (match-let ([(p*e `(name ,n ,(bound)) e-new) (resolve pat e)])

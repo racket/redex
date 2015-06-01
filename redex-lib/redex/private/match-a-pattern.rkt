@@ -1,8 +1,13 @@
 #lang racket/base
 (require racket/match 
+         racket/stxparam
          (for-syntax racket/match
                      racket/base))
-(provide match-a-pattern match-a-pattern/single-base-case)
+
+(provide match-a-pattern 
+         match-a-pattern/single-base-case
+         walk-a-pattern
+         wp-recur)
 
 #|
 
@@ -152,3 +157,55 @@ turns into this:
 
 (define-syntax (match-a-pattern stx) (match-a-pattern/proc stx #f))
 (define-syntax (match-a-pattern/single-base-case stx) (match-a-pattern/proc stx #t))
+
+(define-syntax-parameter wp-recur
+  (lambda (stx)
+    (raise-syntax-error (syntax-e stx)
+                        "used outside of walk-a-pattern")))
+
+(define-syntax (walk-a-pattern stx)
+  (syntax-case stx ()
+    [(walk-a-pattern pat [lhs rhs ...] ...)
+     #'(walk-a-pattern pat #:base-func values
+                       [lhs rhs ...] ...)]
+    [(walk-a-pattern pat #:base-func bf
+                     [lhs rhs ...] ...)
+     (with-syntax ([(recur) (generate-temporaries (list #'recur))])
+       #'(let recur ([pat pat])
+           (syntax-parameterize ([wp-recur (make-rename-transformer #'recur)])
+             (match pat
+               [lhs rhs ...] ...
+               [_ (match-a-pattern 
+                   pat
+                   [`any (bf pat)]
+                   [`number (bf pat)]
+                   [`string (bf pat)]
+                   [`natural (bf pat)]
+                   [`integer (bf pat)]
+                   [`real (bf pat)]
+                   [`boolean (bf pat)]
+                   [`variable (bf pat)]
+                   [`(variable-except ,vars (... ...)) (bf pat)]
+                   [`(variable-prefix ,var) (bf pat)]
+                   [`variable-not-otherwise-mentioned (bf pat)]
+                   [`hole (bf pat)]
+                   [`(nt ,name) (bf pat)]
+                   [`(name ,var ,pat)
+                    `(name ,var ,(recur pat))]
+                   [`(mismatch-name ,var ,pat)
+                    `(mismatch-name ,var ,(recur pat))]
+                   [`(in-hole ,p1 ,p2)
+                    `(in-hole ,(recur p1) ,(recur p2))]
+                   [`(hide-hole ,p)
+                    `(hide-hole p)]
+                   [`(side-condition ,p ,exp ,srcloc)
+                    `(side-condition ,(recur p) ,exp ,srcloc)]
+                   [`(cross ,nt) (bf pat)]
+                   [`(list ,lpats (... ...))
+                    `(list
+                      ,@(for/list ([lpat (in-list lpats)])
+                          (match lpat
+                            [`(repeat ,p ,name ,mismatch?)
+                             `(repeat ,(recur p) ,name ,mismatch?)]
+                            [_ (recur lpat)])))]
+                   [(? (compose not pair?)) (bf pat)])]))))]))
