@@ -1067,13 +1067,7 @@
   
   (define (handle-single-side-condition scs)
     (define-values (fresh where/sc) (partition metafunc-extra-fresh? scs))
-    (side-condition-pict 
-     (foldl (λ (clause picts) 
-              (foldr (λ (l ps) (cons (wrapper->pict l) ps))
-                     picts (metafunc-extra-fresh-vars clause)))
-            '() fresh)
-     (filter
-      values
+    (define side-cond-picts
       (for/list ([thing (in-list where/sc)])
         (match thing
           [(struct metafunc-extra-where (lhs rhs))
@@ -1081,13 +1075,22 @@
           [(struct metafunc-extra-side-cond (expr))
            (wrapper->pict expr)]
           [`(clause-name ,n) #f])))
+    (side-condition-pict 
+     (foldl (λ (clause picts) 
+              (foldr (λ (l ps) (cons (wrapper->pict l) ps))
+                     picts (metafunc-extra-fresh-vars clause)))
+            '() fresh)
+     (filter
+      values
+      side-cond-picts)
      (cond
        [vertical-side-conditions? 
         ;; maximize line breaks:
         0]
        [compact-side-conditions?
         ;; maximize line break as needed:
-        max-line-w/pre-sc]
+        (apply max max-line-w/pre-sc
+               (map pict-width side-cond-picts))]
        [else 
         ;; no line breaks:
         +inf.0])))
