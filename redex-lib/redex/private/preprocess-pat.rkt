@@ -2,7 +2,7 @@
 
 (require racket/match
          racket/set
-         unstable/hash
+         racket/hash
 
          "env.rkt"
          "error.rkt"

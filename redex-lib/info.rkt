@@ -12,8 +12,7 @@
                "tex-table"
                "profile-lib"
                "typed-racket-lib"
-               "unstable-2d"
-               "unstable-list-lib"))
+               "unstable-2d"))
 (define build-deps '("rackunit-lib"))
 
 (define pkg-desc "implementation (no documentation) part of \"redex\"")
