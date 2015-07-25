@@ -281,12 +281,15 @@ matches lists of three @tt{e}s, but where all three of them are
 distinct.
 
 If the @tt{_!_} is used under the ellipsis then the ellipsis is effectively
-ignored. That is, a pattern like this:
+ignored while checking to see if the @tt{e}s are different. For example,
+the @pattern @racket[(e_!_1 ...)] matches any sequence of @tt{e}s, as long
+as they are all distinct. Also, unlike @tt{e_1} patterns, the nesting depth
+of @tt{_!_} patterns do not have to be the same. For example, this pattern:
 
 @racketblock[(e_!_1 ... e_!_1)]
 
-matches all sequences of @racket[e]s that have at least one element and are
-all distinct.
+matches all sequences of @racket[e]s that have at least one element, as long
+as they are all distinct.
 
 Unlike a @tt{_} @|pattern|, the @tt{_!_} @|pattern|s do not bind names.
 
