@@ -308,6 +308,7 @@
 (define (default-generator lang pat)
   (define ad-hoc-generator ((compile lang 'redex-check) pat))
   (define enum (pat-enumerator (compiled-lang-enum-table lang) pat))
+  (define compiled-pat (compile-pattern lang pat #f))
   (cond
     [enum
      (define in-bounds (if (finite-enum? enum)
@@ -318,11 +319,21 @@
      (define interleave-time (+ start-time (* 1000 10))) ;; 10 seconds later
      (define pure-random-start-attempt #f)
      (define pure-random-time (+ start-time (* 1000 60 10))) ;; 10 minutes later
+     
      (λ (_size _attempt _retries)
+       (define (enum-ith/fallback enum n)
+         (define val (enum-ith enum n))
+         (if (match-pattern? compiled-pat val)
+             (values val 'ignored)
+             ;; this _attempt argument is wrong, but we don't care,
+             ;; this is just a bug avoidance change.
+             ;; when the enumerator properly handles (x_!_1 ...) patterns,
+             ;; then remove enum-ith/fallback and just use enum-ith
+             (ad-hoc-generator _size _attempt _retries)))
        (define now (current-inexact-milliseconds))
        (cond
          [(<= now interleave-time)
-          (values (enum-ith enum (in-bounds (- _attempt 1))) 'ignored)]
+          (enum-ith/fallback enum (in-bounds (- _attempt 1)))]
          [(<= now pure-random-time)
           (unless interleave-start-attempt (set! interleave-start-attempt _attempt))
           (define interleave-attempt (- _attempt interleave-start-attempt))
@@ -331,7 +342,7 @@
              (ad-hoc-generator _size (/ (- interleave-attempt 1) 2) _retries)]
             [else
              (define enum-id (in-bounds (+ interleave-start-attempt (/ interleave-attempt 2) -1)))
-             (values (enum-ith enum enum-id) 'ignored)])]
+             (enum-ith/fallback enum enum-id)])]
          [else
           (unless pure-random-start-attempt (set! pure-random-start-attempt _attempt))
           (ad-hoc-generator _size
