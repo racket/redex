@@ -8,6 +8,7 @@
          "struct.rkt"
          "match-a-pattern.rkt"
          (for-syntax "reduction-semantics.rkt")
+         racket/list
          racket/dict
          racket/contract
          racket/promise
@@ -221,14 +222,23 @@
   (define (generate-sequence gen env vars length)
     (define (split-environment env)
       (foldl (λ (var seq-envs)
-               (let ([vals (hash-ref env var #f)])
-                 (if vals
-                     (map (λ (seq-env val) (hash-set seq-env var val)) seq-envs vals)
-                     seq-envs)))
+               (cond
+                 [(mismatch? var) seq-envs]
+                 [else
+                  (define vals (hash-ref env var #f))
+                  (if vals
+                      (map (λ (seq-env val) (hash-set seq-env var val)) seq-envs vals)
+                      seq-envs)]))
              (build-list length (λ (_) #hash())) vars))
     (define (merge-environments seq-envs)
       (foldl (λ (var env)
-               (hash-set env var (map (λ (seq-env) (hash-ref seq-env var)) seq-envs)))
+               (define list-of-vals (map (λ (seq-env) (hash-ref seq-env var)) seq-envs))
+               (cond
+                 [(mismatch? var)
+                  (define existing (hash-ref env var '()))
+                  (hash-set env var (apply append existing list-of-vals))]
+                 [else
+                  (hash-set env var list-of-vals)]))
              env vars))
     (define-values (seq envs)
       (let recur ([envs (split-environment env)])
@@ -251,11 +261,10 @@
                   (let ([vals (make-hash)])
                     (hash-set! groups group vals)
                     vals))))
-    (for/and ([(name val) env])
-      (or (not (mismatch? name))
-          (let ([prior (get-group (mismatch-var name))])
-            (and (not (hash-ref prior val #f))
-                 (hash-set! prior val #t))))))
+    (for/and ([(name val) (in-hash env)]
+              #:when (mismatch? name))
+      (= (length (remove-duplicates val))
+         (length val))))
   
   (define empty-env #hash())
   
@@ -274,15 +283,11 @@
     
     (define vars-table (make-hash))
     (define (find-vars pat) (hash-ref vars-table pat '()))
-    (define mismatch-id 0)
     (define-values (rewritten-pat vars)
       (let loop ([pat pat])
         (define (add/ret pat vars) 
           (hash-set! vars-table pat vars)
           (values pat vars))
-        (define (build-mismatch var) 
-          (set! mismatch-id (+ mismatch-id 1))
-          (make-mismatch mismatch-id var))
         (match-a-pattern pat
           [`any (values pat '())]
           [`number (values pat '())]
@@ -301,7 +306,7 @@
            (define-values (p-rewritten p-names) (loop p))
            (add/ret `(name ,name ,p-rewritten) (cons name p-names))]
           [`(mismatch-name ,name ,p)
-           (define mm (build-mismatch name)) 
+           (define mm (make-mismatch name))
            (define-values (p-rewritten p-names) (loop p))
            (add/ret `(mismatch-name ,mm ,p-rewritten)
                     (cons mm p-names))]
@@ -325,8 +330,7 @@
                (match lpat 
                  [`(repeat ,p ,name ,mismatch-name)
                   (define l1 (if name (list name) '()))
-                  (define mm (and mismatch-name
-                                  (build-mismatch mismatch-name)))
+                  (define mm (and mismatch-name (make-mismatch mismatch-name)))
                   (define l2 (if mm (cons mm l1) l1))
                   (define-values (p-rewritten p-vars) (loop p))
                   (values (cons `(repeat ,p-rewritten ,name ,mm) ps-rewritten)
@@ -408,7 +412,7 @@
                    (set! mismatches? #t)
                    (λ (r s a e f)
                      (let-values ([(t e) (g r s a e f)])
-                       (values t (hash-set e id t)))))]
+                       (values t (hash-set e id (cons t (hash-ref e id '())))))))]
                 [`(in-hole ,context ,filler)
                  (let ([c-context (recur context)]
                        [c-filler (recur filler)])
@@ -450,7 +454,7 @@
                           (let*-values ([(seq env) (generate-sequence (λ (e) (elemg r s a e f)) env0 vars len)]
                                         [(env) (if name (hash-set env name len) env)]
                                         [(env) (if mismatch-name 
-                                                   (hash-set env mismatch-name len)
+                                                   (hash-set env mismatch-name (list len))
                                                    env)]
                                         [(tail env) (tailg r s a env f)])
                             (values (append seq tail) env))))]
@@ -629,7 +633,7 @@
 
 (define-struct class (id) #:transparent)
 
-(define-struct mismatch (id var) #:transparent)
+(define-struct mismatch (var) #:transparent)
 
 (define-struct binder (name) #:transparent)
 (define binder-pattern
@@ -654,7 +658,7 @@
 (define unparse-pattern
   (match-lambda
     [(struct binder (name)) name]
-    [(struct mismatch (id var)) var]
+    [(struct mismatch (var)) var]
     [(list-rest (struct ellipsis (name sub-pat _ _)) rest)
      (let ([ellipsis (if (mismatch? name) (mismatch-var name) name)])
        (list* (unparse-pattern sub-pat) ellipsis (unparse-pattern rest)))]
@@ -770,7 +774,6 @@
 (define generation-decisions (make-parameter random-decisions@))
 
 (provide (struct-out ellipsis) 
-         (struct-out mismatch)
          (struct-out class)
          (struct-out binder)
          (struct-out rg-lang)

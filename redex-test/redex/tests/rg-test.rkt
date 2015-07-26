@@ -1,6 +1,7 @@
 #lang racket
 
 (require "test-util.rkt"
+         (only-in redex/reduction-semantics redex-match)
          redex/private/reduction-semantics
          redex/private/judgment-form
          redex/private/matcher
@@ -323,6 +324,7 @@
     (n number)
     (q literal)
     (z 4))
+
   (test
    (generate-term/decisions 
     lang a 2 0
@@ -353,12 +355,12 @@
          ((0 ..._!_1) ... (1 ..._!_1) ...)
          5 0
          (decisions #:seq (list (λ (_) 2) (λ (_) 3) (λ (_) 4) (λ (_) 2) (λ (_) 3) (λ (_) 4)
-                                (λ (_) 2) (λ (_) 3) (λ (_) 4) (λ (_) 1) (λ (_) 3))))
-        '((0 0 0) (0 0 0 0) (1 1 1)))
+                                (λ (_) 2) (λ (_) 3) (λ (_) 4) (λ (_) 1) (λ (_) 5))))
+        '((0 0 0) (0 0 0 0) (1 1 1 1 1)))
   (test (generate-term/decisions 
          lang ((0 ..._!_1) ... (1 ..._!_1) ...) 5 0
-         (decisions #:seq (list (λ (_) 2) (λ (_) 3) (λ (_) 4) (λ (_) 2) (λ (_) 3) (λ (_) 5))))
-        '((0 0 0) (0 0 0 0) (1 1 1) (1 1 1 1 1))))
+         (decisions #:seq (list (λ (_) 2) (λ (_) 3) (λ (_) 4) (λ (_) 2) (λ (_) 2) (λ (_) 5))))
+        '((0 0 0) (0 0 0 0) (1 1) (1 1 1 1 1))))
 
 (let ()
   (define-language lang (e (variable-prefix pf)))
@@ -933,6 +935,15 @@
   
   ;; just make sure no errors
   (redex-check L cap-x #t #:attempts 10))
+
+(let ()
+  ;; just make sure no errors
+  (define-language Lambda
+    (e ::= (lambda (x_!_1 x_!_1 ...) 1))
+    (x ::= a))
+  (define e? (redex-match Lambda e))
+  (redex-check Lambda e #:ad-hoc (e? (term e)) #:print? #f)
+  (void))
 
 ;; check-reduction-relation
 (let ()
