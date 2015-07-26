@@ -147,6 +147,10 @@
                              ..._r4
                              #f)))
 
+(check-equal? (car (rsc (z_!_1 ... z_!_1 ...) (z) #t))
+              '(list (repeat (mismatch-name z_!_1 (nt z)) #f #f)
+                     (repeat (mismatch-name z_!_1 (nt z)) #f #f)))
+
 ;;
 ;; test the normalization of the ellipses underscores
 ;;

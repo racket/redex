@@ -221,20 +221,24 @@
                     orig-stx
                     term)]
                   [(memq prefix-sym all-nts)
-                   (record-binder term under under-mismatch-ellipsis)
                    (record-syncheck-use term prefix-sym)
-                   (if mismatch?
-                       (values `(mismatch-name ,term (nt ,prefix-stx))
-                               '())
-                       (values `(name ,term (nt ,prefix-stx))
-                               (list (make-id/depth term (length under)))))]
+                   (cond
+                     [mismatch?
+                      (values `(mismatch-name ,term (nt ,prefix-stx))
+                              '())]
+                     [else
+                      (record-binder term under under-mismatch-ellipsis)
+                      (values `(name ,term (nt ,prefix-stx))
+                              (list (make-id/depth term (length under))))])]
                   [(memq prefix-sym underscore-allowed)
-                   (record-binder term under under-mismatch-ellipsis)
-                   (if mismatch?
-                       (values `(mismatch-name ,term ,prefix-stx)
-                               '())
-                       (values `(name ,term ,prefix-stx)
-                               (list (make-id/depth term (length under)))))]
+                   (cond
+                     [mismatch?
+                      (values `(mismatch-name ,term ,prefix-stx)
+                              '())]
+                     [else
+                      (record-binder term under under-mismatch-ellipsis)
+                      (values `(name ,term ,prefix-stx)
+                              (list (make-id/depth term (length under))))])]
                   [else
                    (raise-syntax-error
                     what
