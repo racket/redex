@@ -4,7 +4,7 @@
   (require setup/path-to-relative
            racket/runtime-path
            "test-util.rkt"
-           (for-syntax racket/base))
+           syntax/strip-context)
   (provide exec-syntax-error-tests
            exec-runtime-error-tests
            syn-err-test-namespace)
@@ -13,6 +13,7 @@
   
   (define syn-err-test-namespace (make-base-namespace))
   (parameterize ([current-namespace syn-err-test-namespace])
+    (eval '(require (for-syntax racket/base)))
     (eval '(require redex/reduction-semantics)))
   
   (define (syntax-error-test-setup thunk)
@@ -52,7 +53,7 @@
     (define-values (file line expected-message expected-sources test)
       (make-error-test spec))
     (let-values ([(actual-message actual-sources)
-                  (setup (λ () (begin (exec test) (values "" '()))))])
+                  (setup (λ () (begin (exec (strip-context test)) (values "" '()))))])
       (test/proc (λ () actual-message) expected-message line file)
       (test/proc (λ () actual-sources) expected-sources line file)))
   
@@ -100,8 +101,7 @@
 (reset-count)
 
 (parameterize ([current-namespace syn-err-test-namespace])
-  (eval (quote-syntax
-         (define-language syn-err-lang
+  (eval '(define-language syn-err-lang
            (M (M M)
               number)
            (E hole
@@ -112,10 +112,10 @@
            (Q (Q ...)
               variable)
            (UN (add1 UN)
-               zero)))))
-
+               zero))))
 
 (parameterize ([current-namespace (make-base-namespace)])
+  (eval '(require (for-syntax racket/base)))
   (eval '(require redex/reduction-semantics redex/pict))
   (eval '(define-language L
            (s a b c)))
@@ -128,6 +128,7 @@
 
 (parameterize ([current-namespace (make-base-namespace)])
   (eval '(require redex/reduction-semantics))
+  (eval '(require (for-syntax racket/base)))
   (exec-runtime-error-tests "run-err-tests/judgment-form-undefined.rktd"))
 
 (exec-syntax-error-tests "syn-err-tests/metafunction-definition.rktd")
@@ -142,6 +143,7 @@
 (exec-syntax-error-tests "syn-err-tests/judgment-holds.rktd")
 
 (parameterize ([current-namespace (make-base-namespace)])
+  (eval '(require (for-syntax racket/base)))
   (eval '(require redex/reduction-semantics))
   (eval '(define-language L
            (s a b c)))
@@ -163,6 +165,7 @@
   (exec-runtime-error-tests "run-err-tests/judgment-form-ellipses.rktd"))
 
 (parameterize ([current-namespace (make-base-namespace)])
+  (eval '(require (for-syntax racket/base)))
   (eval '(require redex/reduction-semantics))
   (eval '(define-language L))
   (eval '(define-metafunction L
