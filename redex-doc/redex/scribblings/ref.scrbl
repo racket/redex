@@ -1283,7 +1283,7 @@ clause, once for each @racket[or] expression, but signals to
 the typesetting library to use a large left curly brace to group
 the conditions in the @racket[or].
 
-@history[#:changed "1.4" @list{Added @racket[#:post] conditions.}]
+@history[#:changed "1.4" @list{Added @racket[#:post] conditions.}
          #:changed "1.5" @list{Added @racket[or] clauses.}]
 }
 
