@@ -2375,10 +2375,12 @@
   (and uf/f
        (uf-find uf/f)))
 
-(define (apply-reduction-relation* reductions exp 
-                                   #:cache-all? [cache-all? (current-cache-all?)]
+(define (apply-reduction-relation* reductions exp
+                                   #:all? [return-all? #f]
+                                   #:cache-all? [cache-all? (or return-all? (current-cache-all?))]
                                    #:stop-when [stop-when (λ (x) #f)])
   (let-values ([(results cycle?) (traverse-reduction-graph reductions exp
+                                                           #:all? return-all?
                                                            #:cache-all? cache-all?
                                                            #:stop-when stop-when)])
     results))
@@ -2389,55 +2391,59 @@
 ;; traverse-reduction-graph : 
 ;;  reduction-relation term #:goal (-> any boolean?) #:steps number? #:visit (-> any/c void?) -> (or/c search-success? search-failure?)
 ;;  reduction-relation term #:goal #f                #:steps number? #:visit (-> any/c void?) -> (values (listof any/c) boolean?)
-(define (traverse-reduction-graph reductions start #:goal [goal? #f] #:steps [steps +inf.0] #:visit [visit void] 
-                                  #:cache-all? [cache-all? (current-cache-all?)]
+(define (traverse-reduction-graph reductions start
+                                  #:goal [goal? #f] #:steps [steps +inf.0] #:visit [visit void] 
+                                  #:all? [return-all? #f]
+                                  #:cache-all? [cache-all? (or return-all? (current-cache-all?))]
                                   #:stop-when [stop-when (λ (x) #f)])
-  (define visited (and cache-all? (make-hash)))
+  (define visited (and (or cache-all? return-all?) (make-hash)))
   (let/ec return
-    (let ([answers (make-hash)]
-          [cycle? #f]
-          [cutoff? #f])
-      (let loop ([term start]
-                 ;; It would be better to record all visited terms, to avoid traversing
-                 ;; any part of the graph multiple times. Results from 
-                 ;;    collects/redex/trie-experiment
-                 ;; in commit
-                 ;;    152084d5ce6ef49df3ec25c18e40069950146041
-                 ;; suggest that a hash works better than a trie.
-                 [path (make-immutable-hash '())]
-                 [more-steps steps])
-        (if (and goal? (goal? term))
-            (return (search-success))
-            (cond
-              [(hash-ref path term #f)
-               (set! cycle? #t)]
-              [else
-               (visit term)
-               (cond
-                 [(stop-when term)
-                  (unless goal? 
-                    (hash-set! answers term #t))]
-                 [else
-                  (define nexts (apply-reduction-relation reductions term))
-                  (cond
-                    [(null? nexts) 
-                     (unless goal? 
-                       (hash-set! answers term #t))]
-                    [else (if (zero? more-steps)
-                              (set! cutoff? #t)
-                              (for ([next (in-list (remove-duplicates nexts))])
-                                (when (or (not visited)
-                                          (not (hash-ref visited next #f)))
-                                  (when visited (hash-set! visited next #t))
-                                  (loop next 
-                                        (hash-set path term #t) 
-                                        (sub1 more-steps)))))])])])))
-      (if goal?
-          (search-failure cutoff?)
-          (values (sort (hash-map answers (λ (x y) x))
-                        string<=?
-                        #:key (λ (x) (format "~s" x)))
-                  cycle?)))))
+    (define answers (if return-all? #f (make-hash)))
+    (define cycle? #f)
+    (define cutoff? #f)
+    (let loop ([term start]
+               ;; It would be better to record all visited terms, to avoid traversing
+               ;; any part of the graph multiple times. Results from 
+               ;;    collects/redex/trie-experiment
+               ;; in commit
+               ;;    152084d5ce6ef49df3ec25c18e40069950146041
+               ;; suggest that a hash works better than a trie.
+               [path (make-immutable-hash '())]
+               [more-steps steps])
+      (if (and goal? (goal? term))
+          (return (search-success))
+          (cond
+            [(hash-ref path term #f)
+             (set! cycle? #t)]
+            [else
+             (visit term)
+             (cond
+               [(stop-when term)
+                (unless goal?
+                  (when answers
+                    (hash-set! answers term #t)))]
+               [else
+                (define nexts (apply-reduction-relation reductions term))
+                (cond
+                  [(null? nexts) 
+                   (unless goal?
+                     (when answers
+                       (hash-set! answers term #t)))]
+                  [else (if (zero? more-steps)
+                            (set! cutoff? #t)
+                            (for ([next (in-list (remove-duplicates nexts))])
+                              (when (or (not visited)
+                                        (not (hash-ref visited next #f)))
+                                (when visited (hash-set! visited next #t))
+                                (loop next 
+                                      (hash-set path term #t) 
+                                      (sub1 more-steps)))))])])])))
+    (if goal?
+        (search-failure cutoff?)
+        (values (sort (hash-map (or answers visited) (λ (x y) x))
+                      string<=?
+                      #:key (λ (x) (format "~s" x)))
+                cycle?))))
 
 (define current-cache-all? (make-parameter #f))
 

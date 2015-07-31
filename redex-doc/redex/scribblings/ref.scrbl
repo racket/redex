@@ -1093,13 +1093,15 @@ names of the reductions that were used.
 @defproc[(apply-reduction-relation*
           [r reduction-relation?]
           [t any/c]
-          [#:cache-all? cache-all? boolean? (current-cache-all?)]
+          [#:all? all boolean? #f]
+          [#:cache-all? cache-all? boolean? (or all? (current-cache-all?))]
           [#:stop-when stop-when (-> any/c any) (λ (x) #f)])
          (listof any/c)]{
 
 Accepts a reduction relation and a
 term. Starting from @racket[t], it follows every reduction
-path and returns all of the terms that do not reduce further.
+path and returns either all of the terms that do not reduce further
+or all of the terms, if @racket[all?] is @racket[#t].
 If there are infinite reduction
 sequences that do not repeat, this function will not
 terminate (it does terminate if the only infinite reduction paths are cyclic).
