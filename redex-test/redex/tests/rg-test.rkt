@@ -500,20 +500,9 @@
     (C (c hole))
     (D (d hole))
     (E (e hole))
-    (F (f hole))
-    
-    (p (in-hole (hole hole) 4))
-    (q (in-hole (hole ... hole) 4)))
+    (F (f hole)))
   
   (test (generate-term L (in-hole 3 4) 5) 3)
-  (test (raised-exn-msg 
-         exn:fail? 
-         (test-match L p (generate-term L p 5)))
-        #rx"two holes")
-  (test (raised-exn-msg 
-         exn:fail?
-         (test-match L q (generate-term/decisions L q 5 0 (decisions #:seq (list (λ (_) 1))))))
-        #rx"two holes")
   
   (let ([bindings #f])
     (test (generate-term 
@@ -585,8 +574,8 @@
 ;; `hide-hole' pattern
 (let ()
   (define-language lang
-    (e (hide-hole (in-hole ((hide-hole hole) hole) 1))))
-  (test (generate-term lang e 5) (term (hole 1)))
+    (e (hide-hole (in-hole ((hide-hole hole) hole) hole))))
+  (test (generate-term lang e 5) (term (hole hole)))
   (test (plug (generate-term lang (hide-hole hole) 0) 3) 3))
 
 (define (output-error-port thunk)

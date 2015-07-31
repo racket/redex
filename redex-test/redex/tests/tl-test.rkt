@@ -1004,16 +1004,16 @@
   
   (let ()
     (define-language lamv
-      (z variable hole))
+      (z (variable hole) hole))
 
     (define-metafunction lamv
       foo : z  -> any
       [(foo hole) dontcare]
-      [(foo variable) docare])
+      [(foo (variable hole)) docare])
 
     (test (term (foo hole))
           (term dontcare))
-    (test (term (foo y))
+    (test (term (foo (y hole)))
           (term docare)))
   
   (let ()
@@ -2927,7 +2927,7 @@
           (and m (length m)))
         1)
   
-  (define-extended-language qabc-lang lc-lang (q a b c))
+  (define-extended-language qabc-lang lc-lang (q a b x))
   
   (test (redex-match qabc-lang
                      e

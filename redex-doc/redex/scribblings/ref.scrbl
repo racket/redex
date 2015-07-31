@@ -407,6 +407,11 @@ bound to @racket['()].
       exactly.}
 ]
 
+@history[#:changed "1.8" @list{
+          Patterns are syntactically checked
+          to ensure they accept exactly one or zero holes.
+          }]
+
 @defform*[[(redex-match lang @#,ttpattern term-expr)
            (redex-match lang @#,ttpattern)]]{
           

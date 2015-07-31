@@ -22,7 +22,7 @@ a self-reference in the grammar.
   var ::= symbol?     
   condition ::= (-> bindings? any) ;; any is treated like a boolean
 
-Also, the `(cross ,nt) pattern alwyas has hypenated non-terminals, ie
+Also, the `(cross ,nt) pattern always has hypenated non-terminals, ie
 (cross e) in the source turns into (cross e-e) after translation which
 means that the other cross non-terminals, e.g. (cross e-v), are not
 directly available as redex patterns, but can only be used via the
