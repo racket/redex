@@ -6,7 +6,7 @@
 
 (define deps '(("data-enumerate-lib" #:version "1.2")
                "scheme-lib"
-               "base"
+               ("base" #:version "6.2.900.6")
                "data-lib"
                "math-lib"
                "tex-table"
