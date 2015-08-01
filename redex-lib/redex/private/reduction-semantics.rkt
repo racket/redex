@@ -2291,7 +2291,7 @@
        (with-syntax ([(all-names ...) (sort (hash-map names-table (λ (x y) x)) string<=? #:key symbol->string)]
                      [((prefix old-lang _1 _2 _3) ...) normalized-orig-langs]
                      [(define-language-name) (generate-temporaries #'(name))])
-         #'(begin
+         #`(begin
              (define define-language-name (union-language (list (list 'prefix old-lang) ...)))
              (define-syntax name
                (make-set!-transformer

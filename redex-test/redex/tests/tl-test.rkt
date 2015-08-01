@@ -3317,6 +3317,13 @@
   
   (test #t (regexp-match? #rx"^compatible-closure:.*fred" err-msg)))
 
+(let ()
+  (define-language L1)
+  (define-language L2)
+  (define-union-language L3 L1 L2)
+  (define-extended-language L4 L3)
+  (void))
+
 ;; this tests that context-closure (and thus compatible-closure)
 ;; play along properly with way extend-reduction-relation handles
 ;; language extensions
