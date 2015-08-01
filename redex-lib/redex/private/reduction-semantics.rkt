@@ -1980,7 +1980,7 @@
           (cond
             [(equal? (syntax-e prod) '....) (values overall previous-known previous-index)]
             [else
-             (define this-one (check-hole-sanity 'define-language prod nt->hole))
+             (define this-one (check-hole-sanity 'define-language prod nt->hole orig-prod))
              (cond
                [(equal? overall 'unknown)
                 (values this-one

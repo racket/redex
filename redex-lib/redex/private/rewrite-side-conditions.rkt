@@ -474,7 +474,10 @@
     
     (filter-duplicates what orig-stx names)
 
-    (check-hole-sanity what #'term nt->hole)
+    (when nt->hole (check-hole-sanity what
+                                      ellipsis-normalized/simplified
+                                      nt->hole
+                                      orig-stx))
 
     (with-syntax ([(name/ellipses ...) (map build-dots names)]
                   [(name ...) (map id/depth-id names)]
@@ -487,7 +490,7 @@
 ;; returns 0 if it cannot produce any hole
 ;; returns 'unknown if cannot figure out the answer (based on an 'unknown in the nt-map)
 ;; raises an error if there is inconsistency
-  (define (check-hole-sanity who pattern nt-map)
+  (define (check-hole-sanity who pattern nt-map stx-to-use-for-error-messages)
     (let loop ([pattern (syntax->datum pattern)]
                [local-stx pattern])
        (match-a-pattern pattern
@@ -519,7 +522,7 @@
                (define ctxt (loop context #'context-stx))
                (when (equal? ctxt 0)
                  (raise-syntax-error who "in-hole's first argument is expected to have a hole"
-                                     #'context-stx))
+                                     stx-to-use-for-error-messages))
                (loop contractum #'contractum-stx))])]
          [`(hide-hole ,pat)
           (syntax-case local-stx ()
@@ -528,7 +531,7 @@
                (define pat-resp (loop pat #'pat-stx))
                (when (equal? pat-resp 0)
                  (raise-syntax-error who "hide-hole's argument is expected to have a hole"
-                                     #'pat-stx))
+                                     stx-to-use-for-error-messages))
                0)])]
          [`(side-condition ,pat ,condition ,expr)
           (syntax-case local-stx ()
@@ -551,7 +554,8 @@
                        [(repeat pat-stx _1 _2)
                         (begin
                           (when (equal? (loop pat #'pat-stx) 1)
-                            (raise-syntax-error who "repeated patterns may not have holes" #'pat-stx))
+                            (raise-syntax-error who "repeated patterns may not have holes"
+                                                stx-to-use-for-error-messages))
                           (l-loop (cdr pats) (cdr pat-stxes) found-one all-0?))])]
                     [pat
                      (define this-one (loop pat (car pat-stxes)))
@@ -559,7 +563,7 @@
                        (raise-syntax-error
                         who
                         "two different parts of a sequence may not both have holes"
-                        #f #f (list (car pat-stxes) found-one)))
+                        stx-to-use-for-error-messages))
                      (l-loop (cdr pats)
                              (cdr pat-stxes)
                              (if (equal? this-one 1) (car pat-stxes) found-one)
