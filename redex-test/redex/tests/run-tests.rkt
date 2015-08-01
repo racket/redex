@@ -23,7 +23,14 @@
      "rewrite-side-condition-test.rkt"
      "unify-tests.rkt"
      "dq-test.rkt"
+
+     "tl-language.rkt"
+     "tl-metafunctions.rkt"
+     "tl-relation.rkt"
+     "tl-reduction-relation.rkt"
+     "tl-judgment-form.rkt"
      "tl-test.rkt"
+
      "err-loc-test.rkt"
      "term-test.rkt"
      "rg-test.rkt"
