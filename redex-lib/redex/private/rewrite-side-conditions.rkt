@@ -474,15 +474,12 @@
     
     (filter-duplicates what orig-stx names)
 
-    (when nt->hole (check-hole-sanity what
-                                      ellipsis-normalized/simplified
-                                      nt->hole
-                                      orig-stx))
-
     (with-syntax ([(name/ellipses ...) (map build-dots names)]
                   [(name ...) (map id/depth-id names)]
                   [term ellipsis-normalized/simplified]
                   [void-stx void-stx])
+      (when nt->hole
+        (check-hole-sanity what #'term nt->hole orig-stx))
       #'(void-stx term (name ...) (name/ellipses ...))))
 
 ;; check-hole-sanity : pat hash[sym -o> (or/c 0 1 'unknown)] -> (or/c 0 1 'unknown)

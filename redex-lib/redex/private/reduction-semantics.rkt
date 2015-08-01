@@ -1311,7 +1311,9 @@
        (define codomain-separators (syntax-e #'codomain-separators-stx))
        (define post-condition (condition-or-false #'post-condition-stx))
        (define pats (syntax-e #'pats-stx))
-       (define syn-error-name (syntax-e #'syn-error-name))
+       (define syn-error-name (if prev-metafunction
+                                  'define-metafunction
+                                  'define-metafunction/extension))
        (define lang-nts
          (definition-nts #'lang #'orig-stx syn-error-name))
        (with-syntax ([(((original-names lhs-clauses ...) raw-rhses ...) ...)
