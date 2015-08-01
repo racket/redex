@@ -2441,7 +2441,7 @@
     (if goal?
         (search-failure cutoff?)
         (values (sort (hash-map (or answers visited) (λ (x y) x))
-                      string<=?
+                      string<?
                       #:key (λ (x) (format "~s" x)))
                 cycle?))))
 
