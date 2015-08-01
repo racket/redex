@@ -3266,7 +3266,15 @@
       (test (apply-reduction-relation* 
              red
              (term (I (delay (+inf.0 +inf.0)))))
-            '()))
+            '())
+
+      (test (apply-reduction-relation*
+             red
+             (term (I (I (I I))))
+             #:all? #t)
+            (list (term (I (I I)))
+                  (term (I I))
+                  (term I))))
     
     (let* ([S (reduction-relation
                empty-language
