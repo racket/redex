@@ -483,9 +483,10 @@
       #'(void-stx term (name ...) (name/ellipses ...))))
 
 ;; check-hole-sanity : pat hash[sym -o> (or/c 0 1 'unknown)] -> (or/c 0 1 'unknown)
-;; returns 1 if the pattern can produce a unique hole,
-;; returns 0 if it cannot produce any hole
 ;; returns 'unknown if cannot figure out the answer (based on an 'unknown in the nt-map)
+;; returns 0 if the pattern cannot produce a hole
+;; returns 1 if the pattern produces a unique hole,
+;; returns 'lots if it might produce any number of holes (0, 1, or more)
 ;; raises an error if there is inconsistency
   (define (check-hole-sanity who pattern nt-map stx-to-use-for-error-messages)
     (let loop ([pattern (syntax->datum pattern)]
@@ -501,7 +502,7 @@
          [`variable 0] 
          [`(variable-except ,vars ...) 0]
          [`(variable-prefix ,var) 0]
-         [`variable-not-otherwise-mentioned  0]
+         [`variable-not-otherwise-mentioned 0]
          [`hole 1]
          [`(nt ,id) (hash-ref nt-map id)]
          [`(name ,name ,pat)
@@ -517,16 +518,24 @@
             [(_ context-stx contractum-stx)
              (let ()
                (define ctxt (loop context #'context-stx))
-               (when (equal? ctxt 0)
-                 (raise-syntax-error who "in-hole's first argument is expected to have a hole"
-                                     stx-to-use-for-error-messages))
+               (unless (or (equal? ctxt 1) (equal? ctxt 'unknown))
+                 (raise-syntax-error
+                  who
+                  (string-append
+                   "in-hole's first argument is expected to match exactly one hole"
+                   (cond
+                     [(equal? ctxt 0)
+                      ", but it cannot match a hole"]
+                     [(equal? ctxt 'lots)
+                      ", but it may match a hole many different ways"]))
+                  stx-to-use-for-error-messages))
                (loop contractum #'contractum-stx))])]
          [`(hide-hole ,pat)
           (syntax-case local-stx ()
             [(_ pat-stx)
              (let ()
                (define pat-resp (loop pat #'pat-stx))
-               (when (equal? pat-resp 0)
+               (unless (or (equal? pat-resp 1) (equal? pat-resp 'unknown))
                  (raise-syntax-error who "hide-hole's argument is expected to have a hole"
                                      stx-to-use-for-error-messages))
                0)])]
@@ -534,37 +543,41 @@
           (syntax-case local-stx ()
             [(_ pat-stx _2 _3)
              (loop pat #'pat-stx)])]
-         [`(cross ,nt) #t]
+         [`(cross ,nt) 1]
          [`(list ,pats ...)
           (syntax-case local-stx ()
             [(_ pat-stx ...)
              (let l-loop ([pats pats]
                           [pat-stxes (syntax->list #'(pat-stx ...))]
-                          [found-one #f]
-                          [all-0? #t])
+                          [all-zeros? #t]
+                          [number-of-ones 0]
+                          [all-known? #t])
                (cond
-                 [(null? pats) (if all-0? 0 (if found-one 1 'unknown))]
+                 [(null? pats)
+                  (cond
+                    [all-zeros? 0]
+                    [(>= number-of-ones 2) 'lots]
+                    [(and (= number-of-ones 1) all-known?) 1]
+                    [else 'unknown])]
                  [else
                   (match (car pats)
                     [`(repeat ,pat ,name ,mname)
                      (syntax-case (car pat-stxes) ()
                        [(repeat pat-stx _1 _2)
-                        (begin
-                          (when (equal? (loop pat #'pat-stx) 1)
-                            (raise-syntax-error who "repeated patterns may not have holes"
-                                                stx-to-use-for-error-messages))
-                          (l-loop (cdr pats) (cdr pat-stxes) found-one all-0?))])]
+                        (let ()
+                          (define this-one (loop pat #'pat-stx))
+                          (l-loop (cdr pats) (cdr pat-stxes)
+                                  (and all-zeros? (equal? this-one 0))
+                                  (if (equal? this-one 1) +inf.0 number-of-ones)
+                                  (and all-known? (not (equal? this-one 'unknown)))))])]
                     [pat
-                     (define this-one (loop pat (car pat-stxes)))
-                     (when (and found-one (equal? this-one 1))
-                       (raise-syntax-error
-                        who
-                        "two different parts of a sequence may not both have holes"
-                        stx-to-use-for-error-messages))
-                     (l-loop (cdr pats)
-                             (cdr pat-stxes)
-                             (if (equal? this-one 1) (car pat-stxes) found-one)
-                             (and all-0? (equal? this-one 0)))])]))])]
+                     (let ()
+                       (define this-one (loop pat (car pat-stxes)))
+                       (l-loop (cdr pats)
+                               (cdr pat-stxes)
+                               (and all-zeros? (equal? this-one 0))
+                               (if (equal? this-one 1) (+ number-of-ones 1) number-of-ones)
+                               (and all-known? (not (equal? this-one 'unknown)))))])]))])]
          [(? (compose not pair?)) 0])))
 
   (define-struct id/depth (id depth))

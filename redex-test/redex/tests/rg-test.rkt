@@ -502,7 +502,7 @@
     (E (e hole))
     (F (f hole)))
   
-  (test (generate-term L (in-hole 3 4) 5) 3)
+  (test (generate-term L (in-hole hole 3) 5) 3)
   
   (let ([bindings #f])
     (test (generate-term 

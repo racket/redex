@@ -2,7 +2,8 @@
 (require "test-util.rkt"
          redex/reduction-semantics
          (only-in redex/private/matcher make-bindings make-bind)
-         racket/match)
+         racket/match
+         (for-syntax redex/private/term-fn racket/base))
 
 (module test racket/base)
 (reset-count)
@@ -752,5 +753,59 @@
                     (term number_1)])
        '1)
       '(1 1))
+
+(define-syntax (get-nt-hole-map stx)
+  (syntax-case stx ()
+    [(_ lang)
+     (identifier? #'lang)
+     #`'#,(language-id-nt-hole-map #'lang 'get-nt-hole-map)]))
+
+(test (get-nt-hole-map empty-language) (make-hash))
+
+(let ()
+  (define-language L
+    (e ::= (e e) x (λ (x) e))
+    (x ::= variable-not-otherwise-mentioned))
+  (test (get-nt-hole-map L)
+        (make-hash '((e . 0) (x . 0)))))
+
+(let ()
+  (define-language L
+    (e ::= (e e) x (λ (x) e))
+    (x ::= variable-not-otherwise-mentioned)
+    (E ::= (e E) (E e) hole))
+  (test (get-nt-hole-map L)
+        (make-hash '((e . 0) (x . 0) (E . 1)))))
+
+(let ()
+  (define-language L
+    (E ::= hole (E ...)))
+  (test (get-nt-hole-map L) (make-hash '((E . lots)))))
+
+(let ()
+  (define-language L
+    (E ::= hole))
+  
+  (define-extended-language L2 L
+    (E ::= ....))
+  
+  (test (get-nt-hole-map L2) (make-hash '((E . 1)))))
+
+(let ()
+  (define-language L
+    (e ::= (e e) x (λ (x) e))
+    (x ::= variable-not-otherwise-mentioned))
+  
+  (define-extended-language L2 L
+    (E ::= (e E) (E e) hole))
+  
+  (test (get-nt-hole-map L2) (make-hash '((e . 0) (x . 0) (E . 1)))))
+
+(let ()
+  (define-language L
+    (E hole
+       (in-hole L E))
+    (L hole))
+  (test (get-nt-hole-map L) (make-hash '((L . 1) (E  . 1)))))
 
 (print-tests-passed 'tl-language.rkt)

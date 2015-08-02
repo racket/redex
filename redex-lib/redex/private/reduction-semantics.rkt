@@ -1966,44 +1966,28 @@
                        '#,nt->hole)))
                    (define define-language-name #,language-expression))))))))]))
 
+(define-for-syntax (nt-hole-lub l r)
+  (cond
+    [(equal? l r) l]
+    [(equal? l 'unknown) r]
+    [(equal? r 'unknown) l]
+    [else 'lots]))
+
 (define-for-syntax (fill-nt-hole-map namess prodss orig-prodss nt->hole)
   (let loop ()
     (define changed? #f)
     (for ([names (in-list namess)]
           [prods (in-list prodss)]
           [orig-prods (in-list orig-prodss)])
-      (define-values (nt-hole-count _1 _2)
-        (for/fold ([overall 'unknown]
-                   [previous-known #f]
-                   [previous-index #f])
+      (define nt-hole-count
+        (for/fold ([nt-hole-count (hash-ref nt->hole (car names))])
                   ([prod (in-list (syntax->list prods))]
-                   [orig-prod (in-list (syntax->list orig-prods))]
-                   [i (in-naturals)])
+                   [orig-prod (in-list (syntax->list orig-prods))])
           (cond
-            [(equal? (syntax-e prod) '....) (values overall previous-known previous-index)]
+            [(equal? (syntax-e prod) '....) nt-hole-count]
             [else
-             (define this-one (check-hole-sanity 'define-language prod nt->hole orig-prod))
-             (cond
-               [(equal? overall 'unknown)
-                (values this-one
-                        (if (equal? this-one 'unknown) #f orig-prod)
-                        (if (equal? this-one 'unknown) #f i))]
-               [(equal? this-one 'unknown)
-                (values overall previous-known previous-index)]
-               [(equal? overall this-one)
-                (values overall previous-known previous-index)]
-               [else
-                (raise-syntax-error
-                 'define-language
-                 (string-append
-                  (format "two productions of ~a, numbers ~a and ~a"
-                          (car names)
-                          previous-index i)
-                  " (counting from zero), are inconsistent;"
-                  " one has a hole and another does not")
-                 #f
-                 previous-known
-                 (list orig-prod))])])))
+             (nt-hole-lub (check-hole-sanity 'define-language prod nt->hole orig-prod)
+                          nt-hole-count)])))
       (for ([name (in-list names)])
         (unless (equal? (hash-ref nt->hole name) nt-hole-count)
           (hash-set! nt->hole name nt-hole-count)

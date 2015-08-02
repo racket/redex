@@ -306,13 +306,11 @@ matches @ttpattern and binds using it to the name @racket[_id].
 }
 
 @item{The @tt{(@defpattech[in-hole] @ttpattern @ttpattern)} @pattern
-matches the first @|ttpattern|. This match must include exactly one match
-against the second @|ttpattern|. If there are zero matches or more
-than one match, an exception is raised.
+matches the first @|ttpattern|, looking for a way to decompose the
+term such that the second @ttpattern matches at some sub-expression
+where the @racket[hole] appears while matching the first @|ttpattern|.
 
-When matching the first argument of in-hole, the @racket[hole] @pattern
-matches any term. Then, the term that matched the hole
-@pattern is used to match against the second @|pattern|.
+The first @ttpattern must be a pattern that matches with exactly one hole.
 }
 
 @item{The @tt{(@defpattech[hide-hole] @ttpattern)} @pattern matches what
@@ -408,9 +406,11 @@ bound to @racket['()].
 ]
 
 @history[#:changed "1.8" @list{
-          Patterns are syntactically checked
-          to ensure they accept exactly one or zero holes.
-          }]
+          Non-terminals are syntactically classified
+          as either always producing exactly one hole or may
+          produce some other number of holes,
+          and the first argument to @racket[in-hole] is allowed
+          to accept only patterns that produce exactly one hole.}]
 
 @defform*[[(redex-match lang @#,ttpattern term-expr)
            (redex-match lang @#,ttpattern)]]{
@@ -3812,7 +3812,7 @@ contain all of the spacing information just as it would appear
 when being used to typeset.
 
 Each sub-expression corresponds to its own lw, and
-the element indicates what kind of subexpression it is. If
+the element indicates what kind of sub-expression it is. If
 the element is a list, then the lw corresponds to a
 parenthesized sequence, and the list contains a lw
 for the open paren, one lw for each component of the
