@@ -413,6 +413,15 @@
                    '(J () z)
                    #f
                    '()))))))))
+
+(let ()
+  (define-judgment-form empty-language #:mode (J I) [(J any)])
+  ;; test that the judgment form cache doesn't interfere with build-derivations
+  (define term 'x)
+  (test (judgment-holds (J ,term)) #t)
+  (test (build-derivations (J ,term))
+        (list (derivation '(J x) #f '()))))
+
 (let ()
   (define-language U
     (n Z (S n)))

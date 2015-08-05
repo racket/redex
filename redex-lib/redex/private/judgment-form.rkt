@@ -334,16 +334,27 @@
   (define traced (current-traced-metafunctions))
   (define cache (unbox boxed-cache))
   (define in-cache? (and (caching-enabled?)
-                         (not (eq? (hash-ref cache input not-in-cache) not-in-cache))))
+                         (let ([cache-value (hash-ref cache input not-in-cache)])
+                           (and (not (eq? cache-value not-in-cache))
+                                (if (include-entire-derivation)
+                                    (andmap derivation-with-output-only-subs cache-value)
+                                    #t)))))
   (define p-a-e (print-as-expression))
   (define (form-proc/cache recur input derivation-init)
     (parameterize ([print-as-expression p-a-e])
       (cond
         [(caching-enabled?)
-         (hash-ref!
-          cache
-          input
-          (λ () (form-proc recur input derivation-init)))]
+         (define candidate (hash-ref cache input not-in-cache))
+         (cond
+           [(or (equal? candidate not-in-cache)
+                (if (include-entire-derivation)
+                    (not (andmap derivation-with-output-only-subs candidate))
+                    #f))
+            (define computed-ans (form-proc recur input derivation-init))
+            (hash-set! cache input computed-ans)
+            computed-ans]
+           [else
+            candidate])]
         [else (form-proc recur input derivation-init)])))
   (define vecs
     (if (or (eq? 'all traced) (memq form-name traced))
@@ -872,9 +883,7 @@
             #,(if id-or-not
                   #`(let ([#,id-or-not '()])
                       #,main-stx)
-                  #`(sort #,main-stx
-                          string<=?
-                          #:key (λ (x) (format "~s" x)))))
+                  #`(sort-as-strings #,main-stx)))
         'disappeared-use
         (syntax-local-introduce #'form-name)))]
     [(_ stx-name derivation? (not-form-name . _) . _)
@@ -884,6 +893,8 @@
      (raise-syntax-error (syntax-e #'stx-name)
                          "bad syntax"
                          stx)]))
+
+(define (sort-as-strings l) (sort l string<? #:key (λ (x) (format "~s" x))))
 
 (define-syntax (judgment-holds stx)
   (syntax-case stx ()
