@@ -15,7 +15,8 @@
                      "pict-lib"
                      "redex-gui-lib"
                      "redex-benchmark"
-                     "rackunit-lib"))
+                     "rackunit-lib"
+                     "sandbox-lib"))
 
 (define pkg-desc "documentation part of \"redex\"")
 
