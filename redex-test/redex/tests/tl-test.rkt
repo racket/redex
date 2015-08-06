@@ -63,6 +63,33 @@
 
 (let ()
   (define-metafunction empty-language [(f any) ((any))])
+  (test (capture-output (test-equal (term (f 1)) (term ((2))))
+                        (test-results))
+        (regexp
+         (regexp-quote
+          "  actual: '((1))\nexpected: '((2))\n1 test failed (out of 1 total).\n"))))
+
+(let ()
+  (define-metafunction empty-language [(f any) any])
+  (test (capture-output
+         (test-equal (term (f ,(build-list 10 (λ (x) 'this-is-a-bit-longish))))
+                     (term wrong))
+         (test-results))
+        (regexp
+         (regexp-quote
+          (string-append
+           "actual:\n"
+           (apply string-append
+                  (for/list ([i (in-range 10)])
+                    (string-append
+                     (if (zero? i) "  '(" "    ")
+                     "this-is-a-bit-longish"
+                     (if (= i 9) ")\n" "\n"))))
+           "expected: 'wrong\n"
+           "1 test failed (out of 1 total).\n")))))
+
+(let ()
+  (define-metafunction empty-language [(f any) ((any))])
   (define (my-equal? x y) (and (memq x '(a b c)) (memq y '(a b c))))
   (test (capture-output (test-equal (term a) (term b) #:equiv my-equal?)
                         (test-results))

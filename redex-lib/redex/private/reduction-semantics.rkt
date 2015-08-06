@@ -17,6 +17,7 @@
          racket/contract
          racket/list
          racket/set
+         racket/pretty
          data/union-find
          (rename-in racket/match (match match:)))
 
@@ -2559,7 +2560,7 @@
           (set! visit-already-failed? #t)
           (inc-failures)
           (print-failed srcinfo)
-          (eprintf "found a term that failed #:pred: ~v\n" t)))))
+          (eprintf/value-at-end "found a term that failed #:pred" t)))))
   (let-values ([(got got-cycle?) (apply-red red arg #:visit visit)])
     
     (cond
@@ -2575,14 +2576,12 @@
            (unless (set-equal? expected got)
              (inc-failures)
              (print-failed srcinfo)
-             (for-each
-              (λ (v2) (eprintf "expected: ~v\n" v2))
-              expected)
+             (for ([v2 (in-list expected)])
+               (eprintf/value-at-end "expected" v2))
              (if (empty? got)
                  (eprintf "got nothing\n")
-                 (for-each
-                  (λ (v1) (eprintf "  actual: ~v\n" v1))
-                  got)))))])))
+                 (for ([v1 (in-list got)])
+                   (eprintf/value-at-end "  actual" v1))))))])))
 
 (define-syntax (test-->>∃ stx)
   (syntax-parse stx
@@ -2626,8 +2625,8 @@
   (unless (pred arg)
     (inc-failures)
     (print-failed srcinfo)
-    (eprintf "  ~v does not hold for\n  ~v\n" 
-             pred arg)))
+    (eprintf/value-at-end "  ~v does not hold for"
+                          pred arg)))
 
 (define default-equiv (make-parameter equal?))
 
@@ -2643,8 +2642,32 @@
   (unless (equal? v1 v2)
     (inc-failures)
     (print-failed srcinfo)
-    (eprintf "  actual: ~v\n" v1)
-    (eprintf "expected: ~v\n" v2)))
+    (eprintf/value-at-end "  actual" v1)
+    (eprintf/value-at-end "expected" v2)))
+
+(define (eprintf/value-at-end str val)
+  (define one-line-candidate
+    (string-append
+     str
+     ": "
+     (pretty-format val 'infinity)))
+  (cond
+    [(<= (string-length one-line-candidate) 60)
+     (eprintf "~a\n" one-line-candidate)]
+    [else
+     (eprintf "~a:\n" (regexp-replace #rx"^ *" str ""))
+     (parameterize ([pretty-print-columns 60]
+                    [pretty-print-print-line
+                     (λ (line-number port len dest)
+                       (cond
+                         [(not line-number) (fprintf port "\n")]
+                         [(= line-number 0)
+                          (fprintf port "  ")
+                          2]
+                         [else
+                          (fprintf port "\n  ")
+                          2]))])
+       (pretty-print val (current-error-port)))]))
 
 (define (print-failed srcinfo)
   (let ([file (list-ref srcinfo 0)]
