@@ -1475,12 +1475,12 @@
      (if relation?
          rest
          (begin
-           (for-each 
-            (λ (clause)
-              (syntax-case clause ()
-                [(a b) (void)]
-                [x (raise-syntax-error syn-error-name "expected a pattern and a right-hand side" stx clause)]))
-            rest)
+           (for ([clause (in-list rest)])
+             (syntax-case clause ()
+               [(a b c ...) (void)]
+               [x (raise-syntax-error
+                   syn-error-name
+                   "expected a pattern and a right-hand side" stx clause)]))
            (raise-syntax-error syn-error-name "error checking failed.3" stx)))]
     [([x roc ...] ...)
      (begin
