@@ -80,6 +80,30 @@
       (list '((2 3) 20)
             '(6 (4 5))))
 
+(let ()
+  (define-language L
+    (n ::= natural))
+  
+  (test (apply-reduction-relation
+         (reduction-relation
+          L
+          [==> (n_1 n_2) (n_2 n_1)]
+          with
+          [(--> (any a) b)
+           (==> a b)])
+         (term (42 (1 2))))
+        (list (term (2 1))))
+
+  (test (apply-reduction-relation
+         (reduction-relation
+          L
+          [==> (n_1 n_2) (n_2 n_1)]
+          with
+          [(--> (any any_1 any_2 a) b)
+           (==> a b)])
+         (term (blah blah blah (1 2))))
+        (list (term (2 1)))))
+
 ; The scope of a `where' clause includes the left-hand sides
 ; of subsequent `where' clauses.
 (test (apply-reduction-relation

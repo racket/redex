@@ -714,6 +714,23 @@
                            name-table lang-id 
                            allow-zero-rules?))))]))
     (define (rewrite-node-pat id term)
+      (define max-any-number
+        (add1 (let loop ([t term])
+                (syntax-case t (side-condition)
+                  [(side-condition p c)
+                   (loop #'p)]
+                  [(p ...)
+                   (apply max (map loop (syntax->list #'(p ...))))]
+                  [x
+                   (identifier? #'x)
+                   (cond
+                     [(regexp-match #rx"^any_([0-9]*)$" (symbol->string (syntax-e #'x)))
+                      =>
+                      (λ (m)
+                        (string->number (list-ref m 1)))]
+                     [else 0])]
+                  [else 0]))))
+      (define fresh-any (string->symbol (format "any_~a" (+ 1 max-any-number))))
       (let loop ([t term])
         (syntax-case t (side-condition)
           [(side-condition p c)
@@ -722,7 +739,7 @@
            (map loop (syntax->list #'(p ...)))]
           [else 
            (if (and (identifier? t) (eq? id (syntax-e t)))
-               `(name ,id any)
+               `(name ,id ,fresh-any)
                t)])))
     
     (define (freshen-names pat hole-id nts what)
