@@ -352,7 +352,7 @@ fine, blame the server, and blame the client for contract violations,
 respectively. 
 
 @section{Solution: Contracts}
-@(sol con.rkt)
+@(sol contract.rkt)
 
 @; -----------------------------------------------------------------------------
 @section{Problem: Binary Addition}
