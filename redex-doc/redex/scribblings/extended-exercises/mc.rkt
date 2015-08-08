@@ -61,6 +61,6 @@
         move-2-right-to-left)))
    
 ;; -----------------------------------------------------------------------------
-
-(traces mc--> (term ((m m m c c c) L ()))
-        #:pred (lambda (e) (term (ok-state ,e))))
+(module+ main
+  (traces mc--> (term ((m m m c c c) L ()))
+          #:pred (lambda (e) (term (ok-state ,e)))))

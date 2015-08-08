@@ -50,8 +50,8 @@
      (v ... E e ...)
      (+ v ... E e ...)))
 
+(define s1 (term (,e0 ,e1 ,e1)))
 (module+ test
-  (define s1 (term (,e0 ,e1 ,e1)))
   (test-equal (redex-match? Lambda-calculus s s1) #true)
   (test-->> s-->comm #:equiv =α/racket
             (term (,p0))
@@ -83,7 +83,7 @@
         (where #false (zero? (term v)))
         if0-false)))
 
-(module+ test
+(module+ main
   (traces s-->comm s1))
 
 ;; -----------------------------------------------------------------------------

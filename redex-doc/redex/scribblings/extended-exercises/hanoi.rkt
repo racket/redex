@@ -62,6 +62,5 @@
   (test-results))
 
 ;; rendering the search 
-(module+ test
+(module+ main
   (traces -->hanoi (term ([(*) (* *) (* * *)] [] []))))
-

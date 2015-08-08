@@ -1,5 +1,6 @@
 #lang racket
 (require redex "common.rkt" (only-in "mon-aft.rkt" fv))
+(provide eval-value)
 
 ;; -- reductions for LC_v
 ;; -- standard reductions for LC_v

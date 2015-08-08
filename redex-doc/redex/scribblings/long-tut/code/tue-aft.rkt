@@ -116,7 +116,7 @@
              (displayln (term e))
              #:attempts 3)
 
-(module+ test
+(module+ main
   (traces ->
           (term (((lambda ((x (int -> int))) x) (lambda ((x int)) x)) 1))
           ; "../subject-reduction.ps"
