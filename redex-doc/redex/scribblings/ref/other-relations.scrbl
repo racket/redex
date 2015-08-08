@@ -95,6 +95,17 @@ clause to be taken.
 The @racket[clause-name] is used only when typesetting. See
 @racket[metafunction-cases].
 
+The @racket[or] clause is used to define a form of conditional
+right-hand side of a metafunction. In particular, if any of the
+@racket[where] or @racket[side-condition] clauses fail, then
+evaluation continues after an @racket[or] clause, treating the
+term that follows as the result (subject to any subsequent
+@racket[where] clauses or @racket[side-condition]s. This construction
+is equivalent to simply duplicating the left-hand side of the
+clause, once for each @racket[or] expression, but signals to
+the typesetting library to use a large left curly brace to group
+the conditions in the @racket[or].
+
 Note that metafunctions are assumed to always return the same results
 for the same inputs, and their results are cached, unless
 @racket[caching-enabled?] is set to @racket[#f]. Accordingly, if a
@@ -147,17 +158,6 @@ Note the side-condition in the second case of @racket[-]. It
 ensures that there is a unique match for that case. Without
 it, @racket[(term (- (x x) x))] would lead to an ambiguous
 match.
-
-The @racket[or] clause is used to define a form of conditional
-right-hand side of a metafunction. In particular, if any of the
-@racket[where] or @racket[side-condition] clauses fail, then
-evaluation continues after an @racket[or] clause, treating the
-term that follows as the result (subject to any subsequent
-@racket[where] clauses or @racket[side-condition]s. This construction
-is equivalent to simply duplicating the left-hand side of the
-clause, once for each @racket[or] expression, but signals to
-the typesetting library to use a large left curly brace to group
-the conditions in the @racket[or].
 
 @history[#:changed "1.4" @list{Added @racket[#:post] conditions.}
          #:changed "1.5" @list{Added @racket[or] clauses.}]
