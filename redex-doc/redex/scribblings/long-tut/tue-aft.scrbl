@@ -154,18 +154,15 @@ from above.
 @centerline{@image[#:scale .66 subject-reduction.png]}
 
 For simple ``type systems,'' @racket[redex-check] can be used to test a
-true subject reduction statement. If it worked, it would work roughly like
-this: 
+true subject reduction statement:
 @;%
 @(begin
 #reader scribble/comment-reader
 (racketblock
 (redex-check TLambda
-             #:satisfying (⊢ () e t)
-             ;; run for n steps, recheck type 
-             (displayln (term e))
+             e
+             (implies (judgment-holds (⊢ () e int))
+                      (judgment-holds (⊢ () (eval-value e) int)))
              #:attempts 3)
 ))
 @;%
-But getting this done, is future work.@margin-note{Rumor has it that Burke
-will graduate when he's done with this part for @racket[redex-check].}

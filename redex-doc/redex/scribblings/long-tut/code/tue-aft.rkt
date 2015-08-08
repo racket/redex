@@ -10,7 +10,7 @@
  ;; (lookup Γ x) retrieves x's type from Γ
  lookup)
 
-(require redex)
+(require redex "tue-mor.rkt")
 
 ;; -------------------------------------------------------
 (define-language TLambda
@@ -63,8 +63,9 @@
   [----------------------- "+"
    (⊢ Γ + (int int -> int))]
   
-  [----------------------- "variable"
-   (⊢ Γ x (lookup Γ x))]
+  [(where t (lookup Γ x))
+   ----------------------- "variable"
+   (⊢ Γ x t)]
   
   [(⊢ (extend Γ (x_1 t_1) ...) e t)
    ------------------------------------------------- "lambda"
@@ -93,12 +94,12 @@
   (test-equal (term (lookup ((x int) (x (int -> int)) (y int)) y)) (term int)))
 
 (define-metafunction TLambda-tc
-  lookup : any x -> any
+  lookup : any x -> any or #f
   [(lookup ((x_1 any_1) ... (x any_t) (x_2 any_2) ...) x)
    any_t
    (side-condition (not (member (term x) (term (x_1 ...)))))]
   [(lookup any_1 any_2)
-   ,(error 'lookup "not found: ~e in: ~e" (term any_1) (term any_2))])
+   #f])
 
 ;; -----------------------------------------------------------------------------
 
@@ -108,12 +109,10 @@
    #:domain e
    (--> e (lambda ((x int)) x))))
 
-;; wouldn't it be lovely if the following worked 
-#;
 (redex-check TLambda
-             #:satisfying (⊢ () e t)
-             ;; run for n steps, recheck type 
-             (displayln (term e))
+             e
+             (implies (judgment-holds (⊢ () e int))
+                      (judgment-holds (⊢ () (eval-value e) int)))
              #:attempts 3)
 
 (module+ main

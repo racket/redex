@@ -40,9 +40,9 @@
   (test-equal (term (lookup ((x int) (x (int -> int)) (y int)) y)) (term int)))
   
 (define-metafunction TLambda-tc
-  lookup : any x -> any
+  lookup : any x -> any or #f
   [(lookup ((x_1 any_1) ... (x any_t) (x_2 any_2) ...) x)
    any_t
    (side-condition (not (member (term x) (term (x_1 ...)))))]
   [(lookup any_1 any_2)
-   ,(error 'lookup "not found: ~e in: ~e" (term any_1) (term any_2))])
+   #f])

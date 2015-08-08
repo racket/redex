@@ -1,5 +1,6 @@
 #lang racket
 (require redex "common.rkt" (only-in "mon-aft.rkt" fv))
+(provide eval-value)
 
 (define-extended-language Lambda-calculus Lambda
   (e ::= .... n)
