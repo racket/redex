@@ -29,7 +29,7 @@
                    (cdr terms))))))
 
 (provide/contract
- [traces (->* (reduction-relation?
+ [traces (->* ((or/c IO-judgment-form? reduction-relation?)
                any/c)
               (#:multiple?
                boolean?
@@ -49,7 +49,7 @@
                #:reduce (-> reduction-relation? any/c
                             (listof (list/c (or/c false/c string?) any/c))))
               any)]
- [traces/ps (->* (reduction-relation?
+ [traces/ps (->* ((or/c IO-judgment-form? reduction-relation?)
                   any/c
                   (or/c path-string? path?))
                  (#:multiple?
@@ -100,12 +100,12 @@
  [term-node-height (-> term-node? real?)]
  
  [stepper
-  (->* (reduction-relation?
+  (->* ((or/c IO-judgment-form? reduction-relation?)
         any/c)
        (pp-contract)
        void?)]
  [stepper/seed 
-  (->* (reduction-relation?
+  (->* ((or/c reduction-relation? IO-judgment-form?)
         (cons/c any/c (listof any/c)))
        (pp-contract)
        void?)]

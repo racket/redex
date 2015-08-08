@@ -239,17 +239,44 @@
        [else
         `(in-hole ,pat ,orig-pat)]))))
 
-(define (apply-reduction-relation/tagged p v)
-  (let loop ([procs (reduction-relation-procs p)]
-             [acc '()])
-    (cond
-      [(null? procs) acc]
-      [else 
-       (loop (cdr procs)
-             ((car procs) v acc))])))
+(define (apply-reduction-relation/tagged p v tag-with-names?)
+  (cond
+    [(runtime-judgment-form? p)
+     (define jf-res
+       (parameterize ([include-jf-rulename tag-with-names?])
+         (call-judgment-form (runtime-judgment-form-name p)
+                             (runtime-judgment-form-proc p)
+                             (runtime-judgment-form-mode p)
+                             
+                             ;; this list is because we expect one argument
+                             ;; judgment forms, but the general API puts the
+                             ;; arguments into a list. 
+                             (list v)
+                             
+                             #f
+                             (runtime-judgment-form-cache p))))
+     (apply
+      append
+      (for/list ([d-sub (in-list jf-res)])
+        (for/list ([res (in-list (derivation-subs-acc-this-output d-sub))])
+          (if tag-with-names?
+              (list (derivation-subs-acc-rulename d-sub) res)
+              res))))]
+    [else
+     (define proc-results
+       (let loop ([procs (reduction-relation-procs p)]
+                  [acc '()])
+         (cond
+           [(null? procs) acc]
+           [else 
+            (loop (cdr procs)
+                  ((car procs) v acc))])))
+     (if tag-with-names?
+         (map cdr proc-results)
+         (map caddr proc-results))]))
 
-(define (apply-reduction-relation/tag-with-names p v) (map cdr (apply-reduction-relation/tagged p v)))
-(define (apply-reduction-relation p v) (map caddr (apply-reduction-relation/tagged p v)))
+(define (apply-reduction-relation/tag-with-names p v) (apply-reduction-relation/tagged p v #t))
+(define (apply-reduction-relation p v) (apply-reduction-relation/tagged p v #f))
 
 (define-syntax (-reduction-relation stx)
   (syntax-case stx ()

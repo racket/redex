@@ -213,14 +213,16 @@ returns the closure of the reduction in that context.
   @racket[#f] otherwise.
 }
 
-@defproc[(apply-reduction-relation [r reduction-relation?] [t any/c]) (listof any/c)]{
+@defproc[(apply-reduction-relation [r (or/c reduction-relation? IO-judgment-form?)]
+                                   [t any/c])
+         (listof any/c)]{
 
 This accepts reduction relation, a term, and returns a
 list of terms that the term reduces to.
 }
 
 @defproc[(apply-reduction-relation/tag-with-names
-          [r reduction-relation?]
+          [r (or/c reduction-relation? IO-judgment-form?)]
           [t any/c])
          (listof (list/c (union false/c string?) any/c))]{
 
@@ -229,7 +231,7 @@ names of the reductions that were used.
 }
 
 @defproc[(apply-reduction-relation*
-          [r reduction-relation?]
+          [r (or/c reduction-relation? IO-judgment-form?)]
           [t any/c]
           [#:all? all boolean? #f]
           [#:cache-all? cache-all? boolean? (or all? (current-cache-all?))]

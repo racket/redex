@@ -12,6 +12,8 @@
 
 (provide exn:fail:redex?) ;; from error.rkt
 
+(define (judgment-form? jf) (runtime-judgment-form? jf))
+
 (provide reduction-relation 
          --> fresh with ;; keywords for reduction-relation
          hole in-hole ;; keywords for term
@@ -36,6 +38,8 @@
          define-judgment-form
          define-extended-judgment-form
          judgment-holds
+         IO-judgment-form?
+         judgment-form?
          build-derivations
          (struct-out derivation)
          in-domain?
@@ -79,11 +83,15 @@
  [reduction-relation->rule-names (-> reduction-relation? (listof symbol?))]
  [language-nts (-> compiled-lang? (listof symbol?))]
  [set-cache-size! (-> number? void?)]
- [apply-reduction-relation (-> reduction-relation? any/c (listof any/c))]
+ [apply-reduction-relation (-> (or/c IO-judgment-form? reduction-relation?)
+                               any/c (listof any/c))]
  [apply-reduction-relation/tag-with-names
-  (-> reduction-relation? any/c (listof (list/c (or/c false/c string?) any/c)))]
+  (-> (or/c IO-judgment-form? reduction-relation?)
+      any/c
+      (listof (list/c (or/c false/c string?) any/c)))]
  [apply-reduction-relation*
-  (->* (reduction-relation? any/c)
+  (->* ((or/c IO-judgment-form? reduction-relation?)
+        any/c)
        (#:cache-all?
         boolean?
         #:stop-when (-> any/c any)

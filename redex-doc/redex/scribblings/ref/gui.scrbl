@@ -17,7 +17,7 @@
 This section describes the GUI tools that Redex provides for
 exploring reduction sequences.
 
-@defproc[(traces [reductions reduction-relation?] 
+@defproc[(traces [reductions (or/c reduction-relation? IO-judgment-form?)] 
                  [expr (or/c any/c (listof any/c))]
                  [#:multiple? multiple? boolean? #f]
                  [#:reduce reduce (-> reduction-relation? any/c
@@ -64,6 +64,10 @@ By default, it is @racket[apply-reduction-relation/tag-with-names];
 it may be changed to only return a subset of the possible reductions,
 for example, but it must satisfy the same contract as
 @racket[apply-reduction-relation/tag-with-names].
+
+If @racket[reductions] is an @racket[IO-judgment-form?], then the judgment
+form is treated as a reduction relation. The initial input position is
+the given @racket[expr] and the output position becomes the next input.
 
 The @racket[pred] function indicates if a term has a particular
 property. If it returns @racket[#f], the term is displayed with a
@@ -206,7 +210,7 @@ traces window instead of just the numbers.
 
 }
 
-@defproc[(traces/ps [reductions reduction-relation?] 
+@defproc[(traces/ps [reductions (or/c reduction-relation? IO-judgment-form?)] 
                     [expr (or/c any/c (listof any/c))]
                     [file (or/c path-string? path?)]
                     [#:multiple? multiple? boolean? #f]
@@ -248,7 +252,7 @@ with the exception of the @racket[post-process] argument. It is called
 just before the PostScript is created with the graph pasteboard.
 }
 
-@defproc[(stepper [reductions reduction-relation?] 
+@defproc[(stepper [reductions (or/c reduction-relation? IO-judgment-form?)] 
                   [t any/c] 
                   [pp (or/c (any -> string)
                             (any output-port number (is-a?/c text%) -> void))
@@ -270,7 +274,7 @@ to how @racket[pretty-print] prints (when adjusted by
 @racket[pretty-print-parameters]'s behavior, of course).
 }
 
-@defproc[(stepper/seed [reductions reduction-relation?]
+@defproc[(stepper/seed [reductions (or/c reduction-relation? IO-judgment-form?)]
                        [seed (cons/c any/c (listof any/c))]
                        [pp (or/c (any -> string)
                                  (any output-port number (is-a?/c text%) -> void))

@@ -41,13 +41,18 @@
             (values term name subs)))
 
 ;; structs that hold intermediate results when building a derivation
-(struct derivation-subs-acc (subs-so-far this-output) #:transparent)
+(struct derivation-subs-acc (subs-so-far rulename this-output) #:transparent)
 (struct derivation-with-output-only (output name subs) #:transparent)
 
 ;; Intermediate structures recording clause "extras" for typesetting.
 (define-struct metafunc-extra-side-cond (expr))
 (define-struct metafunc-extra-where (lhs rhs))
 (define-struct metafunc-extra-fresh (vars))
+
+(define-struct runtime-judgment-form (name proc mode cache)
+  #:methods gen:custom-write
+  [(define (write-proc tuple port mode)
+     (display "#<judgment-form>" port))])
 
 (begin-for-syntax
   ;; pre: (judgment-form-id? stx) holds
@@ -326,6 +331,11 @@
             (for*/list ([o output] [os (repeated-premise-outputs (cdr inputs) premise)])
               (cons o os))))))
 
+(define (IO-judgment-form? jf)
+  (and (runtime-judgment-form? jf)
+       (or (equal? (runtime-judgment-form-mode jf) '(I O))
+           (equal? (runtime-judgment-form-mode jf) '(O I)))))
+
 (define not-in-cache (gensym))
 (define (call-judgment-form form-name form-proc mode input derivation-init boxed-cache)
   (when (caching-enabled?)
@@ -405,9 +415,11 @@
                             (if (include-entire-derivation)
                                 (reverse subs)
                                 '())))
+      (and (include-jf-rulename) rulename)
       this-output))))
 
 (define include-entire-derivation (make-parameter #f))
+(define include-jf-rulename (make-parameter #f))
 
 (define (verify-name-ok orig-name the-name)
   (unless (symbol? the-name)
@@ -646,6 +658,15 @@
                   (cons (cadr more) arg-pats))]
            [else (values (reverse arg-pats) more)])))]))
 
+(define-for-syntax (expand-to-id id stx)
+  (syntax-case stx ()
+    [(_ args ...)
+     (with-syntax ([app (datum->syntax stx '#%app)])
+       #`(app #,id args ...))]
+    [x
+     (identifier? #'x)
+     id]))
+
 (define-for-syntax (do-extended-judgment-form lang syn-err-name body orig stx is-relation?)
   (define nts (definition-nts lang stx syn-err-name))
   (define-values (judgment-form-name dup-form-names mode position-contracts invariant clauses rule-names)
@@ -660,7 +681,7 @@
             (judgment-form '#,judgment-form-name '#,(cdr (syntax->datum mode)) #'judgment-form-runtime-proc
                            #'mk-judgment-form-proc #'#,lang #'jf-lws
                            '#,rule-names #'judgment-runtime-gen-clauses #'mk-judgment-gen-clauses #'jf-term-proc #,is-relation?
-                           #'jf-cache))
+                           #'jf-cache (λ (stx) (expand-to-id #'the-runtime-judgment-form stx))))
           (define-values (mk-judgment-form-proc mk-judgment-gen-clauses)
             (compile-judgment-form #,judgment-form-name #,mode #,lang #,clauses #,rule-names #,position-contracts #,invariant
                                    #,orig #,stx #,syn-err-name judgment-runtime-gen-clauses))
@@ -668,7 +689,12 @@
           (define jf-lws (compiled-judgment-form-lws #,clauses #,judgment-form-name #,stx))
           (define judgment-runtime-gen-clauses (mk-judgment-gen-clauses #,lang (λ () (judgment-runtime-gen-clauses))))
           (define jf-term-proc (make-jf-term-proc #,judgment-form-name #,syn-err-name #,lang #,nts #,mode))
-          (define jf-cache (box (make-hash))))))
+          (define jf-cache (box (make-hash)))
+          (define the-runtime-judgment-form
+            (runtime-judgment-form '#,judgment-form-name
+                                   judgment-form-runtime-proc
+                                   '#,(cdr (syntax->datum mode))
+                                   jf-cache)))))
   (syntax-property
    (values ;prune-syntax
     (if (eq? 'top-level (syntax-local-context))
@@ -1679,6 +1705,12 @@
          judgment-holds
          build-derivations
          generate-lws
+         IO-judgment-form?
+         judgment-form?
+         call-judgment-form
+         include-jf-rulename
+         (struct-out derivation-subs-acc)
+         (struct-out runtime-judgment-form)
          (struct-out derivation)
          (for-syntax extract-term-let-binds
                      name-pattern-lws

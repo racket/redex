@@ -46,7 +46,8 @@
 
 (define-struct judgment-form (name mode proc mk-proc lang lws rule-names 
                                    gen-clauses mk-gen-clauses term-proc relation?
-                                   cache)
+                                   cache transformer)
+  #:property prop:procedure (struct-field-index transformer)
   #:transparent)
 
 (define-struct defined-term (value))

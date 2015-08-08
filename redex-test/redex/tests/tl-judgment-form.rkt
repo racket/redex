@@ -420,7 +420,42 @@
   (define term 'x)
   (test (judgment-holds (J ,term)) #t)
   (test (build-derivations (J ,term))
-        (list (derivation '(J x) #f '()))))
+        (list (derivation '(J x) #f '())))
+  (test (IO-judgment-form? J) #f))
+
+(let ()
+  (define-judgment-form empty-language
+    #:mode (J O I)
+    [------------- "smaller"
+     (J any (any))]
+    
+    [----------------- "bigger"
+     (J ((any any)) any)])
+  
+  (test (judgment-form? J) #t)
+  (test (IO-judgment-form? J) #t)
+  (test (apply-reduction-relation J '(2))
+        (judgment-holds (J any (2)) any))
+  (test (apply set (apply-reduction-relation/tag-with-names J '(3)))
+        (set (list "smaller" 3)
+             (list "bigger" '(((3) (3)))))))
+
+(let ()
+  (define-judgment-form empty-language
+    #:mode (J I O)
+    [------------- "smaller"
+     (J (any) any)]
+    
+    [----------------- "bigger"
+     (J any ((any any)))])
+  
+  (test (judgment-form? J) #t)
+  (test (IO-judgment-form? J) #t)
+  (test (apply-reduction-relation J '(2))
+        (judgment-holds (J (2) any) any))
+  (test (apply set (apply-reduction-relation/tag-with-names J '(3)))
+        (set (list "smaller" 3)
+             (list "bigger" '(((3) (3)))))))
 
 (let ()
   (define-language U

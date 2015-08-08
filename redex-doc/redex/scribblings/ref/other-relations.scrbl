@@ -492,6 +492,17 @@ the argument contracts.
        (term (subtype (num → int) (num → num)))]
 }
 
+@defproc[(judgment-form? [v any/c]) boolean?]{
+ Identifies values bound to identifiers introduced by
+ @racket[define-judgment-form] and @racket[define-relation].
+}
+
+@defproc[(IO-judgment-form? [v any/c]) boolean?]{
+ Identifies values bound to identifiers introduced by
+ @racket[define-judgment-form] when the mode is
+ @racket[(I O)] or @racket[(O I)].
+}
+
 @defparam[current-traced-metafunctions traced-metafunctions (or/c 'all (listof symbol?))]{
 
 Controls which metafunctions are currently being traced. If it is
