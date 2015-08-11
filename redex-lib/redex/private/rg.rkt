@@ -69,7 +69,13 @@
 (define pick-nts values)
 
 (define (pick-from-list l [random generator-random])
-  (list-ref l (random (length l))))
+  (define len (length l))
+  (cond
+    [(= len 1)
+     ;; don't invoke random in this case, so we avoid perturbing the
+     ;; random generator's state when there are is no choice to make
+     (car l)]
+    [else (list-ref l (random len))]))
 
 ;; Chooses a random (exact) natural number from the "shifted" geometric distribution:
 ;;   P(random-natural = k) = p(1-p)^k

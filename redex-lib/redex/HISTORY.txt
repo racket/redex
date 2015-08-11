@@ -1,3 +1,11 @@
+v6.3
+
+  * change check-metafunction and check-reduction-relation (and
+    redex-check with the #:source keyword) so that they no longer
+    check the "extras" clauses and instead just blindly generate from
+    the left-hand side patterns. (This speeds up compilation of Redex
+    programs that use define-metafunction and reduction-relation.)
+
 v6.2
 
   * Performance improvements for example generation, both for 

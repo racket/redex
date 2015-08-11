@@ -46,9 +46,7 @@
     (check-arg size)
     (check-arg attempt-num)
     (check-arg retries)
-    (let-values ([(term _) ((match raw-generators
-                              [(list g) g]
-                              [_ (pick-from-list raw-generators)])
+    (let-values ([(term _) ((pick-from-list raw-generators)
                             size attempt-num retries)])
       term)))
 
@@ -496,18 +494,17 @@
   (define lang-gen (compile lang what))
   (define-values (pats srcs skip-term?)
     (cond [(metafunc-proc? mf/rr)
-           (values (map (λ (case) ((metafunc-case-lhs+ case) lang)) 
+           (values (map metafunc-case-lhs-pat
                         (metafunc-proc-cases mf/rr))
                    (metafunction-srcs mf/rr)
                    (compose not (metafunc-proc-in-dom? mf/rr)))]
           [(reduction-relation? mf/rr)
-           (values (map (λ (rwp) ((rewrite-proc-lhs rwp) lang)) (reduction-relation-make-procs mf/rr))
+           (values (map rewrite-proc-side-conditions-rewritten (reduction-relation-make-procs mf/rr))
                    (reduction-relation-srcs mf/rr)
                    (let ([pat (compile-pattern (reduction-relation-lang mf/rr)
                                                (reduction-relation-domain-pat mf/rr)
                                                #f)])
                      (λ (x) (not (match-pattern? pat x)))))]))
-  
   (let loop ([pats pats] [srcs srcs])
     (if (and (null? pats) (null? srcs))
         (if show
@@ -764,7 +761,7 @@
           [compile-pat (compile L 'generate-term)]
           [cases (metafunc-proc-cases f)])
      (check-cases name cases)
-     (map (λ (c) (compile-pat ((metafunc-case-lhs+ c) L))) 
+     (map (λ (c) (compile-pat (metafunc-case-lhs-pat c))) 
           cases))
    'generate-term))
 
@@ -774,7 +771,7 @@
   (make-generator
    (let* ([L (reduction-relation-lang r)]
           [compile-pat (compile L 'orig-name)])
-     (map (λ (p) (compile-pat ((rewrite-proc-lhs p) L)))
+     (map (λ (p) (compile-pat (rewrite-proc-side-conditions-rewritten p)))
           (reduction-relation-make-procs r)))
    'generate-term))
 

@@ -13,7 +13,7 @@
          reduction-relation?
          empty-reduction-relation
          make-rewrite-proc rewrite-proc? rewrite-proc-name 
-         rewrite-proc-lhs rewrite-proc-lhs-src rewrite-proc-id
+         rewrite-proc-side-conditions-rewritten rewrite-proc-lhs-src rewrite-proc-id
          (struct-out rule-pict-info))
 
 (define-struct rule-pict-info (arrow
@@ -29,7 +29,10 @@
 
 (define-values (make-rewrite-proc 
                 rewrite-proc? 
-                rewrite-proc-name rewrite-proc-lhs rewrite-proc-lhs-src rewrite-proc-id)
+                rewrite-proc-name
+                rewrite-proc-side-conditions-rewritten
+                rewrite-proc-lhs-src
+                rewrite-proc-id)
   (let ()
     (define-values (type constructor predicate accessor mutator) 
       (make-struct-type 'rewrite-proc #f 5 0 #f '() #f 0))

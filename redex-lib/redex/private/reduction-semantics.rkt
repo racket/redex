@@ -222,7 +222,7 @@
                            (λ (x) (extend (plug (lookup-binding bindings 'ctxt) x)))
                            acc)))]))))
        (rewrite-proc-name make-proc)
-       (rewrite-proc-lhs make-proc)
+       (rewrite-proc-side-conditions-rewritten make-proc)
        (rewrite-proc-lhs-src make-proc)
        (rewrite-proc-id make-proc)))
     (reduction-relation-make-procs red))
@@ -818,23 +818,7 @@
                       (syntax->list #'(names/ellipses ...))
                       #t
                       #f))
-        (define test-case-body-code
-          ;; this contains some redundant code
-          (bind-withs orig-name
-                      #'#t 
-                      #'lang-id2
-                      lang-nts
-                      lang-id
-                      sides/withs/freshs
-                      'predicate
-                      #'#t
-                      (syntax->list #'(names ...))
-                      (syntax->list #'(names/ellipses ...))
-                      #t
-                      #f))
-        (with-syntax ([(lhs-syncheck-expr lhs-w/extras (w/extras-names ...) (w/extras-names/ellipses ...))
-                       (rw-sc #`(side-condition #,from #,test-case-body-code))]
-                      [lhs-source (format "~a:~a:~a"
+        (with-syntax ([lhs-source (format "~a:~a:~a"
                                           (and (path? (syntax-source from))
                                                (path->relative-string/library (syntax-source from)))
                                           (syntax-line from)
@@ -842,19 +826,16 @@
                       [name name]
                       [lang lang]
                       [body-code body-code])
-          #`(begin
-              lhs-syncheck-expr
-              (build-rewrite-proc/leaf 
-               `side-conditions-rewritten
-               (λ (#,rt-lang-id)
-                 (λ (main-exp bindings)
-                   #,(bind-pattern-names 'reduction-relation
-                                         #'(names/ellipses ...)
-                                         #'((lookup-binding bindings 'names) ...)
-                                         #'body-code)))
-               lhs-source
-               name
-               (λ (lang-id2) `lhs-w/extras))))))
+          #`(build-rewrite-proc/leaf 
+             `side-conditions-rewritten
+             (λ (#,rt-lang-id)
+               (λ (main-exp bindings)
+                 #,(bind-pattern-names 'reduction-relation
+                                       #'(names/ellipses ...)
+                                       #'((lookup-binding bindings 'names) ...)
+                                       #'body-code)))
+             lhs-source
+             name))))
     
     (define (process-extras stx orig-name name-table extras)
       (let* ([the-name #f]
@@ -972,11 +953,10 @@
   
   (do-reduction-relation/proc stx))
 
-(define (build-rewrite-proc/leaf side-conditions-rewritten 
+(define (build-rewrite-proc/leaf side-conditions-rewritten
                                  build-really-matched/lang-arg
                                  lhs-source
-                                 name
-                                 lhs-w/extras-proc)
+                                 name)
   (let ([case-id (gensym)])
     (make-rewrite-proc
      (λ (lang-id)
@@ -1014,7 +994,7 @@
                            (loop (cdr mtchs) acc)]))]))
                  other-matches)))))
      name
-     lhs-w/extras-proc
+     side-conditions-rewritten
      lhs-source
      case-id)))
 
@@ -1072,7 +1052,7 @@
                                           acc)))]))
                other-matches)))))
    (rewrite-proc-name child-make-proc)
-   (λ (lang) (subst lhs-frm-id ((rewrite-proc-lhs child-make-proc) lang) rhs-from))
+   (subst lhs-frm-id (rewrite-proc-side-conditions-rewritten child-make-proc) rhs-from)
    (rewrite-proc-lhs-src child-make-proc)
    (rewrite-proc-id child-make-proc)))
 
@@ -1173,7 +1153,7 @@
 
 (define-struct metafunction (proc))
 
-(define-struct metafunc-case (lhs rhs lhs+ src-loc id) #:transparent)
+(define-struct metafunc-case (lhs lhs-pat rhs src-loc id) #:transparent)
 
 (define-syntax (in-domain? stx)
   (syntax-case stx ()
@@ -1394,30 +1374,8 @@
                                    (syntax->list #'((stuff ...) ...))
                                    (syntax->list #'(rhs ...))
                                    (syntax->list #'(lhs-names ...))
-                                   (syntax->list #'(lhs-namess/ellipses ...)))]
-                             [(rg-rhs/wheres ...)
-                              (map (λ (sc/b rhs names names/ellipses) 
-                                     (bind-withs
-                                      syn-error-name '()  
-                                      #'effective-lang lang-nts #'lang
-                                      sc/b 'predicate
-                                      #`#t
-                                      (syntax->list names)
-                                      (syntax->list names/ellipses)
-                                      #t
-                                      #f))
-                                   (syntax->list #'((stuff ...) ...))
-                                   (syntax->list #'(rhs ...))
-                                   (syntax->list #'(lhs-names ...))
                                    (syntax->list #'(lhs-namess/ellipses ...)))])
-                 (with-syntax ([((rg-syncheck-expr rg-side-conditions-rewritten rg-names rg-names/ellipses ...) ...)
-                                (map (λ (x) (rewrite-side-conditions/check-errs
-                                             #'lang
-                                             syn-error-name
-                                             #t
-                                             x))
-                                     (syntax->list (syntax ((side-condition lhs rg-rhs/wheres) ...))))]
-                               [(clause-src ...)
+                 (with-syntax ([(clause-src ...)
                                 (map (λ (lhs)
                                        (format "~a:~a:~a"
                                                (and (path? (syntax-source lhs))
@@ -1471,16 +1429,11 @@
                     (prune-syntax
                      #`(let ([sc `(side-conditions-rewritten ...)]
                              [dsc `dom-side-conditions-rewritten])
-                         syncheck-expr ... rg-syncheck-expr ... dom-syncheck-expr codom-syncheck-expr ...
-                         (let ([cases (map (λ (pat rhs-fn rg-lhs src)
-                                             (make-metafunc-case
-                                              (λ (effective-lang) (compile-pattern effective-lang pat #t))
-                                              rhs-fn
-                                              rg-lhs src (gensym)))
-                                           sc
-                                           (list (λ (effective-lang) rhs-fns) ...)
-                                           (list (λ (effective-lang) `rg-side-conditions-rewritten) ...)
-                                           `(clause-src ...))]
+                         syncheck-expr ... dom-syncheck-expr codom-syncheck-expr ...
+                         (let ([cases (list
+                                       (build-metafunc-case `side-conditions-rewritten
+                                                            (λ (effective-lang) rhs-fns)
+                                                            `clause-src) ...)]
                                [parent-cases 
                                 #,(if prev-metafunction
                                       #`(metafunc-proc-cases #,(term-fn-get-id (syntax-local-value prev-metafunction)))
@@ -1538,6 +1491,13 @@
                     'disappeared-use
                     (map syntax-local-introduce 
                          (syntax->list #'(original-names ...)))))))))))]))
+
+(define (build-metafunc-case sc rhs-fn clause-src)
+  (make-metafunc-case (λ (effective-lang) (compile-pattern effective-lang sc #t))
+                      sc
+                      rhs-fn
+                      clause-src
+                      (gensym)))
 
 (define (extend-mf-clauses old-mf new-clauses)
   (memoize0

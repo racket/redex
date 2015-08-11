@@ -994,7 +994,7 @@
            (->4 a b)])])
   
   ; test that names are properly bound for side-conditions in shortcuts
-  (let* ([lhs ((rewrite-proc-lhs (first (reduction-relation-make-procs r))) grammar)]
+  (let* ([lhs (rewrite-proc-side-conditions-rewritten (first (reduction-relation-make-procs r)))]
          [proc (third lhs)]
          [name (cadar (cddadr lhs))]
          [bind (λ (n) (make-bindings (list (make-bind name n))))])
@@ -1002,7 +1002,7 @@
   
   ; test binder renaming
   (let ([sym-mtch? (λ (rx) (λ (s) (and (symbol? s) (regexp-match? rx (symbol->string s)))))])
-    (match (rewrite-proc-lhs (second (reduction-relation-make-procs r)))
+    (match (rewrite-proc-side-conditions-rewritten (second (reduction-relation-make-procs r)))
       [`(3
          (,(and n1 (? (sym-mtch? #px"^number_\\d+$"))) ,n1)
          (,(and n2 (? (sym-mtch? #px"^X_1\\d+$"))) ,n2)
@@ -1013,8 +1013,8 @@
       [else #f]))
   
   ; test shortcut in terms of shortcut
-  (test (match ((rewrite-proc-lhs (third (reduction-relation-make-procs r))) grammar)
-          [`(list (list (side-condition 5 ,(? procedure?) ,_) 2) 1) #t]
+  (test (match (rewrite-proc-side-conditions-rewritten (third (reduction-relation-make-procs r)))
+          [`(list (list 5 2) 1) #t]
           [else #f])
         #t))
 

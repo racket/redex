@@ -758,7 +758,7 @@
   (syntax-case stx ()
     [(_ lang)
      (identifier? #'lang)
-     #`'#,(language-id-nt-hole-map #'lang 'get-nt-hole-map)]))
+     #`(hash-copy '#,(language-id-nt-hole-map #'lang 'get-nt-hole-map))]))
 
 (test (get-nt-hole-map empty-language) (make-hash))
 

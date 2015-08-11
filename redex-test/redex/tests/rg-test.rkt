@@ -563,13 +563,7 @@
          empty any 5 0 (decisions #:nt (patterns first)
                                   #:any (λ (langc sexpc) (values sexpc 'sexp))
                                   #:var (list (λ _ 'x))))
-        'x)
-  (test 
-   (generate-term/decisions 
-    empty (in-hole (any hole) 7) 5 0
-    (decisions #:any (list (λ (_ sexp) (values sexp 'sexp)))
-               #:nt (patterns fourth)))
-   (term (hole 7))))
+        'x))
 
 ;; `hide-hole' pattern
 (let ()
@@ -763,18 +757,6 @@
                         #:source mf
                         #:print? #f)
           (make-counterexample '(0))))
-  
-  (let ()
-    (define-metafunction lang
-      [(f) 
-       dontcare
-       (side-condition #f)])
-    (test (raised-exn-msg
-           exn:fail:redex:generation-failure?
-           (redex-check lang any #t 
-                        #:attempts 1
-                        #:source f))
-          #px"unable to generate LHS of clause at .*:\\d+:\\d+"))
   
   (let ()
     (define-metafunction lang
@@ -975,17 +957,17 @@
                    L
                    (--> (name t (number_1 number_3))
                         dontcare
-                        (side-condition (set! generated (cons (term t) generated)))
                         (where number_1 4)
                         (where number_2 number_1)
                         (where number_3 number_2)))])
           (parameterize ([generation-decisions 
-                          (decisions #:num (list (λ _ 3) (λ _ 4) 
-                                                 (λ _ 4) (λ _ 3)
-                                                 (λ _ 4) (λ _ 4)))])
-            (check-reduction-relation R (λ (_) #t) #:attempts 1 #:print? #f))
+                          (decisions #:num (list (λ _ 3) (λ _ 4)))])
+            (check-reduction-relation
+             R
+             (λ (t) (set! generated (cons t generated)))
+             #:attempts 1 #:print? #f))
           generated)
-        '((4 4) (4 3) (3 4)))
+        '((3 4)))
   
   ; Extension reinterprets the LHSs of the base relation
   ; relative to the new language.
@@ -1084,7 +1066,7 @@
     (test (output
            (λ ()
              (parameterize ([generation-decisions 
-                             (decisions #:num (build-list 5 (λ (x) (λ _ x))))])
+                             (decisions #:num (build-list 5 (λ (x) (λ _ 4))))])
                (check-reduction-relation 
                 T (curry equal? '(9 4)) 
                 #:attempts 1))))
@@ -1145,20 +1127,7 @@
             generated) 
           (reverse '((1) (2)))))
   
-  (test
-   (let/ec k
-     (define-language L (n 2))
-     (define-metafunction L
-       [(f n)
-        n
-        (where number_2 ,(add1 (term n)))
-        (where number_3 ,(add1 (term number_2)))
-        (side-condition (k (term number_3)))]
-       [(f any) 0])
-     (check-metafunction f (λ (_) #t)))
-   4)
-  
-  (let ()
+    (let ()
     (define-language L 
       ((m n) number))
     (define-metafunction L
@@ -1174,19 +1143,19 @@
   (test (let ([generated null])
           (define-language L)
           (define-metafunction L
-            [(f (name t (number_1 number_3)))
+            [(f (number_1 number_3))
              dontcare
-             (side-condition (set! generated (cons (term t) generated)))
              (where number_1 4)
              (where number_2 number_1)
              (where number_3 number_2)])
           (parameterize ([generation-decisions 
-                          (decisions #:num (list (λ _ 3) (λ _ 4) 
-                                                 (λ _ 4) (λ _ 3)
-                                                 (λ _ 4) (λ _ 4)))])
-            (check-metafunction f (λ (_) #t) #:attempts 1 #:print? #f))
+                          (decisions #:num (list (λ _ 3) (λ _ 4) ))])
+            (check-metafunction f (λ (arg)
+                                    (set! generated (cons arg generated))
+                                    #t)
+                                #:attempts 1 #:print? #f))
           generated)
-        '((4 4) (4 3) (3 4)))
+        '(((3 4))))
   
   (test (let/ec k
           (define-language L (n number))

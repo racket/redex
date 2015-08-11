@@ -572,7 +572,9 @@ argument, @racket[redex-check] distributes its attempts across the left-hand sid
 of that metafunction/relation by using those patterns, rather than @racket[pattern],
 as the basis of its generation. It is an error if any left-hand side generates a
 term that does not match @racket[pattern]. @racket[#:source] cannot be used
-with @racket[#:satisfying].}
+with @racket[#:satisfying]. See also @racket[check-reduction-relation] and
+@racket[check-metafunction].
+}
 
 @examples[
 #:eval redex-eval
@@ -717,6 +719,10 @@ Tests @racket[relation] as follows: for each case of @racket[relation],
 terms that match that case's left-hand side and applies @racket[property] 
 to each random term.
 
+Only the primary pattern of each case's left-hand side is considered. If there
+are @racket[where] clauses or @racket[side-condition]s (or anything else from the
+@racket[_red-extras] portion of the grammar), they are ignored.
+
 This form provides a more convenient notation for
 @racketblock[(redex-check L any (property (term any)) 
                           #:attempts (* n attempts)
@@ -739,6 +745,10 @@ Like @racket[check-reduction-relation] but for metafunctions.
 @racket[check-metafunction] calls @racket[property] with lists
 containing arguments to the metafunction. Similarly, @racket[prepare-expr]
 produces and consumes argument lists.}
+
+Only the primary pattern of each case's left-hand side is considered. If there
+are @racket[where] clauses or @racket[side-condition]s (or anything else from the
+@racket[_metafunction-extras] portion of the grammar), they are ignored.
 
 @(redex-eval '(random-seed 0))
 @examples[
