@@ -891,7 +891,8 @@
      (for ([kwd (in-list (syntax->list #'(k ...)))]
            [e (in-list (syntax->list #'(e ...)))])
        (cond
-         [(equal? '#:filename (syntax-e kwd))
+         [(or (equal? '#:filename (syntax-e kwd))
+              (equal? '#:file (syntax-e kwd)))
           (set! filename e)]
          [(equal? '#:contract? (syntax-e kwd))
           (set! contract? e)]

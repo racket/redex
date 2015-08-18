@@ -195,7 +195,9 @@ other tools that combine @racketmodname[pict]s together.
               (render-metafunction metafunction-name filename maybe-contract)]{}
 @defform[(render-metafunctions metafunction-name ... 
                                maybe-filename maybe-contract)
-          #:grammar ([maybe-filename (code:line) (code:line #:file filename)]
+          #:grammar ([maybe-filename (code:line)
+                      (code:line #:file filename)
+                      (code:line #:filename filename)]
                      [maybe-contract? (code:line) (code:line #:contract? bool-expr)])]{}]]{
 Like @racket[render-reduction-relation] but for metafunctions.
 
