@@ -29,7 +29,7 @@
   (cons 
    (let recur ([e expr])
      (match e
-       [(compilation-top _ _ e)
+       [(compilation-top _ _ _ e)
         (recur e)]
        [(localref #f n #f #t #f)
         `(loc ,n)]
@@ -96,7 +96,7 @@
           (begin
             (hash-set! seen e #t)
             (match e
-              [(compilation-top _ _ e)
+              [(compilation-top _ _ _ e)
                (recur e)]
               [(localref _ _ _ _ _)
                (void)]
@@ -208,4 +208,4 @@
             (placeholder-set! (hash-ref cycle-places x) (car (recur e)))])
          cycles)
         (make-reader-graph
-         (compilation-top dep-expr (prefix 0 '() '()) rep-expr))))))
+         (compilation-top dep-expr #hash() (prefix 0 '() '()) rep-expr))))))
