@@ -1,4 +1,4 @@
-#lang unstable/2d racket/base
+#lang 2d racket/base
 
 (require racket/set
          racket/match
@@ -6,7 +6,7 @@
          "match-a-pattern.rkt"
          "lang-struct.rkt"
          "build-nt-property.rkt"
-         unstable/2d/match)
+         2d/match)
 
 (provide 
  (contract-out

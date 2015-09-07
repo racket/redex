@@ -1,4 +1,4 @@
-#lang unstable/2d racket/base
+#lang 2d racket/base
 
 (require racket/contract
          racket/function
@@ -14,7 +14,7 @@
          "error.rkt"
          (for-syntax "rewrite-side-conditions.rkt"
                      racket/base)
-         unstable/2d/match)
+         2d/match)
 
 (provide unify
          unify*
