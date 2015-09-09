@@ -18,6 +18,7 @@ making them suitable for programs that should not depend on
 @include-section["ref/languages.scrbl"]
 @include-section["ref/reduction-relations.scrbl"]
 @include-section["ref/other-relations.scrbl"]
+@include-section["ref/binding.scrbl"]
 @include-section["ref/testing.scrbl"]
 @include-section["ref/gui.scrbl"]
 @include-section["ref/typesetting.scrbl"]

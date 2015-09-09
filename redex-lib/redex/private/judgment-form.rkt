@@ -12,7 +12,8 @@
          "rewrite-side-conditions.rkt"
          (only-in "pat-unify.rkt"
                   unsupported-pat-err-name
-                  unsupported-pat-err))
+                  unsupported-pat-err)
+         (only-in "lang-struct.rkt" mtch-bindings))
 
 (require
  (for-syntax "rewrite-side-conditions.rkt"

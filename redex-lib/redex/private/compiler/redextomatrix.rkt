@@ -8,13 +8,12 @@
 (require racket/set)
 (require profile)
 (require (only-in "../../private/matcher.rkt"
+                  build-flat-context)
+         (only-in "../../private/lang-struct.rkt"
+                  the-hole
                   make-bindings
                   make-bind
-                  make-mtch
-                  build-flat-context
-                  )
-         (only-in "../../private/lang-struct.rkt"
-                  the-hole)
+                  make-mtch)
          racket/list)
 
 (define plug (λ (x y)

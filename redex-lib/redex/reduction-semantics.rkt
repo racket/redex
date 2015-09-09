@@ -48,6 +48,8 @@
          coverage?
          check-redundancy)
 
+(provide shadow rib nothing)
+
 (provide (rename-out [test-match redex-match])
          (rename-out [test-match? redex-match?])
          term-match
@@ -63,7 +65,11 @@
          test-->
          test-->>∃ (rename-out [test-->>∃ test-->>E])
          test-predicate
-         test-results)
+         test-results
+
+         default-language
+         alpha-equivalent?
+         substitute)
 
 (provide redex-check
          generate-term

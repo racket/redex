@@ -1,7 +1,7 @@
 #lang racket
 (require "private/test-util.rkt"
          redex/reduction-semantics
-         (only-in redex/private/matcher make-bindings make-bind)
+         (only-in redex/private/lang-struct make-bindings make-bind)
          racket/match
          racket/trace
          redex/private/struct)

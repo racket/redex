@@ -1,6 +1,8 @@
 #lang racket
 (require redex)
 
+(provide (all-defined-out))
+
 ;; This semantics comes from the paper
 ;; _A Natural Semantics for Lazy Evaluation_,
 ;; by John Launchbury, POPL 1993
