@@ -33,6 +33,7 @@
 
      "err-loc-test.rkt"
      "term-test.rkt"
+     "binding-forms-test.rkt" 
      "rg-test.rkt"
      "gen-test.rkt"
      "keyword-macros-test.rkt"
