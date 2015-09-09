@@ -1,6 +1,8 @@
 #lang racket
 (require redex)
 
+(provide (all-defined-out))
+
 ;; This semantics comes from the paper
 ;; _A Natural Semantics for Lazy Evaluation_,
 ;; by John Launchbury, POPL 1993
@@ -239,7 +241,6 @@
     (⇓ · ,p Δ v))))
 
 (module+ test
-  
   (test-equal (term (replace-free (let ([x x] [p q]) x) (x y)))
               (term (let ([x y] [p q]) x)))
   (test-equal (term (replace-free (let ([p q]) x) (x y)))
@@ -259,7 +260,7 @@
               (term (λ (y) (λ (y) y))))
   (test-equal (term (rename-bound (let ([x 1] [y 2]) x) x z))
               (term (let ([z 1] [y 2]) z)))
-  
+
   (test-equal (term (subst (λ (x) ((λ (y) x) y)) y z))
               (term (λ (x) ((λ (y) x) z))))
   (test-equal (term (subst (λ (x) ((λ (y) y) y)) y z))
@@ -278,7 +279,7 @@
   (test-equal (term (separate ((· x ↦ 1) y ↦ 2) x)) 
               (term ((· y ↦ 2) x ↦ 1)))
   (test-equal (term (separate (· x ↦ 1) y)) (term ⊥))
-  
+
   (test-equal (term (^ (· x ↦ (λ (x) x)) (λ (x) x))) 
               (term (λ (x1) x1)))
   (test-equal (term (^ · (λ (x) (λ (y) (x y))))) 
@@ -300,7 +301,7 @@
   (test-equal (term (^ (· x ↦ 1)
                        (if0 x (λ (x) x) x)))
               (term (if0 x (λ (x1) x1) x)))
-  
+
   (test-equal (judgment-holds (⇓ (· y ↦ 1) ((λ (x) x) y) Δ v) v)
               (list (term 1)))
   
@@ -379,5 +380,9 @@
                           [five 5])
                       ((Y tri) five))))
               (+ 5 4 3 2 1 0))
+
+  (test-equal (run (term (let ([one 1] [two 2])
+                           (((λ (x) (λ (x) (+ x one))) one) two))))
+              3)
   
   (test-results))
