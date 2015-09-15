@@ -8,7 +8,6 @@
                "gui-lib"
                "data-lib"
                "profile-lib"
-               "unstable-2d"
                "redex-lib"
                "redex-pict-lib"
                "pict-lib"))

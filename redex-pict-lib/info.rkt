@@ -7,7 +7,6 @@
                "draw-lib"
                "data-lib"
                "profile-lib"
-               "unstable-2d"
                "redex-lib"
                "pict-lib"))
 
