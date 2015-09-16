@@ -318,14 +318,12 @@
                    ((,a2 ,b2) (,b2 ,a2)))
    (a b c a2 b2 'a 'b 'c))
 
-  ;; TODO: what should we do about metafunction caching?
-
   (destr-test
    (let* (cl a ((lambda (a) a) a)
              (cl x ((lambda (a) a) a) no-cl)) a)
    (let* (cl ,a1 ((lambda (,a2) ,a2) a)
              (cl ,x ((lambda (,a3) ,a3) ,a1) ,no-cl)) ,a1)
-   (a1 a2 'a))  ;; (once metafunction caching is fixed, add a3 to this list)
+   (a1 a2 a3 'a))
 
   (destr-test
    (va-lambda (a b c) (+ c b a))
@@ -385,6 +383,39 @@
 
   ;; TODO: try a form with nested `#:...bind`
 
+
+  (define-judgment-form lc
+    #:mode (j-subst I I I O)
+    #:contract (j-subst expr x expr expr)
+
+    [(j-subst expr_l x expr_new expr_l-res)
+     (j-subst expr_r x expr_new expr_r-res)
+     ----------
+     (j-subst (expr_l expr_r) x expr_new (expr_l-res expr_r-res))]
+
+    [(j-subst expr_body x expr_new expr_res) ;; note the naive-ness!
+     ----------
+     (j-subst (lambda (x_param) expr_body) x expr_new 
+              (lambda (x_param) expr_res))]
+
+    [----------
+     (j-subst x x expr_new expr_new)]
+
+    [(side-condition
+      ,(or (not (symbol=? (term x_other) (term x)))))
+     ----------
+     (j-subst x_other x expr_new x_other)])
+
+  (check-match 
+   (judgment-holds (j-subst (x y) x z expr_out) expr_out)
+   `((z y)))
+
+  (check-match
+   (judgment-holds (j-subst (lambda (x) (y (x (lambda (y) (x (y (lambda (z) (z (y x))))))))) 
+                            y (lambda (i) (x i)) expr_out)
+                   expr_out)
+   `((lambda (,x) ((lambda (,i) (x ,i)) (,x (lambda (,y) (,x (,y (lambda (,z) (,z (,y ,x))))))))))
+   (all-distinct? x i y z 'x))
 )
 
 

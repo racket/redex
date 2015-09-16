@@ -13,7 +13,7 @@
          "lang-struct.rkt"
          "binding-forms-compiler.rkt"
          (only-in "binding-forms.rkt"
-                  α-equal? safe-subst)
+                  α-equal? safe-subst binding-forms-opened?)
          (only-in "binding-forms-definitions.rkt"
                   shadow nothing)
          (for-syntax "cycle-check.rkt"
@@ -1709,72 +1709,75 @@
                 (λ (exp)
                   (let ([cache-ref (hash-ref cache exp not-in-cache)])
                     (cond
-                      [(or (not (caching-enabled?)) (eq? cache-ref not-in-cache))
-                       (define dom-match-result 
-                         (if dom-compiled-pattern
-                             (match-pattern dom-compiled-pattern exp)
-                             '()))
-                       (when dom-compiled-pattern
-                         (unless dom-match-result
-                           (redex-error name
-                                        "~s is not in my domain"
-                                        `(,name ,@exp)))
-                         (unless (for/and ([mtch (in-list dom-match-result)])
-                                   (pre-condition (mtch-bindings mtch)))
-                           (redex-error name
-                                        "~s is not in my domain"
-                                        `(,name ,@exp))))
-                       (let loop ([ids ids]
-                                  [lhss lhss-at-lang]
-                                  [rhss rhss-at-lang]
-                                  [num (- (length parent-cases))])
-                         (cond
-                           [(null? ids) 
-                            (redex-error name "no clauses matched for ~s" `(,name . ,exp))]
-                           [else
-                            (define pattern (car lhss))
-                            (define rhs (car rhss))
-                            (define id (car ids))
-                            (define (continue) (loop (cdr ids) (cdr lhss) (cdr rhss) (+ num 1)))
-                            (define mtchs (match-pattern pattern exp))
-                            (cond
-                              [(not mtchs) (continue)]
-                              [else
-                               (define anss
-                                 (apply append
-                                        (filter values
-                                                (map (λ (mtch) (rhs traced-metafunc (mtch-bindings mtch)))
-                                                     mtchs))))
-                               (define ht (make-hash))
-                               (for-each (λ (ans) (hash-set! ht ans #t)) anss)
-                               (cond
-                                 [(null? anss)
-                                  (continue)]
-                                 [(not (= 1 (hash-count ht)))
-                                  (redex-error name "~a matched ~s ~a returned different results" 
-                                               (if (< num 0)
-                                                   "a clause from an extended metafunction"
-                                                   (format "clause #~a (counting from 0)" num))
-                                               `(,name ,@exp)
-                                               (if (= 1 (length mtchs))
-                                                   "but"
-                                                   (format "~a different ways and "
-                                                           (length mtchs))))]
-                                 [else
-                                  (define ans (car anss))
-                                  (unless (for/or ([codom-compiled-pattern 
-                                                    (in-list codom-compiled-patterns)])
-                                            (match-pattern codom-compiled-pattern 
-                                                           (if post-condition?
-                                                               (list exp ans)
-                                                               ans)))
-                                    (redex-error name
-                                                 "codomain test failed for ~s, call was ~s"
-                                                 ans 
-                                                 `(,name ,@exp)))
-                                  (cache-result exp ans id)
-                                  (log-coverage id)
-                                  ans])])]))]
+                     [(or (not (caching-enabled?)) (eq? cache-ref not-in-cache))
+                      (parameterize ([binding-forms-opened? (if (caching-enabled?) (box #f) #f)])
+
+                        (define dom-match-result 
+                          (if dom-compiled-pattern
+                              (match-pattern dom-compiled-pattern exp)
+                              '()))
+                        (when dom-compiled-pattern
+                          (unless dom-match-result
+                            (redex-error name
+                                         "~s is not in my domain"
+                                         `(,name ,@exp)))
+                          (unless (for/and ([mtch (in-list dom-match-result)])
+                                    (pre-condition (mtch-bindings mtch)))
+                            (redex-error name
+                                         "~s is not in my domain"
+                                         `(,name ,@exp))))
+                        (let loop ([ids ids]
+                                   [lhss lhss-at-lang]
+                                   [rhss rhss-at-lang]
+                                   [num (- (length parent-cases))])
+                          (cond
+                            [(null? ids) 
+                             (redex-error name "no clauses matched for ~s" `(,name . ,exp))]
+                            [else
+                             (define pattern (car lhss))
+                             (define rhs (car rhss))
+                             (define id (car ids))
+                             (define (continue) (loop (cdr ids) (cdr lhss) (cdr rhss) (+ num 1)))
+                             (define mtchs (match-pattern pattern exp))
+                             (cond
+                               [(not mtchs) (continue)]
+                               [else
+                                (define anss
+                                  (apply append
+                                         (filter values
+                                                 (map (λ (mtch) (rhs traced-metafunc (mtch-bindings mtch)))
+                                                      mtchs))))
+                                (define ht (make-hash))
+                                (for-each (λ (ans) (hash-set! ht ans #t)) anss)
+                                (cond
+                                  [(null? anss)
+                                   (continue)]
+                                  [(not (= 1 (hash-count ht)))
+                                   (redex-error name "~a matched ~s ~a returned different results" 
+                                                (if (< num 0)
+                                                    "a clause from an extended metafunction"
+                                                    (format "clause #~a (counting from 0)" num))
+                                                `(,name ,@exp)
+                                                (if (= 1 (length mtchs))
+                                                    "but"
+                                                    (format "~a different ways and "
+                                                            (length mtchs))))]
+                                  [else
+                                   (define ans (car anss))
+                                   (unless (for/or ([codom-compiled-pattern 
+                                                     (in-list codom-compiled-patterns)])
+                                             (match-pattern codom-compiled-pattern 
+                                                            (if post-condition?
+                                                                (list exp ans)
+                                                                ans)))
+                                     (redex-error name
+                                                  "codomain test failed for ~s, call was ~s"
+                                                  ans 
+                                                  `(,name ,@exp)))
+                                   (unless (unbox (binding-forms-opened?))
+                                     (cache-result exp ans id))
+                                   (log-coverage id)
+                                   ans])])])))]
                       [else 
                        (log-coverage (cdr cache-ref))
                        (car cache-ref)])))]

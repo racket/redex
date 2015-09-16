@@ -85,7 +85,7 @@ to traverse the whole value at once, rather than one binding form at a time.
 
 ;; == public interface ==
 
-(provide freshen α-equal? α-equal-hash-code safe-subst)
+(provide freshen α-equal? α-equal-hash-code safe-subst binding-forms-opened?)
 
 
 ;; == parameters ==
@@ -96,9 +96,15 @@ to traverse the whole value at once, rather than one binding form at a time.
 (define pattern-matcher (make-parameter "pattern matcher not defined"))
 ;; Sometimes we want fresh names, sometimes we want canonical names
 (define name-generator (make-parameter "name generator not defined"))
-
 ;; For α-equivalence testing, we walk the whole term at once.
 (define all-the-way-down? (make-parameter "all-the-way-downness not defined"))
+
+
+;; For the outside interface: indicate whether any binding forms were opened.
+;; (This is intended to be used to disable caching)
+;; If it is set to a box containing `#f`, we will change the box to contain
+;; `#t` if 
+(define binding-forms-opened? (make-parameter #f))
 
 ;; == implementation of public interface ==
 
@@ -186,8 +192,11 @@ to traverse the whole value at once, rather than one binding form at a time.
           (match match-res
             [#f (loop rest)]
             ;; "bindings" is what the rest of Redex calls what we call "red-match"
-            [`(,m) (fn (splay-all-...binds (bindings-table (mtch-bindings m)) bspec)
-                       bspec)])]
+            [`(,m) 
+             (when (binding-forms-opened?)
+                   (set-box! (binding-forms-opened?) #t))
+             (fn (splay-all-...binds (bindings-table (mtch-bindings m)) bspec)
+                 bspec)])]
          [`() (nospec-fn redex-val)]))]
     ;; `value-with-spec` is an internal-only "pre-matched" form
     [(value-with-spec match spec) (fn match spec)] ;; (we know it's been splayed)

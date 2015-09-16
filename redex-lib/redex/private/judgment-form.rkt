@@ -13,7 +13,8 @@
          (only-in "pat-unify.rkt"
                   unsupported-pat-err-name
                   unsupported-pat-err)
-         (only-in "lang-struct.rkt" mtch-bindings))
+         (only-in "lang-struct.rkt" mtch-bindings)
+         (only-in "binding-forms.rkt" binding-forms-opened?))
 
 (require
  (for-syntax "rewrite-side-conditions.rkt"
@@ -352,14 +353,16 @@
                            (not (eq? cache-value not-in-cache)))))
   (define p-a-e (print-as-expression))
   (define (form-proc/cache recur input derivation-init)
-    (parameterize ([print-as-expression p-a-e])
+    (parameterize ([print-as-expression p-a-e]
+                   [binding-forms-opened? (if (caching-enabled?) (box #f) #f)])
       (cond
         [(caching-enabled?)
          (define candidate (hash-ref cache input not-in-cache))
          (cond
            [(equal? candidate not-in-cache)
             (define computed-ans (form-proc recur input derivation-init))
-            (hash-set! cache input computed-ans)
+            (unless (unbox (binding-forms-opened?))
+              (hash-set! cache input computed-ans))
             computed-ans]
            [else
             candidate])]
