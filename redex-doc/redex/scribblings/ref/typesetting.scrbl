@@ -19,7 +19,7 @@
                  ...)))))
 
 
-@section{Typesetting}
+@title{Typesetting}
 
 @defmodule*/no-declare[(redex/pict)]
 @declare-exporting[redex/pict redex]
@@ -42,7 +42,7 @@ papers with LaTeX, create @filepath{.ps} files from Redex and use
 (using @tt{pdflatex} with @filepath{.pdf} files will 
 work but the results will not look as good onscreen).
 
-@subsection{Picts, PDF, & PostScript}
+@section{Picts, PDF, & PostScript}
 
 This section documents two classes of operations, one for
 direct use of creating postscript figures for use in papers
@@ -262,7 +262,7 @@ This function sets @racket[dc-for-text-size]. See also
   @racketmodname[pict]s.
 }
 
-@subsection{Customization}
+@section{Customization}
 
 @defparam[render-language-nts nts (or/c false/c (listof symbol?))]{
   The value of this parameter controls which non-terminals
@@ -796,7 +796,7 @@ single reduction relation.
 
 
 
-@subsection[#:tag "pink"]{Removing the Pink Background}
+@section[#:tag "pink"]{Removing the Pink Background}
 
 @declare-exporting[redex/pict redex]
 
@@ -893,7 +893,7 @@ would have been just outside the sequence is replaced with an
                                   expression)]{
 Shorthand for nested @racket[with-compound-rewriter] expressions.}
 
-@subsection{LWs}
+@section{LWs}
                                               
 @defstruct[lw ([e (or/c string?
                         symbol?
