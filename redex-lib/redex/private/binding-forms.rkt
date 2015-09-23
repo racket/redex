@@ -85,7 +85,7 @@ to traverse the whole value at once, rather than one binding form at a time.
 
 ;; == public interface ==
 
-(provide freshen α-equal? safe-subst)
+(provide freshen α-equal? α-equal-hash-code safe-subst)
 
 
 ;; == parameters ==
@@ -115,6 +115,13 @@ to traverse the whole value at once, rather than one binding form at a time.
     (first (rec-freshen redex-val #f #t #f))))
 
 
+;; α-equal-hash-code : (listof (list compiled-pattern bspec))
+;; (compiled-pattern redex-val -> (union #f mtch)) redex-val -> exact-integer
+(define (α-equal-hash-code language-bf-table match-pattern redex-val)
+  (equal-hash-code (canonicalize language-bf-table match-pattern redex-val)))
+
+;; α-equal? : (listof (list compiled-pattern bspec))
+;; (compiled-pattern redex-val -> (union #f mtch)) redex-val -> boolean
 (define (α-equal? language-bf-table match-pattern redex-val-lhs redex-val-rhs)
   (cond
    ;; short-circuit on some easy cases:
@@ -126,39 +133,8 @@ to traverse the whole value at once, rather than one binding form at a time.
              (list? redex-val-rhs))) #f]
    [(not (list? redex-val-lhs)) (equal? redex-val-lhs redex-val-rhs)]
    [else
-    (define canonical-name-list '())
-
-    (parameterize
-     ([bf-table language-bf-table]
-      [pattern-matcher match-pattern]
-      [all-the-way-down? #t])
-
-     (define canonical-lhs
-       (parameterize
-        ([name-generator ;; record the names generated in order
-          (λ (orig-name)
-             (define new-name (gensym orig-name))
-             (set! canonical-name-list (cons new-name canonical-name-list))
-             new-name)])
-
-        (first (rec-freshen redex-val-lhs #f #t #f))))
-
-     (set! canonical-name-list (reverse canonical-name-list)) ;; we generated it back-to-front
-
-
-     (define canonical-rhs
-       (parameterize
-        ([name-generator ;; re-use the generated names... until we run out
-          (λ (orig-name)
-             (if (empty? canonical-name-list)
-                 (gensym orig-name) ;; At this point, we know the answer will be #f
-                 (match-let ([`(,new-name . ,remaining-canonical-names) canonical-name-list])
-                   (set! canonical-name-list remaining-canonical-names)
-                   new-name)))])
-
-        (first (rec-freshen redex-val-rhs #f #t #f))))
-
-     (equal? canonical-lhs canonical-rhs))]))
+    (equal? (canonicalize language-bf-table match-pattern redex-val-lhs)
+            (canonicalize language-bf-table match-pattern redex-val-rhs))]))
 
 ;; Perform a capture-avoiding substitution
 (define (safe-subst language-bf-table match-pattern redex-val redex-val-old-var redex-val-new-val)
@@ -173,6 +149,20 @@ to traverse the whole value at once, rather than one binding form at a time.
       [(list? v) (map loop v)]
       [(eq? redex-val-old-var v) redex-val-new-val]
       [else v]))))
+
+;; not exported, but useful here:
+(define (canonicalize language-bf-table match-pattern redex-val)
+  (define current-name-id 0)
+
+  (parameterize
+   ([bf-table language-bf-table]
+    [pattern-matcher match-pattern]
+    [all-the-way-down? #t]
+    [name-generator (λ (orig)
+                       (set! current-name-id (add1 current-name-id))
+                       (symbol->string current-name-id))])
+   
+   (first (rec-freshen redex-val #f #t #f))))
 
 ;; == pattern-dispatch ==
 
@@ -661,7 +651,6 @@ to traverse the whole value at once, rather than one binding form at a time.
             (λ (rv) (rec-freshen-nospec rv n? t-l? a-b?))))
 
 
-
 ;; freshen/was-noop? : redex-value -> redex-value bool
 ;; The boolean return value is #t if the value was unchanged
 (define (freshen/noop? redex-val)
@@ -673,6 +662,7 @@ to traverse the whole value at once, rather than one binding form at a time.
   (map cadr (second ;; top-level? needs to be off, since lone binders matter!
              (dispatch redex-val (λ (rv bs) (rec-freshen-spec rv bs #t #f))
                        (λ (rv) (rec-freshen-nospec rv #t #f #t))))))
+
 
 (module+ test
   (define (all-distinct? . lst)
