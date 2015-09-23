@@ -19,8 +19,7 @@ behavior of values, but in Redex, we use pattern-matching.)
   Important concepts for binding specifications:
 
     * Inside a particular binding form, a "beta" is a set of sources of names, organized
-      with "shadow" and "rib" to indicate how to shadow and whether it is permitted. They
-      correspond to `β` in the paper.
+      with "shadow" to indicate how to shadow. They correspond to `β` in the paper.
     * If a name source is more complex than a single name, it should be a binding form with an
       `#:exports <beta>` clause, whose beta indicates what names to provide.
     * To actually bind names, the (pattern matching the) subterm that binds them should be
@@ -378,7 +377,6 @@ to traverse the whole value at once, rather than one binding form at a time.
   ;; doesn't allow `red-match` to change
   (define (interp-beta* beta)
     (match beta
-      [(rib/internal betas) (interp-betas betas)]
       [(shadow/internal betas) (interp-betas betas)]
       [nt-ref (nt-case nt-ref red-match)]))
 
@@ -399,14 +397,14 @@ to traverse the whole value at once, rather than one binding form at a time.
 
 
 (module+ test
-  (check-equal? (interp-beta (shadow/internal `(a b ,(rib/internal `(d e))))
+  (check-equal? (interp-beta (shadow/internal `(a b ,(shadow/internal `(d e))))
                              `(,(mb 'a 1) ,(mb 'b 2) ,(mb 'd 3) ,(mb 'e 4) ,(mb 'z 9))
                              append rm-lookup-as-list '())
                 `(1 2 3 4))
 
   (check-equal? (interp-beta (shadow/internal `(a ,(.../internal `b `(b))
                                                   ,(.../internal `z `(z))
-                                                  ,(.../internal (rib/internal `(c d)) `(c d))))
+                                                  ,(.../internal (shadow/internal `(c d)) `(c d))))
                              `(,(mb `a 1) ,(mb `b `(2 3 4)) ,(mb `c `(5 7)) ,(mb `d `(6 8))
                                ,(mb `z `(99)))
                              append rm-lookup-as-list `())
@@ -482,7 +480,7 @@ to traverse the whole value at once, rather than one binding form at a time.
 
 (module+ test
   (define lambda-bspec (bspec `(lambda (x) ,(import/internal `expr `x))
-                              (rib/internal `()) `(x) `() `(x)
+                              (shadow/internal `()) `(x) `() `(x)
                               `((lambda 0) (x 0) (expr 0))))
 
   (define ieie-bspec

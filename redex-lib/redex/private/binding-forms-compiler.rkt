@@ -49,8 +49,6 @@
 
  (define (names-mentioned-in-beta/rec beta)
    (match beta
-     [(rib/internal betas)
-      (append* (map (λ (b) (names-mentioned-in-beta/rec b)) betas))]
      [(shadow/internal betas)
       (append* (map (λ (b) (names-mentioned-in-beta/rec b)) betas))]
      ;; PS: can we just return `names` here?
@@ -114,8 +112,8 @@
    (check-equal? (names-mentioned-in-beta `a) `(a))
    (check-equal? (names-mentioned-in-beta
                   (shadow/internal
-                   `(,(rib/internal `(a b c)) ,(shadow/internal `(b c d e))
-                     ,(rib/internal `(f g h a a a))
+                   `(,(shadow/internal `(a b c)) ,(shadow/internal `(b c d e))
+                     ,(shadow/internal `(f g h a a a))
                      b ,(shadow/internal `()) ,(shadow/internal `()))))
                  `(a b c d e f g h))
 
@@ -123,8 +121,8 @@
    (check-equal? (names-imported-in `((x) e)) `())
    (check-equal? (names-imported-in
                   `(,(import/internal `e_1 (shadow/internal `(x_2 x_444)))
-                    (x_22 ,(import/internal `x_33 (rib/internal `(x_1 x_2)))
-                          ,(import/internal `(e_2 ,(import/internal `e_3 (rib/internal `(x_9))))
+                    (x_22 ,(import/internal `x_33 (shadow/internal `(x_1 x_2)))
+                          ,(import/internal `(e_2 ,(import/internal `e_3 (shadow/internal `(x_9))))
                                             `x_3))))
                  `(x_2 x_444 x_1 x_9 x_3))
    (check-equal? (names-imported-in
@@ -147,24 +145,22 @@
         `(,(surface-beta->beta #'sub-s-beta form-name) . ,(surface-betas->betas #`rest))]
        [() `()]))
 
-   (syntax-case surface-beta (shadow rib nothing)
+   (syntax-case surface-beta (shadow nothing)
      [(shadow . sub-s-betas)
       (shadow/internal (surface-betas->betas #'sub-s-betas))]
-     [(rib . sub-s-betas)
-      (rib/internal (surface-betas->betas #'sub-s-betas))]
      [nothing (shadow/internal '())]
      [nt-ref (if (identifier? #'nt-ref)
                  (syntax-e #'nt-ref)
                  (raise-syntax-error
                   (syntax-e form-name)
-                  "expected a shadow, rib, nothing, or nonterminal" #'nt-ref))]))
+                  "expected a shadow, nothing, or nonterminal" #'nt-ref))]))
 
  (module+ test
-   (check-equal? (surface-beta->beta #'(rib (shadow nothing a b) c d) #'irrelevant)
-                 (rib/internal `(,(shadow/internal `(,(shadow/internal `()) a b)) c d)))
+   (check-equal? (surface-beta->beta #'(shadow (shadow nothing a b) c d) #'irrelevant)
+                 (shadow/internal `(,(shadow/internal `(,(shadow/internal `()) a b)) c d)))
 
-   (check-equal? (surface-beta->beta #'(rib x (... ...)) #'irrelevant)
-                 (rib/internal `(,(.../internal `x `(x)))))
+   (check-equal? (surface-beta->beta #'(shadow x (... ...)) #'irrelevant)
+                 (shadow/internal `(,(.../internal `x `(x)))))
    )
 
 
@@ -276,23 +272,23 @@
 
    (check-equal?
     (surface-bspec->bspec
-     #'((form a b (c d #:refers-to h e) #:refers-to (shadow e b (rib nothing)) e f g h)
-        #:exports (rib e f)))
+     #'((form a b (c d #:refers-to h e) #:refers-to (shadow e b (shadow nothing)) e f g h)
+        #:exports (shadow e f)))
     (bspec `(form a b ,(import/internal
                         `(c ,(import/internal `d `h) e)
-                        (shadow/internal `(e b ,(rib/internal `(,(shadow/internal `())))))) e f g h)
-           (rib/internal `(e f)) `(h e b) `(e f) `(h e b f)
+                        (shadow/internal `(e b ,(shadow/internal `(,(shadow/internal `())))))) e f g h)
+           (shadow/internal `(e f)) `(h e b) `(e f) `(h e b f)
            `((form 0) (a 0) (b 0) (c 0) (d 0) (e 0) (f 0) (g 0) (h 0))))
 
    (check-equal?
     (surface-bspec->bspec #'((form x_11
                                    e_1 #:refers-to (shadow x_2 x_444)
-                                   (x_22 x_33 #:refers-to (rib x_1 x_2)
-                                         (e_2 e_3 #:refers-to (rib x_9))
+                                   (x_22 x_33 #:refers-to (shadow x_1 x_2)
+                                         (e_2 e_3 #:refers-to (shadow x_9))
                                          #:refers-to x_3)) #:exports nothing))
     (bspec `(form x_11 ,(import/internal `e_1 (shadow/internal `(x_2 x_444)))
-                  (x_22 ,(import/internal `x_33 (rib/internal `(x_1 x_2)))
-                        ,(import/internal `(e_2 ,(import/internal `e_3 (rib/internal `(x_9))))
+                  (x_22 ,(import/internal `x_33 (shadow/internal `(x_1 x_2)))
+                        ,(import/internal `(e_2 ,(import/internal `e_3 (shadow/internal `(x_9))))
                                           `x_3)))
            (shadow/internal '()) `(x_2 x_444 x_1 x_9 x_3) `()
            `(x_2 x_444 x_1 x_9 x_3)
@@ -301,13 +297,13 @@
 
 
    (define va-lambda-bspec
-     (surface-bspec->bspec #`((va-lambda (x (... ...)) expr #:refers-to (rib x (... ...)))
+     (surface-bspec->bspec #`((va-lambda (x (... ...)) expr #:refers-to (shadow x (... ...)))
                               #:exports nothing)))
 
    (check-equal?
     va-lambda-bspec
     (bspec `(va-lambda (,(.../internal `x `(x)))
-                       ,(import/internal `expr (rib/internal `(,(.../internal `x `(x))))))
+                       ,(import/internal `expr (shadow/internal `(,(.../internal `x `(x))))))
            (shadow/internal `()) `(x) `() `(x)
            `((va-lambda 0) (x 1) (expr 0))))
 

@@ -77,8 +77,8 @@
    (x variable-not-otherwise-mentioned)
    #:binding-forms
    (lambda (x) expr #:refers-to x)
-   (va-lambda (x ...) expr #:refers-to (rib x ...))
-   (va-vb-lambda (x ...) expr #:refers-to (rib x ...) ...)
+   (va-lambda (x ...) expr #:refers-to (shadow x ...))
+   (va-vb-lambda (x ...) expr #:refers-to (shadow x ...) ...)
    (ieie x_i x_e x_ie expr_1 #:refers-to (shadow x_ie x_i)
          expr_2 #:refers-to (shadow x_i x_ie)) #:exports (shadow x_e x_ie)
    (let* clauses expr #:refers-to clauses)
@@ -86,16 +86,16 @@
    (let3* ((x_a expr_a) (x_b expr_b #:refers-to x_a)
            (x_c expr_c #:refers-to (shadow x_b x_a)))
           expr_body #:refers-to (shadow x_c x_b x_a))
-   (conjoined-lambda ((x ...) expr #:refers-to (rib x ...)) ...)
+   (conjoined-lambda ((x ...) expr #:refers-to (shadow x ...)) ...)
    (embedded-lambda (x_0) (((any_1) expr_1 #:refers-to any_1) expr_0) #:refers-to x_0)
-   (pile-o-binders x ...) #:exports (rib x ...)
+   (pile-o-binders x ...) #:exports (shadow x ...)
    (boring-...-bind (x_1 x_2 #:...bind (whatever nothing nothing) x_3))
    (natural-let* ((x expr) #:...bind (clauses x (shadow clauses x))) expr_body #:refers-to clauses)
    ;; it would be nice if this gave an error message about `x_out` or `x_in` on definition (or worked)
    #;
    (wacky-...-bind x_out ((x_in x_side x_exp expr  #:refers-to x_out )
-                          #:...bind (clauses x_side (rib x_exp clauses)))
-                   expr_body #:refers-to (rib x_in ...))
+                          #:...bind (clauses x_side (shadow x_exp clauses)))
+                   expr_body #:refers-to (shadow x_in ...))
    )
 
 
@@ -397,7 +397,7 @@
           (expr ...)
           (lambda (x ...) expr))
     #:binding-forms
-    (lambda (x ...) expr #:refers-to (rib x ...)))
+    (lambda (x ...) expr #:refers-to (shadow x ...)))
 
   (define-extended-language lc-with-extra-lambda va-lc
     (expr ....

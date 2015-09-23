@@ -4,7 +4,6 @@
 
 ;; When this error occurs, it seems to come from 'wrap-modbeg.rkt'. That seems bad
 (define-syntax (shadow stx) (raise-syntax-error #f "used outside of binding specification" stx))
-(define-syntax (rib stx) (raise-syntax-error #f "used outside of binding specification" stx))
 (define-syntax (nothing stx) (raise-syntax-error #f "used outside of binding specification" stx))
 
 (struct import/internal (body beta) #:prefab)
@@ -15,7 +14,6 @@
 (struct ...bind/internal (export-name drivers bspec) #:prefab)
 
 (struct shadow/internal (betas) #:prefab)
-(struct rib/internal (betas) #:prefab)
 
 ;; body: a tree, with `import/internal`s, `.../internal`s, and identifiers,
 ;;       representing the binding strucutre

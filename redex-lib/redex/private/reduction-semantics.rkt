@@ -15,7 +15,7 @@
          (only-in "binding-forms.rkt"
                   α-equal? safe-subst)
          (only-in "binding-forms-definitions.rkt"
-                  shadow rib nothing)
+                  shadow nothing)
          (for-syntax "cycle-check.rkt"
                      setup/path-to-relative)
          racket/trace
@@ -2815,7 +2815,7 @@
          
          (struct-out binds))
 
-(provide shadow rib nothing)
+(provide shadow nothing)
 
 (provide test-match
          test-match?

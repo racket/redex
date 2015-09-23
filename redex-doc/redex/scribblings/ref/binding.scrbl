@@ -28,13 +28,12 @@ the binding forms at the time of language definition. Explicitly declaring bindi
 makes safely manipulating terms containing binding simpler and easier.
 
 @(racketgrammar*
-   #:literals (binding:nothing binding:rib binding:shadow pat:symbol)
+   #:literals (binding:nothing binding:shadow pat:symbol)
    [binding-declaration-list (code:line) (code:line #:binding-forms binding-declaration ...)]
    [binding-declaration binding-pattern
                  (code:line binding-pattern #:exports beta)]
    [beta nothing
          pat:symbol
-         (rib beta-sequence ...)
          (shadow beta-sequence ...)]
    [beta-sequence beta
                   (code:line ... (code:comment "literal ellipsis"))])
@@ -78,9 +77,8 @@ In this simple case, in a @racket[λ] term, the @racket[e] subterm has the name 
 the @racket[x] subterm in scope. The symbols inside a beta must be names bound by the
 @tech{binding pattern}
 
-It is possible for a single subterm to refer to multiple other sources of names. In
-such a case, their relationship must be specified by the @tech{beta} as either
-@deftech{shadow} (later names override previous names) or @deftech{rib} (names must be distinct):
+It is possible for a single subterm to refer to multiple other sources of names. In such a case, the
+shadowing direction must be specified by the @tech{beta} with a @racket[shadow] clause.
 
 @interaction[#:eval
           redex-eval
@@ -212,7 +210,7 @@ outside of it, or vice versa. For example, @racket[e_body #:refers-to (shadow x_
 would have been illegal in the above example.
 
 @defidform[shadow]{Recognized specially within a @tech{beta}. A @racket[shadow] is an error elsewhere.}
-@defidform[rib]{Recognized specially within a @tech{beta}. A @racket[rib] is an error elsewhere.}
+
 @defidform[nothing]{Recognized specially within a @tech{beta}. A @racket[nothing] is an error elsewhere.}
 
 @(close-eval redex-eval)
