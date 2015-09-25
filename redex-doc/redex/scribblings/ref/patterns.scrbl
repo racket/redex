@@ -394,12 +394,15 @@ Changes the size of the per-pattern and per-metafunction caches.
 The default size is @racket[63].
 }
 
-@defparam[check-redudancy check? boolean?]{
+@defparam[check-redundancy check? boolean?]{
   Ambiguous patterns can slow down
   Redex's pattern matching implementation significantly. To help debug
   such performance issues, set the @racket[check-redundancy]
   parameter to @racket[#t]. A true value causes Redex to, at runtime,
   report any redundant matches that it encounters.
+
+  @history[#:changed "1.9" @list{Corrected spelling error, from
+             @racket[check-redudancy] to @racket[check-redundancy]}]
 }
 
 

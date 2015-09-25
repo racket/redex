@@ -1692,7 +1692,7 @@ See match-a-pattern.rkt for more details
            (if (null? ans)
                #f
                (begin
-                 (when (check-redudancy)
+                 (when (check-redundancy)
                    (let ([rd (remove-duplicates ans)])
                      (unless (= (length rd) (length ans))
                        (eprintf "found redundancy when matching the non-terminal ~s against:\n~s~a"
@@ -1722,7 +1722,7 @@ See match-a-pattern.rkt for more details
            (or (call-nt-proc/bindings (car rhss) term hole-info)
                (loop (cdr rhss)))]))))
 
-(define check-redudancy (make-parameter #f))
+(define check-redundancy (make-parameter #f))
 
 (define (match-nt/boolean list-rhs non-list-rhs nt term)
   (let loop ([rhss (if (or (null? term) (pair? term))
@@ -2027,6 +2027,6 @@ See match-a-pattern.rkt for more details
          rewrite-ellipses
          build-compatible-context-language
          caching-enabled?
-         check-redudancy
+         check-redundancy
          prefix-nts
          mk-uf-sets)

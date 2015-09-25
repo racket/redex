@@ -46,7 +46,7 @@
          caching-enabled?
          make-coverage
          coverage?
-         check-redudancy)
+         check-redundancy)
 
 (provide (rename-out [test-match redex-match])
          (rename-out [test-match? redex-match?])
