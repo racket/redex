@@ -27,7 +27,7 @@
   (Γ Δ Θ ::= · (Γ x ↦ e))
 
   #:binding-forms
-  (let ([x e] ...) e_body #:refers-to (rib x ...))
+  (let ([x e] ...) e_body #:refers-to (shadow x ...))
   (λ (x) e #:refers-to x))
 
 (define-judgment-form L
