@@ -8,4 +8,5 @@
 (define-runtime-path here ".")
 
 (define (all-mods)
-  (make-all-mods here "stlc" (make-path-root 'stlc+lists)))
+  (append (make-all-mods here "stlc" (make-path-root 'stlc+lists))
+          (make-all-mods here "stlc-with-binding" (make-path-root 'stlc+lists))))
