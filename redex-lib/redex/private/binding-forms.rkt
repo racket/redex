@@ -166,7 +166,7 @@ to traverse the whole value at once, rather than one binding form at a time.
     [all-the-way-down? #t]
     [name-generator (λ (orig)
                        (set! current-name-id (add1 current-name-id))
-                       (symbol->string current-name-id))])
+                       (string->symbol (number->string current-name-id)))])
    
    (first (rec-freshen redex-val #f #t #f))))
 
