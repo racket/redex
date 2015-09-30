@@ -178,7 +178,7 @@ is @racket[#f] or has no binding forms, terms have no bound names and therefore
 @racket[alpha-equivalent?] is the same as @racket[equal?].
 }
 
-@defproc[(substitute [lang compiled-lang?] [val any/c] [old-var symbol?] [new-val any/c]) any/c] {
+@defproc[(substitute [lang compiled-lang?] [val any/c] [old-var symbol?] [new-val any/c]) any/c]{
 Returns a value like @racket[val], except that any occurences of @racket[old-var] have been
 replaced with @racket[new-val], in a capture-avoiding fashion. The bound names of @racket[val]
 may be freshened in order to accomplish this, based on the binding information in @racket[lang].
