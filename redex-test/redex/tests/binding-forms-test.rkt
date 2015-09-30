@@ -416,6 +416,7 @@
                    expr_out)
    `((lambda (,x) ((lambda (,i) (x ,i)) (,x (lambda (,y) (,x (,y (lambda (,z) (,z (,y ,x))))))))))
    (all-distinct? x i y z 'x))
+
 )
 
 
@@ -545,5 +546,24 @@
    (lambda (x) (lambda (y) (x y)))
    (lambda (,x) (lambda (,y) (,x ,y)))
    (x y 'x 'y))
+
+  ;; test that judgment forms set `default-language`
+
+  (define-judgment-form lc-extended-with-binding
+    #:mode (dl-param-test-jf O)
+
+    [(where any ,(equal? (default-language) lc-extended-with-binding))
+     ----------
+     (dl-param-test-jf any)])
+
+  (check-equal? (judgment-holds (dl-param-test-jf any) any) `(#t))
+
+  ;; ... and metafunctions
+
+  (define-metafunction lc-extended-with-binding
+    [(dl-param-test-mf)
+     ,(equal? (default-language) lc-extended-with-binding)])
+
+  (check-equal? (term (dl-param-test-mf)) #t)
 
  )

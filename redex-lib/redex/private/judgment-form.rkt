@@ -13,7 +13,7 @@
          (only-in "pat-unify.rkt"
                   unsupported-pat-err-name
                   unsupported-pat-err)
-         (only-in "lang-struct.rkt" mtch-bindings)
+         (only-in "lang-struct.rkt" mtch-bindings default-language)
          (only-in "binding-forms.rkt" binding-forms-opened?))
 
 (require
@@ -265,7 +265,8 @@
                 (quasisyntax/loc premise
                   (call-judgment-form 'form-name #,judgment-proc '#,mode #,input
                                       #,(if jf-results-id #''() #f)
-                                      #,(judgment-form-cache judgment-form))))
+                                      #,(judgment-form-cache judgment-form) 
+                                      #,ct-lang)))
               (if under-ellipsis?
                   #`(repeated-premise-outputs #,input (λ (x) #,(make-traced #'x)))
                   (make-traced input))))
@@ -339,7 +340,8 @@
            (equal? (runtime-judgment-form-mode jf) '(O I)))))
 
 (define not-in-cache (gensym))
-(define (call-judgment-form form-name form-proc mode input derivation-init pair-of-boxed-caches)
+(define (call-judgment-form form-name form-proc mode input derivation-init
+                            pair-of-boxed-caches ct-lang)
   (define boxed-cache (if (include-entire-derivation)
                           (car pair-of-boxed-caches)
                           (cdr pair-of-boxed-caches)))
@@ -353,7 +355,8 @@
                            (not (eq? cache-value not-in-cache)))))
   (define p-a-e (print-as-expression))
   (define (form-proc/cache recur input derivation-init)
-    (parameterize ([print-as-expression p-a-e]
+    (parameterize ([default-language ct-lang]
+                   [print-as-expression p-a-e]
                    [binding-forms-opened? (if (caching-enabled?) (box #f) #f)])
       (cond
         [(caching-enabled?)

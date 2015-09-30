@@ -20,7 +20,8 @@
          (struct-out compiled-lang) 
          compiled-lang-across-ht 
          compiled-lang-across-list-ht
-         compiled-lang-cclang)
+         compiled-lang-cclang
+         default-language)
 
 ;; lang = (listof nt)
 ;; nt = (make-nt sym (listof rhs))
@@ -118,3 +119,5 @@
 (define (compiled-lang-across-list-ht x) 
   (compiled-lang-cclang x) ;; ensure this is computed
   (compiled-lang-raw-across-list-ht x))
+
+(define default-language (make-parameter #f))

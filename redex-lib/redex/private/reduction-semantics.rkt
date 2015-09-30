@@ -1710,7 +1710,8 @@
                   (let ([cache-ref (hash-ref cache exp not-in-cache)])
                     (cond
                      [(or (not (caching-enabled?)) (eq? cache-ref not-in-cache))
-                      (parameterize ([binding-forms-opened? (if (caching-enabled?) (box #f) #f)])
+                      (parameterize ([default-language lang]
+                                     [binding-forms-opened? (if (caching-enabled?) (box #f) #f)])
 
                         (define dom-match-result 
                           (if dom-compiled-pattern
@@ -2721,7 +2722,6 @@
 (define (substitute lang val old-var new-val)
   (safe-subst (compiled-lang-binding-table lang) match-pattern val old-var new-val))
 
-(define default-language (make-parameter #f))
 (define default-equiv
   (make-parameter
    (λ (lhs rhs)
