@@ -471,7 +471,9 @@ repeating as necessary. The optional keyword argument @racket[retries-expr]
 @defform/subs[(redex-check template property-expr kw-arg ...)
               ([template (code:line language @#,ttpattern)
                          (code:line language @#,ttpattern #:ad-hoc)
-                         (code:line language @#,ttpattern #:enum)
+                         (code:line language @#,ttpattern #:in-order)
+                         (code:line language @#,ttpattern #:uniform-at-random p-value)
+                         (code:line language @#,ttpattern #:enum bound)
                          (code:line language #:satisfying
                             (judgment-form-id @#,ttpattern ...))
                          (code:line language #:satisfying 
