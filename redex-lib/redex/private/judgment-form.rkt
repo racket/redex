@@ -1160,7 +1160,7 @@
          (check-judgment-arity orig-stx #'conc)
          (define acc-out
            (for/fold ([acc (foldl pat-pos acc-init conc-in)])
-             ([prem (drop-ellipses #'prems)])
+                     ([prem (drop-ellipses #'prems)])
              (syntax-case prem ()
                [(-where pat tmpl)
                 (where-keyword? #'-where)
@@ -1181,7 +1181,7 @@
                [_ (raise-syntax-error syn-err-name "malformed premise" prem)])))
          (for ([pos conc-out]) (tmpl-pos pos acc-out))
          acc-out)]))
-  (for ([clause clauses])
+  (for ([clause (in-list clauses)])
     (define do-tmpl
       (check-template
        (fold-clause (bind 'rhs-only) void (make-immutable-free-id-table) clause)))
