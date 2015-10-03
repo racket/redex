@@ -424,6 +424,35 @@
   (test (IO-judgment-form? J) #f))
 
 (let ()
+  ;; another test that the judgment form cache doesn't interfere with build-derivations
+  (define-language nats
+    (n ::= z (s n)))
+  
+  (define-judgment-form nats
+    #:mode (even I)
+    [--------
+     "evenz"
+     (even z)]
+    
+    [(even n)
+     ---------------- "even2"
+     (even (s (s n)))])
+  
+  (define-judgment-form nats
+    #:mode (even2 I)
+    [(even n)
+     ---------
+     (even2 n)])
+  (judgment-holds (even2 (s (s z))))
+  
+  (test (build-derivations (even (s (s z))))
+        (list
+         (derivation
+          '(even (s (s z)))
+          "even2"
+          (list (derivation '(even z) "evenz" '()))))))
+
+(let ()
   (define-judgment-form empty-language
     #:mode (J O I)
     [------------- "smaller"

@@ -337,7 +337,10 @@
            (equal? (runtime-judgment-form-mode jf) '(O I)))))
 
 (define not-in-cache (gensym))
-(define (call-judgment-form form-name form-proc mode input derivation-init boxed-cache)
+(define (call-judgment-form form-name form-proc mode input derivation-init pair-of-boxed-caches)
+  (define boxed-cache (if (include-entire-derivation)
+                          (car pair-of-boxed-caches)
+                          (cdr pair-of-boxed-caches)))
   (when (caching-enabled?)
     (when (>= (hash-count (unbox boxed-cache)) cache-size)
       (set-box! boxed-cache (make-hash))))
@@ -345,10 +348,7 @@
   (define cache (unbox boxed-cache))
   (define in-cache? (and (caching-enabled?)
                          (let ([cache-value (hash-ref cache input not-in-cache)])
-                           (and (not (eq? cache-value not-in-cache))
-                                (if (include-entire-derivation)
-                                    (andmap derivation-with-output-only-subs cache-value)
-                                    #t)))))
+                           (not (eq? cache-value not-in-cache)))))
   (define p-a-e (print-as-expression))
   (define (form-proc/cache recur input derivation-init)
     (parameterize ([print-as-expression p-a-e])
@@ -356,10 +356,7 @@
         [(caching-enabled?)
          (define candidate (hash-ref cache input not-in-cache))
          (cond
-           [(or (equal? candidate not-in-cache)
-                (if (include-entire-derivation)
-                    (not (andmap derivation-with-output-only-subs candidate))
-                    #f))
+           [(equal? candidate not-in-cache)
             (define computed-ans (form-proc recur input derivation-init))
             (hash-set! cache input computed-ans)
             computed-ans]
@@ -689,7 +686,7 @@
           (define jf-lws (compiled-judgment-form-lws #,clauses #,judgment-form-name #,stx))
           (define judgment-runtime-gen-clauses (mk-judgment-gen-clauses #,lang (λ () (judgment-runtime-gen-clauses))))
           (define jf-term-proc (make-jf-term-proc #,judgment-form-name #,syn-err-name #,lang #,nts #,mode))
-          (define jf-cache (box (make-hash)))
+          (define jf-cache (cons (box (make-hash)) (box (make-hash))))
           (define the-runtime-judgment-form
             (runtime-judgment-form '#,judgment-form-name
                                    judgment-form-runtime-proc
