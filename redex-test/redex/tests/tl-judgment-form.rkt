@@ -560,6 +560,21 @@
   (test (judgment-holds (Q (3 4) number_1) number_1)
         '(14)))
 
+(let ()
+  (define-judgment-form empty-language
+    #:mode (J1 I O)
+    [------------
+     (J1 1 1)])
+  
+  (define-judgment-form empty-language
+    #:mode (J2 I)
+    [(side-condition ,(judgment-holds (J1 any_1 any_2)))
+     --------
+     (J2 any_1)])
+  
+  (test (judgment-holds (J2 1)) #t)
+  (test (judgment-holds (J2 2)) #f))
+  
 (let () 
   (define-judgment-form empty-language
     #:mode (J I)

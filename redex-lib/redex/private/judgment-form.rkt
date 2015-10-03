@@ -1124,6 +1124,7 @@
                         (term-fn? (syntax-local-value #'x (λ () #f)))]
                        [else #t])
            (raise-syntax-error syn-err-name "unbound pattern variable" #'x))]
+        [(unquote e) (void)]
         [(u ...)
          (for-each check (syntax->list #'(u ...)))]
         [_ (void)])))
