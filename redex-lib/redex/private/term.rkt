@@ -285,10 +285,15 @@
        
   (values
    (with-syntax ([rewritten (rewrite arg-stx)])
-     (with-syntax ([(outer-bs ...) (reverse outer-bindings)])
+     (with-syntax ([(outer-bs ...) (reverse outer-bindings)]
+                   [qd (let ([orig #'(quasidatum rewritten)])
+                         (datum->syntax orig
+                                        (syntax-e orig)
+                                        #f
+                                        orig))])
        #'(term-template
           (outer-bs ...)
-          (quasidatum rewritten))))
+          qd)))
    applied-metafunctions))
 
 (define-for-syntax (term-temp->unexpanded-term term-stx applied-mfs)
