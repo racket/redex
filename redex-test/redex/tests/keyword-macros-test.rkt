@@ -1,7 +1,7 @@
 #lang scheme
 
 (require redex/private/keyword-macros
-         "test-util.rkt")
+         "private/test-util.rkt")
 
 (module test racket/base)
 

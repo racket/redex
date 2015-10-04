@@ -50,9 +50,9 @@
 
 
 (module lw-test racket/base
-  (require "test-util.rkt"
+  (require "private/test-util.rkt"
            redex/private/loc-wrapper
-           "lw-test-util.rkt"
+           "private/lw-test-util.rkt"
            (only-in redex/pict to-lw/stx))
   
   (reset-count)

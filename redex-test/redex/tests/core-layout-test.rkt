@@ -2,8 +2,8 @@
 
 (require redex/private/core-layout
          redex/private/loc-wrapper
-         "lw-test-util.rkt"
-         "test-util.rkt")
+         "private/lw-test-util.rkt"
+         "private/test-util.rkt")
 
 (module test racket/base)
 

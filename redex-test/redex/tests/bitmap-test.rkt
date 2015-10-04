@@ -1,5 +1,5 @@
 #lang racket
-(require "bitmap-test-util.rkt"
+(require "private/bitmap-test-util.rkt"
          redex/pict redex/reduction-semantics
          pict)
 

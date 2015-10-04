@@ -1,5 +1,5 @@
 #lang racket
-(require "test-util.rkt"
+(require "private/test-util.rkt"
          redex/reduction-semantics
          racket/match
          racket/trace)

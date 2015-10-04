@@ -6,8 +6,8 @@
          racket/cmdline
          racket/match
          pkg/lib
-         "test-util.rkt"
-         "bitmap-test-util.rkt")
+         "private/test-util.rkt"
+         "private/bitmap-test-util.rkt")
 
 (define test-examples? #f)
 
@@ -68,6 +68,17 @@
   ;; an interative port
   (flush-output (current-error-port))
   (flush-output (current-output-port)))
+
+;; check to make sure all the files in this directory
+;; are actually known by this testing file
+(for ([file (in-list (directory-list here))])
+  (when (file-exists? (build-path here file))
+    (define str (path->string file))
+    (unless (or (member str test-files)
+                (regexp-match? #rx"~$" str)
+                (regexp-match? #rx"[.]bak$" str)
+                (member str '("run-tests.rkt" "color-test.rkt" "ryr-test.rkt")))
+      (eprintf "WARNING: unknown file ~a\n" file))))
 
 (for ([test-file (in-list test-files)])
   (define-values (file provided action)

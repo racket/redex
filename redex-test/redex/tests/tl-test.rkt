@@ -1,5 +1,5 @@
 #lang racket
-(require "test-util.rkt"
+(require "private/test-util.rkt"
          redex/reduction-semantics
          (only-in redex/private/matcher make-bindings make-bind)
          racket/match

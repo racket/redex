@@ -3,7 +3,7 @@
 (module util racket/base
   (require setup/path-to-relative
            racket/runtime-path
-           "test-util.rkt"
+           "private/test-util.rkt"
            syntax/strip-context)
   (provide exec-syntax-error-tests
            exec-runtime-error-tests
@@ -93,7 +93,7 @@
               '()
               (cons test (loop))))))))
 
-(require "test-util.rkt"
+(require "private/test-util.rkt"
          redex/reduction-semantics
          (for-syntax racket/base)
          'util)

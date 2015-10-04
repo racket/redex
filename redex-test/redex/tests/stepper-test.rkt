@@ -2,7 +2,7 @@
 
 (require framework
          racket/class
-         "test-util.rkt"
+         "private/test-util.rkt"
          redex/reduction-semantics
          redex/private/stepper
          redex/private/size-snip)

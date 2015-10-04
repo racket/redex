@@ -1,6 +1,6 @@
 #lang racket
 
-(require "test-util.rkt"
+(require "private/test-util.rkt"
          drracket/check-syntax
          redex/pict
          redex/reduction-semantics

@@ -3,7 +3,7 @@
          redex/private/lang-struct
          redex/private/matcher
          racket/function
-         "test-util.rkt")
+         "private/test-util.rkt")
 
 (module test racket/base)
 

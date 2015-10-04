@@ -1,6 +1,6 @@
 #lang racket
 
-(require "test-util.rkt"
+(require "private/test-util.rkt"
          (only-in redex/reduction-semantics redex-match)
          redex/private/reduction-semantics
          redex/private/judgment-form

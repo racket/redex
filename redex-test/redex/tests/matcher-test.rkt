@@ -2,7 +2,7 @@
 
 (require redex/private/matcher
          redex/private/lang-struct
-         (only-in "test-util.rkt" equal/bindings?)
+         (only-in "private/test-util.rkt" equal/bindings?)
          (for-syntax racket/base)
          racket/list)
 

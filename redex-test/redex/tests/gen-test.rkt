@@ -3,7 +3,7 @@
 (require redex/reduction-semantics
          redex/private/jdg-gen
          redex/private/generate-term
-         "test-util.rkt"
+         "private/test-util.rkt"
          (only-in redex/private/pat-unify
                   bound
                   lvar))

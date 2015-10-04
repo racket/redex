@@ -4,7 +4,7 @@
          redex/private/matcher
          redex/private/compiler/match
          redex/private/compiler/redextomatrix
-         (only-in "../test-util.rkt" equal/bindings?)
+         (only-in "../private/test-util.rkt" equal/bindings?)
          mzlib/list)
 
 (define (make-test-mtch a b c) (make-mtch a (build-flat-context b) c))
