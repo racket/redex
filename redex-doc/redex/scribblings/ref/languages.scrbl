@@ -47,6 +47,11 @@ grammar of the λ-calculus:
 
 with non-terminals @racket[e] for the expression language, @racket[x] for
 variables, @racket[c] for the evaluation contexts and @racket[v] for values.
+
+Non-terminals used in @racket[define-language] are not bound in
+@pattech[side-condition] patterns and duplicates are not constrained
+to be the same unless they have underscores in them.
+
 }
 
 @defidform[::=]{

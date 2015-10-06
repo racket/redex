@@ -153,7 +153,10 @@ If @racket[pat:symbol] is a non-terminal, it matches any of the right-hand
 sides of the non-terminal. If the non-terminal appears
 twice in a single pattern, then the match is constrained
 to expressions that are the same, unless the pattern is part
-of a grammar, in which case there is no constraint.
+of a @racket[define-language] definition, in which case there is no constraint. Also, the
+non-terminal will be bound in the expression in any
+surrounding @pattech[side-condition] patterns unless there the
+pattern is in a @racket[define-language] definition.
 
 If @racket[pat:symbol] is a non-terminal followed by an underscore,
 for example @tt{e_1}, it is implicitly the same as a name @pattern
