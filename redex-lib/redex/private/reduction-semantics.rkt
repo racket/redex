@@ -522,17 +522,23 @@
                                    #'e
                                    scs/withs
                                    fvars)]
-                            [(judgment-holds (form-name . pieces))
-                             (judgment-form-id? #'form-name)
-                             (loop (cdr stuffs)
-                                   label
-                                   computed-label
-                                   (let*-values ([(mode) (judgment-form-mode (lookup-judgment-form-id #'form-name))]
-                                                 [(_ outs) (split-by-mode (syntax->list #'pieces) mode)])
-                                     (cons (to-lw/proc #'(form-name . pieces))
-                                           (for/fold ([binds scs/withs]) ([out outs])
-                                             (append (name-pattern-lws/rr out) binds))))
-                                   fvars)]
+                            [(judgment-holds jdg-expr)
+                             (syntax-case #'jdg-expr ()
+                               [(form-name . stuff)
+                                (judgment-form-id? #'form-name)]
+                               [other #f])
+                             
+                             (syntax-case #'jdg-expr ()
+                               [(form-name . pieces)
+                                (loop (cdr stuffs)
+                                      label
+                                      computed-label
+                                      (let*-values ([(mode) (judgment-form-mode (lookup-judgment-form-id #'form-name))]
+                                                    [(_ outs) (split-by-mode (syntax->list #'pieces) mode)])
+                                        (cons (to-lw/proc #'jdg-expr)
+                                              (for/fold ([binds scs/withs]) ([out outs])
+                                                (append (name-pattern-lws/rr out) binds))))
+                                      fvars)])]
                             [_
                              ;; just skip over junk here, and expect a syntax error to be raised elsewhere
                              (loop (cdr stuffs) label computed-label scs/withs fvars)])]))])
@@ -547,7 +553,11 @@
                                   #,(to-lw/proc #'rhs)
                                   #,label
                                   #,(and computed-label 
-                                         (to-lw/proc #`,#,computed-label))
+                                         (to-lw/proc (let ([s #`,#,computed-label])
+                                                       (datum->syntax s
+                                                                      (syntax-e s)
+                                                                      #f
+                                                                      s))))
                                   (list scs/withs ...
                                         #,@(map (λ (bind-id bind-pat)
                                                   #`(cons #,(to-lw/proc bind-id)

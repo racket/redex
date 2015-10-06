@@ -31,7 +31,7 @@
         (λ () test-exp)
         bitmap-filename)]))
 
-(define-runtime-path bmps-dir (format "bmps-~a" (system-type)))
+(define-runtime-path bmps-dir (build-path 'up (format "bmps-~a" (system-type))))
 
 (define (test/proc line-number pict-thunk raw-bitmap-filename)
   (set! tests (+ tests 1))
