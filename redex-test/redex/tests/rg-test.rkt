@@ -800,16 +800,15 @@
          exn:fail?
          (redex-check lang 0 #:ad-hoc #t #:prepare (λ (_) (error 'fixer)) #:print? #f))
         #rx"fixing 0")
-  (test (raised-exn-msg 
-         exn:fail:redex?
-         (redex-check lang natural #:ad-hoc #t #:prepare (compose - add1)))
-        #rx"does not match natural")
-  (test (raised-exn-msg 
-         exn:fail:redex?
-         (redex-check lang natural #:ad-hoc #t
-                      #:prepare -
-                      #:source (reduction-relation lang (--> 47 1))))
-        #rx"-47 does not match natural")
+  ;; ensure no errors
+  (test (begin (redex-check lang natural #:ad-hoc #t #:prepare (compose - add1))
+               (void))
+        (void))
+  ;; ensure no errors
+  (test (redex-check lang natural #:ad-hoc #t
+                     #:prepare -
+                     #:source (reduction-relation lang (--> 47 1)))
+        (void))
   (test (redex-check lang number (= 0 (term number))
                      #:prepare add1
                      #:source (reduction-relation lang (--> 0 1))
@@ -829,10 +828,9 @@
    "#:prepare argument"
    (redex-check lang natural #t #:prepare (λ (_) (values))))
   
-  (test (raised-exn-msg 
-         exn:fail:redex?
-         (redex-check lang n #t #:source (reduction-relation lang (--> x 1))))
-        #rx"x does not match n")
+  ;; ensure no errors
+  (test (redex-check lang n #t #:source (reduction-relation lang (--> x 1)))
+        (void))
   (test (raised-exn-msg
          exn:fail:redex:generation-failure?
          (redex-check lang (side-condition any #f) #t #:retries 42 #:attempts 1))

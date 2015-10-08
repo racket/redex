@@ -163,7 +163,7 @@
                 (quasisyntax/loc orig-stx
                   (let ([term-match (λ (generated)
                                       (cond [(test-match #,lang res-term-stx generated) => values]
-                                            [else (redex-error 'redex-check "~s does not match ~s" generated 'res-term-stx)]))])
+                                            [else (give-up-match-result)]))])
                     syncheck-exp
                     (let ([default-attempt-size (λ (s) (add1 (default-attempt-size s)))])
                       (parameterize ([attempt->size #,size-stx]
@@ -203,7 +203,7 @@
                 (quasisyntax/loc orig-stx
                   (let ([term-match (λ (generated)
                                       (cond [(test-match #,lang res-term-stx generated) => values]
-                                            [else (redex-error 'redex-check "~s does not match ~s" generated 'res-term-stx)]))])
+                                            [else (give-up-match-result)]))])
                     lhs-syncheck-exp
                     rhs-syncheck-exp
                     (let ([default-attempt-size (λ (s) (add1 (default-attempt-size s)))])
@@ -242,7 +242,7 @@
               [keep-going? #,keep-going-stx]
               [term-match (λ (generated)
                             (cond [(test-match #,lang #,pat generated) => values]
-                                  [else (redex-error 'redex-check "~s does not match ~s" generated '#,pat)]))])
+                                  [else (give-up-match-result)]))])
           syncheck-exp
           (parameterize ([attempt->size #,size-stx])
             #,(cond
@@ -428,6 +428,7 @@
 
 (define-struct (exn:fail:redex:test exn:fail:redex) (source term))
 (define-struct counterexample (term) #:transparent)
+(define-struct give-up-match-result ())
 
 (define-struct term-prop (pred))
 (define-struct bind-prop (pred))
@@ -465,18 +466,25 @@
                          (if term-fix (term-fix raw-term) raw-term)))
           (cond
             [(skip-term? term) (loop (- remaining 1))]
-            [(if term-match
-                 (let ([bindings (make-bindings 
-                                  (match-bindings
-                                   (pick-from-list (term-match term))))])
+            [(cond
+               [term-match
+                (define match-result (term-match term))
+                (cond
+                  [(give-up-match-result? match-result) #t]
+                  [else
+                   (define bindings
+                     (make-bindings 
+                      (match-bindings
+                       (pick-from-list match-result))))
                    (with-handlers ([exn:fail? (handler "checking" term)])
                      (match property
                        [(term-prop pred) (pred term)]
-                       [(bind-prop pred) (pred bindings)])))
-                 (with-handlers ([exn:fail? (handler "checking" term)])
-                   (match (cons property term-fix)
-                     [(cons (term-prop pred) _) (pred term)]
-                     [(cons (bind-prop pred) #f) (pred bindings)])))
+                       [(bind-prop pred) (pred bindings)]))])]
+               [else
+                (with-handlers ([exn:fail? (handler "checking" term)])
+                  (match (cons property term-fix)
+                    [(cons (term-prop pred) _) (pred term)]
+                    [(cons (bind-prop pred) #f) (pred bindings)]))])
              (loop (sub1 remaining))]
             [else
              (when show

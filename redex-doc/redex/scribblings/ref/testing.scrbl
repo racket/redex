@@ -572,11 +572,10 @@ showing all of the errors it finds. This argument is allowed only when
 When passed a metafunction or reduction relation via the optional @racket[#:source]
 argument, @racket[redex-check] distributes its attempts across the left-hand sides
 of that metafunction/relation by using those patterns, rather than @racket[pattern],
-as the basis of its generation. It is an error if any left-hand side generates a
-term that does not match @racket[pattern]. @racket[#:source] cannot be used
-with @racket[#:satisfying]. See also @racket[check-reduction-relation] and
-@racket[check-metafunction].
-}
+as the basis of its generation. If any left-hand side generates a
+term that does not match @racket[pattern], then the test input is discarded.
+@racket[#:source] cannot be used with @racket[#:satisfying].
+See also @racket[check-reduction-relation] and @racket[check-metafunction].
 
 @examples[
 #:eval redex-eval
@@ -648,6 +647,11 @@ with @racket[#:satisfying]. See also @racket[check-reduction-relation] and
                     #:satisfying
                     (sum nat_1 nat_2 nat_3)
                     (equal? (term nat_1) (term nat_2)))]
+
+@history[#:changed "1.10" @list{Instead of raising an error, @racket[redex-check] now discards
+           test cases that don't match the given pattern when using @racket[#:source].}]
+
+}
 
 @defparam[depth-dependent-order? depth-dependent (or/c boolean? 'random)
                                  #:value 'random]{
