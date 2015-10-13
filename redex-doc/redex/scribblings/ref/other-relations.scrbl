@@ -399,10 +399,13 @@ The @(examples-link "" #t "examples") directory demonstrates three use cases:
       defines a judgment form that serves as a multi-valued metafunction.}]}
 
 @defform[(define-extended-judgment-form language judgment-form-id
-           option ...
+           mode-spec
+           contract-spec
+           invariant-spec
            rule ...)]{
  Defines a new judgment form that extends @racket[judgment-form-id] 
- with additional rules. The @racket[option]s and @racket[rule]s
+ with additional rules. The @racket[mode-spec], @racket[contract-spec],
+ @racket[invariant-spec], and @racket[rule]s
  are as in @racket[define-judgment-form].
  
  The mode specification in this judgment form and the original
