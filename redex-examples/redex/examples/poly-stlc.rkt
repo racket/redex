@@ -36,7 +36,9 @@
      γ)
   (x y ::= variable-not-otherwise-mentioned)
   (α β ::= variable-not-otherwise-mentioned)
-  (c d ::= map nil cons hd tl +)
+  (c d ::=
+     map nil +
+     cons hd tl)
   
   (v (λ (x τ) M)
      C
@@ -162,8 +164,11 @@
         "error"
         "tl-err")
    (--> (in-hole E ((+ integer_1) integer_2))
-        (in-hole E ,(+ (term integer_1) (term integer_2)))
+        (in-hole E (Σ integer_1 integer_2))
         "+")))
+
+(define-metafunction poly-stlc
+  [(Σ integer_1 integer_2) ,(+ (term integer_1) (term integer_2))])
 
 (define M? (redex-match poly-stlc M))
 (define/contract (Eval M)
