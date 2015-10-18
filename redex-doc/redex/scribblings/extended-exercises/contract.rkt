@@ -11,7 +11,7 @@
      x (lambda (x) e) (e e)
      n (+ e e)
      (if0 e e e)
-     (c ⚖ e x x)
+     (c · e x x) ;; monitor a contract
      (blame x))
   (n ::= number)
   (c ::= num? even? odd? pos? (c -> c))
@@ -20,7 +20,7 @@
 ;; -----------------------------------------------------------------------------
 ;; examples
 
-(define a-module (term {(even? -> pos?) ⚖ (lambda (x) (+ x 1)) server client}))
+(define a-module (term {(even? -> pos?) · (lambda (x) (+ x 1)) server client}))
 (define p-good (term [,a-module 2]))
 (define p-bad-server (term [,a-module -2]))
 (define p-bad-client (term [,a-module 1]))
@@ -30,7 +30,7 @@
   (test-equal (redex-match? Lambda e p-good) #true)
   (test-equal (redex-match? Lambda e
                             (term
-                             {(even? -> pos?) ⚖ (lambda (x) (+ x 1))
+                             {(even? -> pos?) · (lambda (x) (+ x 1))
                                               server
                                               client})) #true)
   
@@ -45,7 +45,7 @@
   (E ::= hole
      (v ... E e ...)
      (+ v ... E e ...)
-     (c ⚖ E x x)))
+     (c · E x x)))
 
 (module+ test
   (test-->> s-->c #:equiv =α/racket p-good 3)
@@ -62,22 +62,22 @@
         (in-hole E e_then)
         (where #false (zero? (term v)))
         if0-false)
-   (--> (in-hole E (pos? ⚖ n x_s x_c))
+   (--> (in-hole E (pos? · n x_s x_c))
         (in-hole E ,(c positive? (term n) (term x_s) (term x_c)))
         pos)
-   (--> (in-hole E (even? ⚖ n x_s x_c))
+   (--> (in-hole E (even? · n x_s x_c))
         (in-hole E ,(c even? (term n) (term x_s) (term x_c)))
         even)
-   (--> (in-hole E (odd? ⚖ n x_s x_c))
+   (--> (in-hole E (odd? · n x_s x_c))
         (in-hole E ,(c odd? (term n) (term x_s) (term x_c)))
         odd)
-   (--> (in-hole E (num? ⚖ n x_s x_c))
+   (--> (in-hole E (num? · n x_s x_c))
         (in-hole E 0)
         num)
-   (--> (in-hole E ((c_1 -> c_2) ⚖ (lambda (x) e) x_s x_c))
+   (--> (in-hole E ((c_1 -> c_2) · (lambda (x) e) x_s x_c))
         (in-hole E
                  (lambda (x)
-                   (c_2 ⚖ ((lambda (x) e) (c_1 ⚖ x x_c x_s)) x_s x_c))))
+                   (c_2 · ((lambda (x) e) (c_1 · x x_c x_s)) x_s x_c))))
    (--> (in-hole E (blame x))
         (blame x)
         (where #false ,(equal? (term hole) (term E)))
