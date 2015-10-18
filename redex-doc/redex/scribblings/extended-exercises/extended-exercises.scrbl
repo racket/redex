@@ -316,7 +316,7 @@ Lambda language with contracts. Here is the syntax:
      x (lambda (x) e) (e e)
      n (+ e e)
      (if0 e e e)
-     (c ⚖ e x x)
+     (c · e x x)
      (blame x))
   (n ::= number)
   (c ::= num? even? odd? pos? (c -> c))
@@ -330,7 +330,7 @@ The contract primitives are interpreted as follows:
 @item{@racket[(even? x)] checks whether @racket[x] is an even number}
 @item{@racket[(odd? x)] checks whether @racket[x] is an even number}
 ]
-The contract form @racket[(c ⚖ e x_s x_c)] checks contract @racket[_c] on
+The contract form @racket[(c · e x_s x_c)] checks contract @racket[_c] on
 @racket[_e]. If @racket[_e] breaks the contract, the semantics signals a
 @racket[(blame x_s)] error; other contract violations signal a
 @racket[(blame x_c)] error. 
@@ -341,7 +341,7 @@ well, is blamed, or blames its context depending on the argument:
 @(begin
 #reader scribble/comment-reader
 (racketblock
-(define a-module (term {(even? -> pos?) ⚖ (lambda (x) (+ x 1)) server client}))
+(define a-module (term {(even? -> pos?) · (lambda (x) (+ x 1)) server client}))
 (define p-good (term [,a-module 2]))
 (define p-bad-server (term [,a-module -2]))
 (define p-bad-client (term [,a-module 1]))
