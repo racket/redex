@@ -1,10 +1,25 @@
 v6.3
 
-  * change check-metafunction and check-reduction-relation (and
-    redex-check with the #:source keyword) so that they no longer
-    check the "extras" clauses and instead just blindly generate from
-    the left-hand side patterns. (This speeds up compilation of Redex
-    programs that use define-metafunction and reduction-relation.)
+  * Add new syntax error checking that ensures that each pattern
+    generates either exactly one hole or zero holes.
+
+  * Add a number of new parameters for finer-grained control of
+    rendering.
+
+  * Added a new, in-depth tutorial and some extended exercises
+
+  * Added the #:all? argument to apply-reduction-relation*
+
+  * check-metafunction and check-reduction-relation (and redex-check
+    with the #:source keyword) no longer check the "extras" clauses
+    and instead just blindly generate from the left-hand side
+    patterns. (This speeds up compilation of Redex programs that use
+    define-metafunction and reduction-relation.)
+
+  * Judgment forms that have the mode (I O) can be used as
+    reduction-relations
+
+  * misc bug fixes
 
 v6.2
 
