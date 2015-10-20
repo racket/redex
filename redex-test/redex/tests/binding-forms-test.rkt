@@ -31,6 +31,13 @@
    `(,aa ,bb (,aa ,bb))
    (all-distinct? 'a 'b aa bb))
 
+  (check-match
+   (redex-let* lc
+               ([((lambda (x_1) expr_1) (lambda (x_2) expr_2)) (term ((lambda (a) a) (lambda (b) b)))])
+     (term (x_1 expr_1 x_2 expr_2)))
+   `(,aa ,aa ,bb ,bb)
+   (all-distinct? 'a 'b aa bb))
+
   ;; naively-written substitution
   ;;(should be capture-avoiding, thanks to #:binding-forms)
 

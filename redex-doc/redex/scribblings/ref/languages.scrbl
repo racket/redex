@@ -164,7 +164,7 @@ otherwise.
 }
 
 @defparam[default-lang lang (or/c false/c compiled-lang?)]{
-The value of this parameter is used by the default value of @racket[default-equiv]
+The value of this parameter is used by the default value of @racket[(default-equiv)]
 to determine what language to calculate alpha-equivalence in. By default,
 it is @racket[#f], which acts as if it were a language with no binding forms.
 In that case, alpha-equivalence is the same thing as @racket[equal?].
