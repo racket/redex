@@ -84,7 +84,7 @@
   (reduction-relation
    stlc
    (--> (in-hole E ((λ (x τ) M) v))
-        (in-hole E ,(substitute stlc (term M) (term x) (term v)))
+        (in-hole E (substitute M x v))
         "βv")
    (--> (in-hole E (hd ((cons v_1) v_2)))
         (in-hole E v_1)
@@ -123,7 +123,7 @@
 (define-metafunction stlc
   subst : M x M -> M
   [(subst M x N)
-   ,(substitute stlc (term M) (term x) (term N))])
+   (substitute M x N)])
 
 (define v? (redex-match? stlc v))
 (define τ? (redex-match? stlc τ))

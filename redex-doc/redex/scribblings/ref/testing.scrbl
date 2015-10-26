@@ -163,7 +163,7 @@ prints the test results for the next round of tests.
   of the equivalence predicates
   for @racket[test-equal], @racket[test-->], and @racket[test-->>].
   
-  It defaults to @racket[(lambda (lhs rhs) (alpha-equivalent? (default-lang) lhs rhs))].
+  It defaults to @racket[(lambda (lhs rhs) (alpha-equivalent? (default-language) lhs rhs))].
 }
 
 @defform/subs[(make-coverage subject)

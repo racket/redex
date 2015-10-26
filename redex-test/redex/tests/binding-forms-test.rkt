@@ -37,7 +37,7 @@
      (term (x_1 expr_1 x_2 expr_2)))
    `(,aa ,aa ,bb ,bb)
    (all-distinct? 'a 'b aa bb))
-
+  
   ;; naively-written substitution
   ;;(should be capture-avoiding, thanks to #:binding-forms)
 
@@ -55,10 +55,11 @@
    `(lambda (,x) ((lambda (z) (z x)) (lambda (,y) (,y ,y))))
    (all-distinct? x y `x `y))
 
-  (check-match
-   (substitute lc (term (lambda (x) (y (lambda (y) (y y))))) (term y) (term (lambda (z) (z x))))
-   `(lambda (,x) ((lambda (z) (z x)) (lambda (,y) (,y ,y))))
-   (all-distinct? x y `x `y))
+  (parameterize ([default-language lc])
+    (check-match
+     (term (substitute (lambda (x) (y (lambda (y) (y y)))) y (lambda (z) (z x))))
+     `(lambda (,x) ((lambda (z) (z x)) (lambda (,y) (,y ,y))))
+     (all-distinct? x y `x `y)))
 
 
   ;; == more complex stuff ==
@@ -126,8 +127,8 @@
                  (all-distinct? distinct-name ...)))
 
   (define-syntax-rule (subst-test orig old-var new-val expected (distinct-name ...))
-    (begin
-      (check-match (substitute big-language (term orig) (term old-var) (term new-val))
+    (parameterize [(default-language big-language)]
+      (check-match (term (substitute orig old-var new-val))
                    `expected
                    (all-distinct? distinct-name ...))
       (check-match (term (bl-subst orig old-var new-val))

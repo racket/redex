@@ -1357,6 +1357,7 @@
        (define syn-error-name (if prev-metafunction
                                   'define-metafunction
                                   'define-metafunction/extension))
+
        (define lang-nts
          (definition-nts #'lang #'orig-stx syn-error-name))
        (with-syntax ([(((original-names lhs-clauses ...) raw-rhses ...) ...)
@@ -1670,7 +1671,6 @@
       (syntax->list stuffs)))
    (syntax->list extras)))
 
-
 (define (build-metafunction lang cases parent-cases 
                             wrap
                             dom-contract-pat pre-condition
@@ -1710,7 +1710,11 @@
                   (let ([cache-ref (hash-ref cache exp not-in-cache)])
                     (cond
                      [(or (not (caching-enabled?)) (eq? cache-ref not-in-cache))
-                      (parameterize ([default-language lang]
+                      ;; if this is a language-agnostic metafunction, don't change `default-langauge`
+                      (parameterize ([default-language 
+                                       (if (eqv? lang metafunction-leave-default-language-alone)
+                                           (default-language)
+                                           lang)]
                                      [binding-forms-opened? (if (caching-enabled?) (box #f) #f)])
 
                         (define dom-match-result 
@@ -2717,10 +2721,16 @@
 (define (alpha-equivalent? lang lhs rhs)
   (α-equal? (compiled-lang-binding-table lang) match-pattern lhs rhs))
 
+;; special empty language that signals to `build-metafunction` that this metafunction 
+;; is language-agnostic
+(define-language metafunction-leave-default-language-alone)
 
+(define-metafunction metafunction-leave-default-language-alone
+  [(substitute any_body variable any_substitution)
+   ,(safe-subst (compiled-lang-binding-table (default-language))
+                match-pattern 
+                (term any_body) (term variable) (term any_substitution))])
 
-(define (substitute lang val old-var new-val)
-  (safe-subst (compiled-lang-binding-table lang) match-pattern val old-var new-val))
 
 (define default-equiv
   (make-parameter

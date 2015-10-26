@@ -163,28 +163,32 @@ Returns @racket[#t] if its argument was produced by @racket[language], @racket[#
 otherwise.
 }
 
-@defparam[default-lang lang (or/c false/c compiled-lang?)]{
+@defparam[default-language lang (or/c false/c compiled-lang?)]{
 The value of this parameter is used by the default value of @racket[(default-equiv)]
 to determine what language to calculate alpha-equivalence in. By default,
 it is @racket[#f], which acts as if it were a language with no binding forms.
 In that case, alpha-equivalence is the same thing as @racket[equal?].
+
+The @racket[default-language] parameter is set to the appropriate language inside judgment forms and
+metafunctions.
 }
 
 @defproc[(alpha-equivalent? [lang compiled-lang?] [lhs any/c] [rhs any/c]) boolean?]{
-Returns @racket[#t] if (according to the binding specification in @racket[default-lang])
+Returns @racket[#t] if (according to the binding specification in @racket[default-language])
 the bound names in @racket[lhs] and @racket[rhs] have the same structure, and,
-in everything but bound names, they are @racket[equal?]. If @racket[default-lang]
+in everything but bound names, they are @racket[equal?]. If @racket[default-language]
 is @racket[#f] or has no binding forms, terms have no bound names and therefore
 @racket[alpha-equivalent?] is the same as @racket[equal?].
 }
 
-@defproc[(substitute [lang compiled-lang?] [val any/c] [old-var symbol?] [new-val any/c]) any/c]{
-Returns a value like @racket[val], except that any occurences of @racket[old-var] have been
-replaced with @racket[new-val], in a capture-avoiding fashion. The bound names of @racket[val]
-may be freshened in order to accomplish this, based on the binding information in @racket[lang].
+@defform[#:kind "metafunction"
+         (substitute val old-var new-val)]{
+A metafunction that returns a value like @racket[val], except that any free occurences of
+@racket[old-var] have been replaced with @racket[new-val], in a capture-avoiding fashion. The bound
+names of @racket[val] may be freshened in order to accomplish this, based on the binding information
+in @racket[(default-language)] (this is unlike normal metafunctions, which are defined in a
+particular language).
 
-Note that @racket[substitute] is merely a convenience function. Any substitution on a language
-with correctly-defined binding forms in which the destructuring of @racket[val] is accomplished
-with Redex's pattern-matching facilities is guaranteed to be capture-avoiding.
-
-}
+Note that @racket[substitute] is merely a convenience metafunction. Any manually-written
+substitution in the correct language will also be capture-avoiding, provided that the language's
+binding forms are correctly defined.  However, @racket[substitute] may be significantly faster.}

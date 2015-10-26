@@ -40,7 +40,7 @@
 
 
   [(⇓ Γ e Δ (λ (y) e_*))
-   (⇓ Δ ,(substitute L (term e_*) (term y) (term x)) Θ v)
+   (⇓ Δ (substitute e_* y x) Θ v)
    ------------------------- Application
    (⇓ Γ (e x) Θ v)]
 
@@ -118,20 +118,7 @@
 
   (default-language L)
 
-  ;; replace-free and rename-bound tests omitted, since those metafunctions are gone
-
-  (test-equal (substitute L (term (λ (x) ((λ (y) x) y))) 'y 'z)
-                (term (λ (x) ((λ (y) x) z))))
-  (test-equal (substitute L (term (λ (x) ((λ (y) y) y))) 'y 'z)
-                (term (λ (x) ((λ (y) y) z))))
-  (test-equal (substitute L (term (λ (x) ((λ (q) y) y))) 'y 'z)
-                (term (λ (x) ((λ (q) z) z))))
-  (test-equal (substitute L (term (λ (y) x)) 'x 'y)
-                (term (λ (y1) y)))
-  (test-equal (substitute L (term (let ([x 1]) (+ x z))) 'z 'q)
-                (term (let ([x 1]) (+ x q))))
-  (test-equal (substitute L (term (let ([x 1][y 2][z 3]) (+ x y))) 'x 'q)
-                (term (let ([x 1][y 2][z 3]) (+ x y))))
+  ;; replace-free, rename-bound, and subst tests omitted, since those metafunctions are gone
 
   (test-equal (term (separate · x)) (term ⊥))
   (test-equal (term (separate (· x ↦ 1) x)) (term (· x ↦ 1)))

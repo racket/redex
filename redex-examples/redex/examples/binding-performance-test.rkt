@@ -175,7 +175,7 @@
  (define (do-subst in old new)
    (term (subst ,in ,old ,new)))
  (define (binding:do-subst in old new)
-   (substitute binding:L in old new))
+   (parameterize [(default-language binding:L)] (term (substitute ,in ,old ,new))))
 
  (define-metafunction binding:L
    binding:mf-subst : any x y -> any
