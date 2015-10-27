@@ -262,7 +262,8 @@
                              (list v)
                              
                              #f
-                             (runtime-judgment-form-cache p))))
+                             (runtime-judgment-form-cache p)
+                             (runtime-judgment-form-lang p))))
      (apply
       append
       (for/list ([d-sub (in-list jf-res)])
@@ -1690,11 +1691,12 @@
                [not-in-cache (gensym)]
                [cache-result (λ (arg res case)
                                (when (caching-enabled?)
-                                 (when (>= cache-entries cache-size)
-                                   (set! cache (make-hash))
-                                   (set! cache-entries 0))
-                                 (hash-set! cache arg (cons res case))
-                                 (set! cache-entries (add1 cache-entries))))]
+                                 (unless (unbox (binding-forms-opened?))
+                                   (when (>= cache-entries cache-size)
+                                     (set! cache (make-hash))
+                                     (set! cache-entries 0))
+                                   (hash-set! cache arg (cons res case))
+                                   (set! cache-entries (add1 cache-entries)))))]
                [log-coverage (λ (id)
                                (when id
                                  (for-each 
@@ -1779,8 +1781,7 @@
                                                   "codomain test failed for ~s, call was ~s"
                                                   ans 
                                                   `(,name ,@exp)))
-                                   (unless (unbox (binding-forms-opened?))
-                                     (cache-result exp ans id))
+                                   (cache-result exp ans id)
                                    (log-coverage id)
                                    ans])])])))]
                       [else 

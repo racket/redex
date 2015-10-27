@@ -51,7 +51,7 @@
 (define-struct metafunc-extra-where (lhs rhs))
 (define-struct metafunc-extra-fresh (vars))
 
-(define-struct runtime-judgment-form (name proc mode cache)
+(define-struct runtime-judgment-form (name proc mode cache lang)
   #:methods gen:custom-write
   [(define (write-proc tuple port mode)
      (display "#<judgment-form>" port))])
@@ -698,7 +698,8 @@
             (runtime-judgment-form '#,judgment-form-name
                                    judgment-form-runtime-proc
                                    '#,(cdr (syntax->datum mode))
-                                   jf-cache)))))
+                                   jf-cache
+                                   #,lang)))))
   (syntax-property
    (values ;prune-syntax
     (if (eq? 'top-level (syntax-local-context))
