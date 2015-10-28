@@ -251,7 +251,8 @@
   (cond
     [(runtime-judgment-form? p)
      (define jf-res
-       (parameterize ([include-jf-rulename tag-with-names?])
+       (parameterize ([include-jf-rulename tag-with-names?]
+                      [default-language (runtime-judgment-form-lang p)])
          (call-judgment-form (runtime-judgment-form-name p)
                              (runtime-judgment-form-proc p)
                              (runtime-judgment-form-mode p)
@@ -273,13 +274,14 @@
               res))))]
     [else
      (define proc-results
-       (let loop ([procs (reduction-relation-procs p)]
-                  [acc '()])
-         (cond
-           [(null? procs) acc]
-           [else 
-            (loop (cdr procs)
-                  ((car procs) v acc))])))
+       (parameterize ([default-language (reduction-relation-lang p)])
+         (let loop ([procs (reduction-relation-procs p)]
+                    [acc '()])
+           (cond
+             [(null? procs) acc]
+             [else
+              (loop (cdr procs)
+                    ((car procs) v acc))]))))
      (if tag-with-names?
          (map cdr proc-results)
          (map caddr proc-results))]))

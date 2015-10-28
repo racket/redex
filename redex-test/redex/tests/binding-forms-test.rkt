@@ -60,8 +60,22 @@
      (term (substitute (lambda (x) (y (lambda (y) (y y)))) y (lambda (z) (z x))))
      `(lambda (,x) ((lambda (z) (z x)) (lambda (,y) (,y ,y))))
      (all-distinct? x y `x `y)))
-
-
+    
+  (let ()
+    (define-language stlc
+      (M N ::= (M N) x cons nil)
+      (x variable-not-otherwise-mentioned))
+    
+    (define red
+      (reduction-relation
+       stlc
+       (--> (any_1 any_2 any_3) (substitute any_1 any_2 any_3))))
+    
+    (check-equal? (apply-reduction-relation
+                   red
+                   (term ((cons x) x nil)))
+                  (term (cons nil))))
+  
   ;; == more complex stuff ==
 
   (define-language big-language
