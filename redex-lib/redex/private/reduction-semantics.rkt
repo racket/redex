@@ -2728,9 +2728,12 @@
 
 (define-metafunction metafunction-leave-default-language-alone
   [(substitute any_body variable any_substitution)
-   ,(safe-subst (compiled-lang-binding-table (default-language))
-                match-pattern 
-                (term any_body) (term variable) (term any_substitution))])
+   ,(let ()
+      (define lang (default-language))
+      (unless lang (error 'substitute "unable to determine the language to use"))
+      (safe-subst (compiled-lang-binding-table lang)
+                  match-pattern
+                  (term any_body) (term variable) (term any_substitution)))])
 
 
 (define default-equiv
