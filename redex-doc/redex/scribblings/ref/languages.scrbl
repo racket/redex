@@ -170,7 +170,7 @@ it is @racket[#f], which acts as if it were a language with no binding forms.
 In that case, alpha-equivalence is the same thing as @racket[equal?].
 
 The @racket[default-language] parameter is set to the appropriate language inside judgment forms and
-metafunctions.
+metafunctions, and by @racket[apply-reduction-relation].
 }
 
 @defproc[(alpha-equivalent? [lang compiled-lang?] [lhs any/c] [rhs any/c]) boolean?]{

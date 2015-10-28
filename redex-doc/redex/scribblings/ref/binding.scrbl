@@ -22,10 +22,10 @@ Typical languages provide a mechanism for the programmer to introduce new names
 and give them meaning. The language forms used for this (such as Racket's @racket[let]
 and @racket[lambda]) are called @deftech{binding forms}.
 
-While binding forms are extremely useful to the language user, they require special
-treatment from the language implementor. In Redex, this treatment consists of declaring
-the binding forms at the time of language definition. Explicitly declaring binding forms
-makes safely manipulating terms containing binding simpler and easier.
+Binding forms require special treatment from the language implementor. In Redex, this treatment
+consists of declaring the binding forms at the time of language definition. Explicitly declaring
+binding forms makes safely manipulating terms containing binding simpler and easier, as opposed to
+manually writing operations that respect the binding structure of the language.
 
 @(racketgrammar*
    #:literals (binding:nothing binding:shadow pat:symbol)
@@ -39,16 +39,21 @@ makes safely manipulating terms containing binding simpler and easier.
                   (code:line ... (code:comment "literal ellipsis"))])
 
 A @deftech{binding pattern} is like a @pattern, except that inside it, any @tech{binding pattern}
-may be followed by @racket[#:refers-to beta]. A @deftech{beta} is a tree of references to names
-bound by the @tech{binding pattern}. (Note that the ``binding'' of pattern variables by Redex
+may be followed by @racket[#:refers-to beta]. A @deftech{beta} is a tree of references to
+names bound by the @tech{binding pattern}. (Note that the ``binding'' of pattern variables by Redex
 patterns is otherwise unrelated to the ``binding'' of symbols inside Redex terms that we discuss
-here.) Furthermore, in a @tech{binding pattern}, it is also possible to use @racket[#:...bind
+here.)  Furthermore, in a @tech{binding pattern}, it is also possible to use @racket[#:...bind
 (symbol beta beta)] wherever a literal @racket[...] is allowed, creating a @tech{binding
 repetition}.
 
-In a given language, a @tech{term} is determined to be a binding form if it matches one of
-the @tech{binding patterns} defined in that language (@racket[#:refers-to] and @racket[#:exports]
-do not affect matching).
+In a given language, a @tech{term} is determined to be a binding form if it matches one of the
+@tech{binding patterns} defined in that language (@racket[#:refers-to] and @racket[#:exports] do not
+affect matching). 
+
+A common problem is for the binding patterns to be over-specific and not match values that the user
+intended to be binding forms. In particular, the binding patterns are different from the patterns
+that define the grammar of a language in that multiple references to the name are constrained to
+match (alpha-)equivalent values.
 
 @section{The structure of binding forms}
 
@@ -70,11 +75,11 @@ untyped lambda calculus:
                (λ (x) e))
             (x variable-not-otherwise-mentioned)
             #:binding-forms
-            (λ (x) e #:refers-to x))
+            (λ (x_param) e_body #:refers-to x_param))
 ]
 
-In this simple case, in a @racket[λ] term, the @racket[e] subterm has the name from
-the @racket[x] subterm in scope. The symbols inside a beta must be names bound by the
+In this simple case, in a @racket[λ] term, the @racket[e_body] subterm has the name from
+the @racket[x_param] subterm in scope. The symbols inside a beta must be names bound by the
 @tech{binding pattern}
 
 It is possible for a single subterm to refer to multiple other sources of names. In such a case, the
@@ -120,7 +125,7 @@ are determined by recursively examining everything mentioned by that @racket[#:e
                           ())
           #:binding-forms
           (let* let*-clauses e #:refers-to let*-clauses)
-          (let*-clause x e let*-clauses #:refers-to x) #:exports (shadow x let*-clauses))]
+          (let*-clause x_bnd e_val let*-clauses #:refers-to x_bnd) #:exports (shadow x_bnd let*-clauses))]
 
 (Note that, in this example, we have departed from standard Racket syntax: A term representing
 a @racket[let*] might look like @racket[(let* (let*-clause x 1 (let*-clause y (* x x) ()))
@@ -180,7 +185,7 @@ For example:
                (let* ((x e) ...) e))
             (x variable-not-otherwise-mentioned)
             #:binding-forms
-            (λ (x) e #:refers-to x)
+            (λ (x_param) e_body #:refers-to x_param)
             (let* ((x_v e_v) #:...bind (clauses x_v (shadow clauses x_v)))
               e_body #:refers-to clauses))]
 
