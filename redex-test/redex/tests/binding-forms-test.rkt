@@ -576,13 +576,17 @@
   ;; test that judgment forms set `default-language`
 
   (define-judgment-form lc-extended-with-binding
-    #:mode (dl-param-test-jf O)
+    #:mode (dl-param-test-jf I O)
 
-    [(where any ,(equal? (default-language) lc-extended-with-binding))
+    [(where any_out ,(equal? (default-language) lc-extended-with-binding))
      ----------
-     (dl-param-test-jf any)])
+     (dl-param-test-jf any_in any_out)])
 
-  (check-equal? (judgment-holds (dl-param-test-jf any) any) `(#t))
+  (check-equal? (judgment-holds (dl-param-test-jf 0 any) any) `(#t))
+
+  (check-equal? (apply-reduction-relation dl-param-test-jf
+                                          (term 0))
+                `(#t))
 
   ;; ... and metafunctions
 
