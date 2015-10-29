@@ -78,6 +78,7 @@
          metafunction-gap-space
          metafunction-rule-gap-space
          metafunction-line-gap-space
+         metafunction-fill-acceptable-width
          metafunction-combine-contract-and-rules
          rule-pict-style
          arrow-space
@@ -990,6 +991,7 @@
 (define metafunction-gap-space (make-parameter 2))
 (define metafunction-rule-gap-space (make-parameter 2))
 (define metafunction-line-gap-space (make-parameter 2))
+(define metafunction-fill-acceptable-width (make-parameter 0))
 (define metafunction-combine-contract-and-rules
   (make-parameter (lambda (c-p rule-p)
                     (vl-append
@@ -1173,30 +1175,32 @@
   
   (define max-line-w/pre-sc (and
                              compact-side-conditions?
-                             (for/fold ([biggest 0]) ([lhs/contracts (in-list lhs/contractss)]
-                                                      [rhss (in-list rhsss)]
-                                                      [linebreaks (in-list linebreakss)])
-                               (for/fold ([biggest 0]) ([lhs/contract (in-list lhs/contracts)]
-                                                        [rhs (in-list rhss)]
-                                                        [linebreak? (in-list linebreaks)])
-                                 (cond
-                                  [(equal? rhs 'contract)
-                                   ;; this is a contract
-                                   (max biggest (pict-width lhs/contract))]
-                                  [(eq? mode 'vertical)
-                                   (max biggest
-                                        (+ (pict-width lhs/contract) (pict-width =-pict))
-                                        (pict-width rhs))]
-                                  [linebreak?
-                                   (max biggest
-                                        (pict-width lhs/contract)
-                                        (+ (pict-width rhs) hsep (pict-width =-pict)))]
-                                  [else
-                                   (max biggest
-                                        (+ (pict-width lhs/contract)
-                                           (pict-width rhs)
-                                           (pict-width =-pict)
-                                           (* 2 hsep)))])))))
+                             (max
+                              (metafunction-fill-acceptable-width)
+                              (for/fold ([biggest 0]) ([lhs/contracts (in-list lhs/contractss)]
+                                                       [rhss (in-list rhsss)]
+                                                       [linebreaks (in-list linebreakss)])
+                                (for/fold ([biggest 0]) ([lhs/contract (in-list lhs/contracts)]
+                                                         [rhs (in-list rhss)]
+                                                         [linebreak? (in-list linebreaks)])
+                                  (cond
+                                   [(equal? rhs 'contract)
+                                    ;; this is a contract
+                                    (max biggest (pict-width lhs/contract))]
+                                   [(eq? mode 'vertical)
+                                    (max biggest
+                                         (+ (pict-width lhs/contract) (pict-width =-pict))
+                                         (pict-width rhs))]
+                                   [linebreak?
+                                    (max biggest
+                                         (pict-width lhs/contract)
+                                         (+ (pict-width rhs) hsep (pict-width =-pict)))]
+                                   [else
+                                    (max biggest
+                                         (+ (pict-width lhs/contract)
+                                            (pict-width rhs)
+                                            (pict-width =-pict)
+                                            (* 2 hsep)))]))))))
   
   (define scss (for/list ([eqns (in-list eqnss)])
                  (for/list ([eqn (in-list eqns)])

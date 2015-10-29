@@ -205,6 +205,10 @@ Similarly, @racket[render-metafunctions] accepts multiple
 metafunctions and renders them together, lining up all of the
 clauses together.
 
+Parameters that affect rendering include
+@racket[metafunction-pict-style], @racket[linebreaks], and
+@racket[metafunction-cases].
+
 If the metafunctions have contracts, they are typeset as the first
 lines of the output unless the expression following @racket[#:contract?]
 evaluates to @racket[#f] (which is the default).
@@ -425,7 +429,8 @@ conditions each on a separate line, instead of all on the same line.
 The @racket['left-right/compact-side-conditions] and
 @racket['up-down/compact-side-conditions] variants move side
 conditions to separate lines to avoid making the rendered form wider
-than it would be otherwise.
+would be otherwise---except that the rendered form is allowed to be up
+to the width specified by @racket[metafunction-fill-acceptable-width].
 
 The @racket['left-right/beside-side-conditions] variant is like
 @racket['left-right], except it puts the side-conditions on the 
@@ -707,6 +712,30 @@ single reduction relation.
   Defaults to @racket[2].
   
   @history[#:added "1.7"]
+}
+
+@defparam[metafunction-fill-acceptable-width width real?]{
+  Determines a width that is used for putting metafunction side
+  conditions on a single line when using a style like
+  @racket['left-right/compact-side-conditions] (as the value of
+  @racket[metafunction-pict-style]). The default value is @racket[0],
+  which means that side conditions are joined on a line only when
+  joining them does not change the overall width of the rendered
+  metafunction. A larger value allows side conditions to be joined
+  when they would make the rendered form wider, as long as the overall
+  width of the metafunction does not exceed the specified value.
+
+  For example, if the side conditions of a particular rule in a
+  metafunction are all shorter than the rule itself,
+  @racket[metafunction-fill-acceptable-width] has no effect. In
+  contrast, if the rule itself is shorter than the side conditions and
+  narrower than the space available to render (in a document for
+  printing, for example), setting
+  @racket[metafunction-fill-acceptable-width] can help. Setting it to
+  the available width causes rendering to use the available horizontal
+  space for joining side conditions.
+
+  @history[#:added "1.11"]
 }
 
 @defparam[metafunction-combine-contract-and-rules combine (pict? pict? . -> . pict?)]{

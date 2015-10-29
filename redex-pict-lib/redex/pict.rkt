@@ -81,6 +81,7 @@
  [metafunction-rule-gap-space (parameter/c real?)]
  [metafunction-line-gap-space (parameter/c real?)]
  [metafunction-combine-contract-and-rules (parameter/c (pict? pict? . -> . pict?))]
+ [metafunction-fill-acceptable-width (parameter/c real?)]
  [label-style (parameter/c text-style/c)]
  [literal-style (parameter/c text-style/c)]
  [grammar-style (parameter/c text-style/c)]
