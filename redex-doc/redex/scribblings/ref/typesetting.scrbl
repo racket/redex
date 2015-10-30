@@ -1,5 +1,8 @@
 #lang scribble/manual
 @(require scribble/struct
+          scribble/eval
+          racket/port
+          (for-syntax racket/base)
           (for-label racket/base
                      (except-in racket/gui make-color)
                      racket/pretty
@@ -18,6 +21,35 @@
                  (make-element #f (list " " (hspace 1) " " (racketidfont (symbol->string 'a))))
                  ...)))))
 
+@(define redex-eval (make-base-eval))
+@(interaction-eval #:eval redex-eval
+                   (require redex/reduction-semantics redex/pict racket/port))
+@(define-syntax-rule (ex e ...)
+   (with-eval-preserve-source-locations
+    (examples #:eval redex-eval e ...)))
+
+@(define (ex-tests/proc line exps)
+   (define err-only-p (open-output-string))
+   (define both-p (open-output-string))
+   (define-values (ep-in ep-out) (make-pipe))
+   (define t
+     (thread (λ ()
+               (copy-port ep-in err-only-p both-p))))
+   (redex-eval
+    `(parameterize ([current-error-port ,ep-out]
+                    [current-output-port ,both-p])
+       ,@exps))
+   (close-output-port ep-out)
+   (sync t)
+   (flush-output both-p)
+   (unless (equal? (get-output-string err-only-p) "")
+     (eprintf "error output from ex-tests on line ~a\n" line)
+     (display (get-output-string both-p) (current-error-port))))
+
+@(define-syntax (ex-tests stx)
+   (syntax-case stx ()
+     [(_ e ...)
+      #`(ex-tests/proc #,(syntax-line stx) (list #'e ...))]))
 
 @title{Typesetting}
 
@@ -74,14 +106,21 @@ sets @racket[dc-for-text-size] and the latter does not.
   Encapsulated PostScript in the provided filename, unless the filename
   ends with @filepath{.pdf}, in which case it saves PDF.
   
-  The @racket[term] argument must be a literal; it is not an 
-  evaluated position. For example, this:
-  @racketblock[(define-language L)
-               (define x (term (+ 1 2)))
-               (render-term L x)]
-  will render the term @racket[x], not the term @racket[(+ 1 2)].
-  
-  See @racket[render-language] for more details on the construction of the pict.
+ @ex[(define-language nums
+       (AE K
+           (+ AE AE))
+       (code:comment "binary constants")
+       (K · (1 K) (0 K)))
+     (render-term nums (+ (1 (0 (1 ·))) (+ (1 (1 (1 ·))) (1 (0 (0 ·))))))]
+
+ The @racket[term] argument must be a literal; it is not an 
+ evaluated position. For example:
+ @ex[(let ([x (term (+ (1 (1 (1 ·))) (1 (0 (0 ·)))))])
+       (render-term nums x))]
+ but also see @racket[render-term/pretty-write].
+ 
+ See @racket[render-language] for more details on the construction of the pict.
+
 }
 
 
@@ -97,6 +136,8 @@ sets @racket[dc-for-text-size] and the latter does not.
  This function is primarily designed to be used with
  Slideshow or with other tools that combine @racketmodname[pict]s
  together.
+
+ @ex[(term->pict nums (+ 1 (+ 3 4)))]
 }
 
 @defproc[(render-term/pretty-write [lang compiled-lang?]
@@ -108,6 +149,9 @@ sets @racket[dc-for-text-size] and the latter does not.
   and expected to return a term. Then, @racket[pretty-write] is used
   to determine where the line breaks go, using the @racket[width] argument
   as a maximum width (via @racket[pretty-print-columns]).
+
+
+  @ex[(render-term/pretty-write nums '(+ (1 1 1) (1 0 1)))]
 }
 
 @defproc[(term->pict/pretty-write [lang compiled-lang?] 
@@ -117,6 +161,8 @@ sets @racket[dc-for-text-size] and the latter does not.
          pict?]{
   Like @racket[term->pict], but with the same change that
   @racket[render-term/pretty-write] has from @racket[render-term].
+
+  @ex[(term->pict/pretty-write nums '(+ (1 1 1) (1 0 1)))]
 }
 
 @defproc[(render-language [lang compiled-lang?]
@@ -138,7 +184,11 @@ relevant dc: a @racket[bitmap-dc%] or a @racket[post-script-dc%], depending on
 whether @racket[file] is a path.
 
 See @racket[language->pict] if you are using Slideshow or
-are otherwise setting @racket[dc-for-text-size].  }
+are otherwise setting @racket[dc-for-text-size].
+
+  @ex[(render-language nums)]
+
+}
 
 @defproc[(language->pict (lang compiled-lang?)
                          [#:nts nts (or/c false/c (listof (or/c string? symbol?)))
@@ -151,6 +201,9 @@ adjusting @racket[dc-for-text-size].
 This function is primarily designed to be used with
 Slideshow or with other tools that combine @racketmodname[pict]s
 together.
+
+  @ex[(language->pict nums)]
+
 }
 
 @defproc[(render-reduction-relation [rel reduction-relation?]
@@ -175,6 +228,16 @@ The following forms of arrows can be typeset:
 @arrows[--> -+> ==> -> => ..> >-> ~~> ~> :-> :--> c->
         -->> >-- --< >>-- --<<]
 
+@ex[(render-reduction-relation
+     (reduction-relation
+      nums
+      (--> (+ AE ())
+           AE)
+      (--> (+ AE_1
+              AE_2)
+           (+ AE_2
+              AE_1))))]
+
 }
 
 @defproc[(reduction-relation->pict (r reduction-relation?)
@@ -187,6 +250,13 @@ The following forms of arrows can be typeset:
 This function is
 primarily designed to be used with Slideshow or with
 other tools that combine @racketmodname[pict]s together.
+
+
+@ex[(reduction-relation->pict
+     (reduction-relation
+      nums
+      (--> (+ (+ AE_1 AE_2) AE_3)
+           (+ AE_1 (+ AE_2 AE_3)))))]
 }
 
 @deftogether[[
@@ -217,6 +287,16 @@ This function sets @racket[dc-for-text-size]. See also
 @racket[metafunction->pict] and
 @racket[metafunctions->pict].
 
+@ex[(define-metafunction nums
+      add : K K -> K
+      [(add K ·) K]
+      [(add · K) K]
+      [(add (0 K_1) (0 K_2)) (0 (add K_1 K_2))]
+      [(add (1 K_1) (0 K_2)) (1 (add K_1 K_2))]
+      [(add (0 K_1) (1 K_2)) (1 (add K_1 K_2))]
+      [(add (1 K_1) (1 K_2)) (0 (add (1 ·) (add K_1 K_2)))])
+    (render-metafunction add #:contract? #t)]
+
 @history[#:changed "1.3" @list{Added @racket[#:contract?] keyword argument.}]
 }
 
@@ -224,7 +304,10 @@ This function sets @racket[dc-for-text-size]. See also
   Produces a pict like @racket[render-metafunction], but without setting @racket[dc-for-text-size].
   It is suitable for use in Slideshow or other libraries that combine
   @racketmodname[pict]s.
-  @history[#:changed "1.3" @list{Added @racket[#:contract?] keyword argument.}]
+
+  @ex[(metafunction->pict add)]
+  
+ @history[#:changed "1.3" @list{Added @racket[#:contract?] keyword argument.}]
 }
 
 @defform[(metafunctions->pict metafunction-name ...)]{
@@ -234,6 +317,28 @@ This function sets @racket[dc-for-text-size]. See also
   @racketmodname[pict]s. Like
   @racket[render-metafunctions], it accepts multiple metafunctions
   and renders them together.
+
+
+ @ex[(define-metafunction nums
+       to-nat : K -> natural
+       [(to-nat ·) 0]
+       [(to-nat (0 K)) ,(* 2 (term (to-nat K)))]
+       [(to-nat (1 K)) ,(+ 1 (* 2 (term (to-nat K))))])]
+
+ @ex[(metafunctions->pict add to-nat)]
+ 
+ @ex-tests[(test-equal (term (to-nat (0 (0 (0 ·))))) 0)
+           (test-equal (term (to-nat (0 (0 (1 ·))))) 4)
+           (test-equal (term (to-nat (0 (1 (1 ·))))) 6)
+           (test-equal (term (to-nat (1 (1 (1 ·))))) 7)
+           (test-equal (term (to-nat (1 (1 (0 ·))))) 3)
+           (test-equal (term (to-nat (1 (0 (1 ·))))) 5)
+           (test-results)
+           (redex-check
+            nums
+            (K_1 K_2)
+            (= (+ (term (to-nat K_1)) (term (to-nat K_2)))
+               (term (to-nat (add K_1 K_2)))))]
 }
 
 @deftogether[(@defform[(render-relation relation-name)]{}
@@ -249,7 +354,37 @@ This function sets @racket[dc-for-text-size]. See also
               @defform/none[#:literals (render-judgment-form)
                                        (render-judgment-form judgment-form-name filename)]{})]{
 Like @racket[render-metafunction] but for judgment forms.
+     
+ @ex[(define-judgment-form nums
+       #:mode (eq I I)
+       #:contract (eq K K)
+       
+       [---------
+        (eq · ·)]
+       
+       [(eq K ·)
+        ------------
+        (eq (0 K) ·)]
 
+       [(eq · K)
+        ------------
+        (eq · (0 K))]
+       
+       [(eq K_1 K_2)
+        --------------------
+        (eq (0 K_1) (0 K_2))]
+
+       [(eq K_1 K_2)
+        --------------------
+        (eq (1 K_1) (1 K_2))])
+     (render-judgment-form eq)]
+
+ @ex-tests[(redex-check
+            nums
+            (K_1 K_2)
+            (equal? (= (term (to-nat K_1)) (term (to-nat K_2)))
+                    (judgment-holds (eq K_1 K_2))))]
+ 
 This function sets @racket[dc-for-text-size]. See also
 @racket[judgment-form->pict].
 }
@@ -434,7 +569,14 @@ to the width specified by @racket[metafunction-fill-acceptable-width].
 
 The @racket['left-right/beside-side-conditions] variant is like
 @racket['left-right], except it puts the side-conditions on the 
-same line, instead of on a new line below the case.}
+same line, instead of on a new line below the case.
+
+ @ex[(parameterize ([metafunction-pict-style 'left-right])
+       (render-metafunction add #:contract? #t))
+     (parameterize ([metafunction-pict-style 'up-down])
+       (render-metafunction add #:contract? #t))]
+
+}
 
 @defparam[metafunction-up/down-indent indent (>=/c 0)]{
   Controls the indentation of the right-hand side clauses
@@ -735,6 +877,28 @@ single reduction relation.
   the available width causes rendering to use the available horizontal
   space for joining side conditions.
 
+ @ex[(define-metafunction nums
+       [(f K_1)
+        ·
+        (where (0 K_2) K_1)
+        (where (1 K_3) K_2)
+        (where (0 K_4) K_3)
+        (where (1 K_5) K_4)
+        (where (1 ·) K_5)]
+       [(f K) (0 ·)])
+     (parameterize ([metafunction-pict-style 'left-right/compact-side-conditions])
+       (render-metafunction f))
+     (parameterize ([metafunction-pict-style 'left-right/compact-side-conditions]
+                    [metafunction-fill-acceptable-width 300])
+       (render-metafunction f))
+     (parameterize ([metafunction-pict-style 'left-right/compact-side-conditions]
+                    [metafunction-fill-acceptable-width 400])
+       (render-metafunction f))]
+
+ @ex-tests[(test-equal (term (f ·)) (term (0 ·)))
+           (test-equal (term (f (0 (1 (0 (1 (1 ·))))))) (term ·))
+           (test-results)]
+  
   @history[#:added "1.11"]
 }
 
@@ -915,6 +1079,14 @@ is to return a list that begins and ends with @racket[""] (the
 empty string). In that situation, any extra logical space that
 would have been just outside the sequence is replaced with an 
 @racket[lw] that does not draw anything at all.
+
+@ex[(with-compound-rewriter
+     'eq
+     (λ (lws)
+       (define lhs (list-ref lws 2))
+       (define rhs (list-ref lws 3))
+       (list "" lhs " = " rhs ""))
+     (render-judgment-form eq))]
 
 }
 
