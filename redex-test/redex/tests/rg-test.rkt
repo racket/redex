@@ -27,7 +27,8 @@
 ;; output : (-> (-> void) string)
 (define (output thunk)
   (let ([p (open-output-string)])
-    (parameterize ([current-output-port p])
+    (parameterize ([current-output-port p]
+                   [current-error-port p])
       (unless (void? (thunk))
         (error 'output "expected void result")))
     (begin0
@@ -697,13 +698,25 @@
   (test (output (λ () (redex-check lang (d e) #f)))
         #rx"counterexample found after 1 attempt:\n\\(5 (4|17)\\)\n")
   (let* ([p (open-output-string)]
-         [m (parameterize ([current-output-port p])
+         [m (parameterize ([current-error-port p])
               (with-handlers ([exn:fail? exn-message])
                 (redex-check lang d (error 'pred-raised))
                 'no-exn-raised))])
     (test m "error: pred-raised")
     (test (get-output-string p) #rx"checking 5 raises.*\n$")
     (close-output-port p))
+
+  ;; make sure that when it passes we get current-output-port output
+  (let* ([p (open-output-string)]
+         [m (parameterize ([current-output-port p])
+              (redex-check lang d #t))])
+    (test (get-output-string p) #rx"no counterexample"))
+
+  ;; make sure that when it fails we get current-error-port output
+  (let* ([p (open-output-string)]
+         [m (parameterize ([current-error-port p])
+              (redex-check lang d #f))])
+    (test (get-output-string p) #rx"counterexample"))
 
   (test (output
          (λ ()

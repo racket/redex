@@ -60,11 +60,14 @@
                                     (path->relative-string/library (syntax-source stx)) 
                                     (syntax-line stx))
                             #f)])
-       #`(λ (msg)
-           (fprintf 
-            (current-output-port)
-            "~a: ~a~a"
-            'what (if loc (string-append loc "\n") "") msg)))]))
+       #`(λ (err? msg)
+           (show-message/proc 'what err? loc msg)))]))
+
+(define (show-message/proc what err? loc msg)
+  (fprintf
+   (if err? (current-error-port) (current-output-port))
+   "~a: ~a~a"
+   what (if loc (string-append loc "\n") "") msg))
 
 (define-for-syntax attempts-keyword
   (list '#:attempts #'(default-check-attempts)
@@ -421,7 +424,8 @@
     [(counterexample? c)
      (unless show c)] ; check printed it
     [show
-     (show (format "no counterexamples in ~a\n"
+     (show #f
+           (format "no counterexamples in ~a\n"
                    (format-attempts attempts)))]
     [else
      #t]))
@@ -453,7 +457,7 @@
             (λ (action term)
               (λ (exn)
                 (define msg (format "~a ~s raises an exception" action term))
-                (when show (show (format "~a\n" msg)))
+                (when show (show #t (format "~a\n" msg)))
                 (raise 
                  (if show
                      exn
@@ -489,10 +493,11 @@
             [else
              (when show
                (show
+                #t
                 (format "counterexample found after ~a~a:\n"
                         (format-attempts attempt)
                         (if source (format " with ~a" source) "")))
-               (pretty-write term (current-output-port)))
+               (pretty-write term (current-error-port)))
              (if keep-going?
                  (loop (sub1 remaining))
                  (make-counterexample term))])])])))
@@ -517,6 +522,7 @@
     (if (and (null? pats) (null? srcs))
         (if show
             (show
+             #f
              (format "no counterexamples in ~a (with each clause)\n"
                      (format-attempts attempts)))
             #t)
