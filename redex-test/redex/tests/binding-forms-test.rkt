@@ -74,7 +74,7 @@
     (check-equal? (apply-reduction-relation
                    red
                    (term ((cons x) x nil)))
-                  (term (cons nil))))
+                  (list (term (cons nil)))))
   
   ;; == more complex stuff ==
 
