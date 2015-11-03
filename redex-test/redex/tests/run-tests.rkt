@@ -78,7 +78,8 @@
     (unless (or (member str test-files)
                 (regexp-match? #rx"~$" str)
                 (regexp-match? #rx"[.]bak$" str)
-                (member str '("run-tests.rkt" "color-test.rkt" "ryr-test.rkt")))
+                (member str '("run-tests.rkt" "color-test.rkt" "ryr-test.rkt"
+                                              "binding-performance-test.rkt")))
       (eprintf "WARNING: unknown file ~a\n" file))))
 
 (for ([test-file (in-list test-files)])
