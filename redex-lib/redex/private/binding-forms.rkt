@@ -116,7 +116,7 @@ to traverse the whole value at once, rather than one binding form at a time.
 (define (freshen language-bf-table match-pattern redex-val)
   (parameterize ([bf-table language-bf-table]
                  [pattern-matcher match-pattern]
-                 [name-generator gensym]
+                 [name-generator generate-readable-fresh-name]
                  [all-the-way-down? #f])
     (first (rec-freshen redex-val #f #t #f))))
 
@@ -147,7 +147,7 @@ to traverse the whole value at once, rather than one binding form at a time.
   (parameterize
    ([bf-table language-bf-table]
     [pattern-matcher match-pattern]
-    [name-generator gensym]
+    [name-generator generate-readable-fresh-name]
     [all-the-way-down? #t])
 
    (let loop [(v (first (rec-freshen redex-val #f #t #f)))]
@@ -169,6 +169,25 @@ to traverse the whole value at once, rather than one binding form at a time.
                        (string->symbol (number->string current-name-id)))])
    
    (first (rec-freshen redex-val #f #t #f))))
+
+;; == name generation ==
+
+(define prev-freshened-number -1)
+
+(define (generate-readable-fresh-name old-name)
+  (define name-as-string (symbol->string old-name))
+
+  (set! prev-freshened-number (add1 prev-freshened-number))
+
+  (string->symbol
+   (string-append
+    (match (symbol->string old-name) ;; on my machine ≪ ≫ are
+      [(regexp #rx"^(.+)«[0-9]+»$" (list _ base-name)) base-name]
+      [base-name base-name])
+    "«"
+    (number->string prev-freshened-number)
+    "»")))
+
 
 ;; == pattern-dispatch ==
 

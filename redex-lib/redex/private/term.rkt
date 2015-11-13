@@ -5,6 +5,7 @@
                      syntax/boundmap
                      syntax/parse
                      racket/syntax
+                     racket/match
                      (only-in racket/list flatten)
                      "keyword-macros.rkt"
                      "matcher.rkt")
@@ -233,7 +234,13 @@
       [x
        (and (identifier? (syntax x))
             (check-id (syntax->datum #'x) stx ellipsis-allowed? #f))
-       (values stx 0)]
+       (values
+        (match (symbol->string (syntax-e #'x))
+          [(regexp #rx"^(.+)«([0-9]+)»$" (list _ base-name index))
+           (datum->syntax
+            stx (string->symbol (string-append base-name "«" index "☺»")) stx)]
+          [_ stx])
+        0)]
       [() (values stx 0)]
       [(x ... . y)
        (not (null? (syntax->list #'(x ...))))

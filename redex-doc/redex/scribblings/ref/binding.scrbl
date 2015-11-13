@@ -139,8 +139,8 @@ named subterm in its binding declaration.
 Informally speaking, the fundamental problem in handling binding forms is that, depending on
 the context (i.e., the values that they are embedded in), two equal atoms may or may not have
 different meanings (i.e., may refer to binders in different positions). Redex solves this
-problem by detecting when a binding form is destructured, and freshening all the names that
-thereby become free.
+problem by detecting when a binding form is destructured, and @deftech{freshening} all the
+names that thereby become free.
 
 This enables Redex to provide a conditional guarantee: if the only tools used to examine a
 term are @racket[symbol=?] and built-in Redex operations (for example, metafunctions and
