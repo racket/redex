@@ -239,6 +239,15 @@
           [(regexp #rx"^(.+)«([0-9]+)»$" (list _ base-name index))
            (datum->syntax
             stx (string->symbol (string-append base-name "«" index "☺»")) stx)]
+          [(regexp #rx"^(.+)«([0-9]+)([☺☹]+)»$" (list _ base-name index smiley-number))
+           (datum->syntax
+            stx
+            (string->symbol (string-append base-name
+                                           "«"
+                                           index
+                                           (to-smiley-number (+ 1 (from-smiley-number smiley-number)))
+                                           "»"))
+            stx)]
           [_ stx])
         0)]
       [() (values stx 0)]
@@ -264,7 +273,7 @@
          (values (datum->syntax stx x-rewrite stx stx) max-depth))]
       
       [_ (values stx 0)]))
-  
+
   (define (check-id id stx ellipsis-allowed? term-id?)
     (define m (regexp-match #rx"^([^_]*)_" (symbol->string id)))
     (cond

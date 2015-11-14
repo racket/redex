@@ -4,10 +4,8 @@
   (require rackunit)
   (require redex/reduction-semantics)
 
-  (term (asdf«5000» a«1» b«1a1» c«1☺»))
-
-  (check-equal? (term (asdf«5000» a«1» b«1a1» c«1☺»))
-                '(asdf«5000☺» a«1☺» b«1a1» c«1☺»))
+  (check-equal? (term (asdf«5000»  a«1»  b«1a1» c«1☺» c«1☹»))
+                '(     asdf«5000☺» a«1☺» b«1a1» c«1☹» c«1☹☺»))
 
 
   (define (all-distinct? . lst)

@@ -32,7 +32,10 @@
          language-id-nt-hole-map
          pattern-symbols
          
-         build-disappeared-use)
+         build-disappeared-use
+
+         from-smiley-number
+         to-smiley-number)
 
 (define-values (struct-type make-term-fn term-fn? term-fn-get term-fn-set!) 
   (make-struct-type 'term-fn #f 1 0))
@@ -121,3 +124,35 @@
         #f])]
     [else
      #f]))
+
+
+(define (to-smiley-number n)
+  (define candidate
+    (let loop ([n n]
+               [chars '()])
+      (cond
+        [(zero? n) (apply string chars)]
+        [(odd? n) (loop (/ (- n 1) 2) (cons #\☹ chars))]
+        [else (loop (/ n 2) (cons #\☺ chars))])))
+  (cond
+    [(equal? candidate "") "☺"]
+    [else candidate]))
+
+(define (from-smiley-number str)
+  (for/fold ([acc 0])
+            ([c (in-string str)])
+    (+ (case c [(#\☺) 0] [(#\☹) 1])
+       (* 2 acc))))
+
+(module+ test
+  (require rackunit)
+  (check-equal? (to-smiley-number 0) "☺")
+  (check-equal? (to-smiley-number 1) "☹")
+  (check-equal? (to-smiley-number 2) "☹☺")
+  (check-equal? (to-smiley-number 3) "☹☹")
+  (check-equal? (to-smiley-number 18) "☹☺☺☹☺")
+  
+  (for ([x (in-range 1000)])
+    (check-equal? x (from-smiley-number (to-smiley-number x))))
+  
+  (check-equal? (from-smiley-number "☺☺☺☺☺☺☹☺☺☹☺") 18))
