@@ -4,9 +4,13 @@
 
 tests the color setting ability during a reduction sequence.
 
-In one window, you expect to see a red and a blue snip. as you reduce you expect to see a spectrum from blue to red
+In one window, you expect to see a red and a blue snip.
+as you reduce you expect to see a spectrum from blue to red
 
 In the other window, you expect to see the currently unreducted terms in green and all others white.
+
+Also just tests that the stepper works. The third window is a stepper window.
+Expect the second step to split and show two steps.
 
 |#
 
@@ -71,3 +75,12 @@ In the other window, you expect to see the currently unreducted terms in green a
                 dup))
           '(1 word)
           #:pred last-color-pred))
+
+(let ()
+  (define-language empty-language)
+  (stepper
+   (reduction-relation
+    empty-language
+    (--> any (any) (computed-name (term (12 any 34))))
+    (--> (any) (any any) "not-computed"))
+   1234))

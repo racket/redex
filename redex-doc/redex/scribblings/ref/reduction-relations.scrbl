@@ -224,7 +224,7 @@ list of terms that the term reduces to.
 @defproc[(apply-reduction-relation/tag-with-names
           [r (or/c reduction-relation? IO-judgment-form?)]
           [t any/c])
-         (listof (list/c (union false/c string?) any/c))]{
+         (listof (list/c (or/c #f string?) any/c))]{
 
 Like @racket[apply-reduction-relation], but the result indicates the
 names of the reductions that were used.
