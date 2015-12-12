@@ -731,14 +731,18 @@
         [((rhs-arrow rhs-from rhs-to) (lhs-arrow lhs-frm-id lhs-to-id))
          (let ([lang-nts (language-id-nts lang-id 'reduction-relation)]
                [rewrite-side-conds
-                (λ (pat) (rewrite-side-conditions/check-errs lang-id orig-name #t pat))])
+                (λ (pat rewrite-as-any-id)
+                  (rewrite-side-conditions/check-errs
+                   lang-id orig-name #t pat
+                   #:rewrite-as-any-id rewrite-as-any-id))])
            (with-syntax ([(lhs-syncheck-expr side-conditions-rewritten (names ...) (names/ellipses ...))
                           (rewrite-side-conds
-                           (rewrite-node-pat (syntax-e (syntax lhs-frm-id))
-                                             (syntax rhs-from)))]
+                           (syntax rhs-from)
+                           (syntax-e (syntax lhs-frm-id)))]
                          [(rhs-syncheck-expr fresh-rhs-from (fresh-names ...) (fresh-names/ellipses ...)) 
                           (rewrite-side-conds 
-                           (freshen-names #'rhs-from #'lhs-frm-id lang-nts orig-name))]
+                           (freshen-names #'rhs-from #'lhs-frm-id lang-nts orig-name)
+                           #f)]
                          [lang lang])
              (map
               (λ (child-proc)
@@ -761,34 +765,6 @@
                            (syntax lhs-arrow) 
                            name-table lang-id 
                            allow-zero-rules?))))]))
-    (define (rewrite-node-pat id term)
-      (define max-any-number
-        (add1 (let loop ([t term])
-                (syntax-case t (side-condition)
-                  [(side-condition p c)
-                   (loop #'p)]
-                  [(p ...)
-                   (apply max (map loop (syntax->list #'(p ...))))]
-                  [x
-                   (identifier? #'x)
-                   (cond
-                     [(regexp-match #rx"^any_([0-9]*)$" (symbol->string (syntax-e #'x)))
-                      =>
-                      (λ (m)
-                        (string->number (list-ref m 1)))]
-                     [else 0])]
-                  [else 0]))))
-      (define fresh-any (string->symbol (format "any_~a" (+ 1 max-any-number))))
-      (let loop ([t term])
-        (syntax-case t (side-condition)
-          [(side-condition p c)
-           #`(side-condition #,(loop #'p) c)]
-          [(p ...)
-           (map loop (syntax->list #'(p ...)))]
-          [else 
-           (if (and (identifier? t) (eq? id (syntax-e t)))
-               `(name ,id ,fresh-any)
-               t)])))
     
     (define (freshen-names pat hole-id nts what)
       (define (fresh x)

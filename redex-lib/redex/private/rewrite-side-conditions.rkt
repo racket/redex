@@ -28,7 +28,14 @@
   ;; - the second is an expression that, when prefixed with a
   ;;   quasiquote, evaluates to a pattern that can be used with
   ;;   match-a-pattern (at runtime).
-  (define (rewrite-side-conditions/check-errs all-nts/lang-id what bind-names? orig-stx)
+
+  ;; if rewrite-id is not #f, then it must be a pair of
+  ;; a symbol and a well-formed rewritten pattern.
+  ;; Occurrences of that symbol in the `orig-stx' pattern are replaced by
+  ;; the pattern. Also, uses of that identifier not in "pattern expression" positions
+  ;; are signalled as syntax errors
+  (define (rewrite-side-conditions/check-errs all-nts/lang-id what bind-names? orig-stx
+                                              #:rewrite-as-any-id [rewrite-as-any-id #f])
     (define all-nts (if (identifier? all-nts/lang-id)
                         (language-id-nts all-nts/lang-id what)
                         all-nts/lang-id))
@@ -178,6 +185,9 @@
              (unless (identifier? #'x)
                (raise-syntax-error what "expected an identifier"
                                    orig-stx #'x))
+             (when (equal? (syntax-e #'x) rewrite-as-any-id)
+               (raise-syntax-error what (format "illegal use of ~a" rewrite-as-any-id)
+                                   orig-stx #'x))
              (define-values (sub-term sub-vars) (loop #'y under under-mismatch-ellipsis))
              (record-binder #'x under under-mismatch-ellipsis)
              (values #`(name x #,sub-term)
@@ -277,6 +287,9 @@
                    (values `(name ,term ,term) (list (make-id/depth term (length under))))]
                   [else
                    (values term '())])]
+               [(equal? (syntax-e term) rewrite-as-any-id)
+                (values `(name ,rewrite-as-any-id any)
+                        (list (make-id/depth term (length under))))]
                [else
                 (values term '())]))]
           [(terms ...)
