@@ -135,7 +135,9 @@ Each @racket[shortcut] clause defines arrow names in terms of
 @racket[base-arrow-name] and earlier @racket[shortcut] definitions.
 The left- and right-hand sides of a @racket[shortcut] definition 
 are identifiers, not @|pattern|s and @|tterm|s. These identifiers
-need not correspond to non-terminals in @racket[language].
+need not correspond to non-terminals in @racket[language] and if
+they do, that correspondence is ignored (more precisely, the
+shortcut is @emph{not} restricted only to terms matching the non-terminal).
 
 For example, this expression
 

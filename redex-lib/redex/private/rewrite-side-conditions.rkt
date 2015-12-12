@@ -12,6 +12,7 @@
             "matcher.rkt"))
   
   (provide rewrite-side-conditions/check-errs
+           break-out-underscore
            extract-names
            (rename-out [binds? id-binds?])
            raise-ellipsis-depth-error

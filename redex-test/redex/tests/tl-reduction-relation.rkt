@@ -980,14 +980,14 @@
           with
           [(--> (side-condition (a number) (even? (term number))) b)
            (->1 a b)]
-          [(--> (X 
+          [(--> (XX
                  (number number)
                  (X_1 X_1)
                  (M_!_1 M_!_1)
                  (1 ..._1 1 ..._1)
                  (1 ..._!_1 1 ..._!_1))
                 b)
-           (->2 X b)]
+           (->2 XX b)]
           [(--> (a 1) b)
            (->3 a b)]
           [(->3 (a 2) b)

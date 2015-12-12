@@ -269,8 +269,8 @@
         (side-condition (not (equal? (term E) (term hole)))))
 
    with
-   [(==> (<> (in-hole E a) Σ) (<> (in-hole E b) Σ))
-    (--> a b)]))
+   [(==> (<> (in-hole E aa) Σ) (<> (in-hole E bb) Σ))
+    (--> aa bb)]))
 
 ;; wrapping contracts
 (define-metafunction abort-lang

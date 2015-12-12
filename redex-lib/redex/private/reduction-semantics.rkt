@@ -592,6 +592,7 @@
     (let ([ht (make-module-identifier-mapping)]
           [all-top-levels '()]
           [withs (make-module-identifier-mapping)])
+      (define lang-nt-names (language-id-nts lang-id 'reduction-relation))
       (for-each (λ (shortcut)
                   (syntax-case shortcut ()
                     [((rhs-arrow rhs-from rhs-to)
@@ -610,7 +611,17 @@
                       shortcut #'b)]
                     [((rhs-arrow rhs-from rhs-to)
                       (lhs-arrow lhs-from lhs-to))
-                     (begin
+                     (let ()
+                       (define-values (lhs-prefix lhs-suffix) (break-out-underscore #'lhs-from))
+                       (define-values (rhs-prefix rhs-suffix) (break-out-underscore #'lhs-to))
+                       (when (member lhs-prefix lang-nt-names)
+                         (raise-syntax-error orig-name
+                                             "shortcut name may not be a non-terminal"
+                                             stx #'lhs-from))
+                       (when (member rhs-prefix lang-nt-names)
+                         (raise-syntax-error orig-name
+                                             "shortcut name may not be a non-terminal"
+                                             stx #'lhs-to))
                        (table-cons! withs #'lhs-arrow #'rhs-arrow)
                        (table-cons! ht (syntax rhs-arrow) shortcut))]
                     [((a b c) d)
