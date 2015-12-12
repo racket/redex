@@ -175,6 +175,9 @@
           [hole (values term '())]
           [(name x y)
            (let ()
+             (unless (identifier? #'x)
+               (raise-syntax-error what "expected an identifier"
+                                   orig-stx #'x))
              (define-values (sub-term sub-vars) (loop #'y under under-mismatch-ellipsis))
              (record-binder #'x under under-mismatch-ellipsis)
              (values #`(name x #,sub-term)
