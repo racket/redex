@@ -186,7 +186,8 @@
                (raise-syntax-error what "expected an identifier"
                                    orig-stx #'x))
              (when (equal? (syntax-e #'x) rewrite-as-any-id)
-               (raise-syntax-error what (format "illegal use of ~a" rewrite-as-any-id)
+               (raise-syntax-error what
+                                   "the identifier bound by a shortcut may not be used in a with"
                                    orig-stx #'x))
              (define-values (sub-term sub-vars) (loop #'y under under-mismatch-ellipsis))
              (record-binder #'x under under-mismatch-ellipsis)
@@ -222,15 +223,11 @@
           [_
            (identifier? term)
            (let ()
-             (define m (regexp-match #rx"^([^_]*)_(.*)$" (symbol->string (syntax-e term))))
+             (define-values (prefix-sym suffix-sym) (break-out-underscore term))
              (cond
-               [m
-                (define prefix (list-ref m 1))
-                (define suffix (list-ref m 2))
-                (define suffix-sym (string->symbol suffix))
-                (define prefix-sym (string->symbol prefix))
+               [suffix-sym
                 (define prefix-stx (datum->syntax term prefix-sym))
-                (define mismatch? (regexp-match? #rx"^!_" suffix))
+                (define mismatch? (regexp-match? #rx"^!_" (symbol->string suffix-sym)))
                 (cond
                   [(eq? (syntax-e term) '_) (values `any '())] ;; don't bind wildcard
                   [(eq? prefix-sym '...)
@@ -497,6 +494,19 @@
       (when nt->hole
         (check-hole-sanity what #'term nt->hole orig-stx))
       #'(void-stx term (name ...) (name/ellipses ...))))
+
+(define (break-out-underscore id)
+  (define sym (syntax-e id))
+  (define m (regexp-match #rx"^([^_]*)_(.*)$" (symbol->string sym)))
+  (cond
+    [m
+     (define prefix (list-ref m 1))
+     (define suffix (list-ref m 2))
+     (values (string->symbol prefix) (string->symbol suffix))]
+    [else
+     (values sym #f)]))
+                
+
 
 ;; check-hole-sanity : pat hash[sym -o> (or/c 0 1 'unknown)] -> (or/c 0 1 'unknown)
 ;; returns 'unknown if cannot figure out the answer (based on an 'unknown in the nt-map)
