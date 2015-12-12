@@ -273,7 +273,7 @@
                [(memq (syntax-e term) underscore-allowed)
                 (cond
                   [bind-names?
-                   (record-binder #'term under under-mismatch-ellipsis)
+                   (record-binder term under under-mismatch-ellipsis)
                    (values `(name ,term ,term) (list (make-id/depth term (length under))))]
                   [else
                    (values term '())])]
