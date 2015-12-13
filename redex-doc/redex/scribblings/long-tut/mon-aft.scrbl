@@ -48,7 +48,7 @@ numbers)---and many other things.
 After you have a syntax, use the grammar to generate instances and check
 them (typos do sneak in). Instances are generated with @racket[term]: 
 @;
-@interaction[#:eval redex-eval
+@examples[#:label #f #:eval redex-eval
 (define e1 (term y))
 (define e2 (term (lambda (y) y)))
 (define e3 (term (lambda (x y) y)))

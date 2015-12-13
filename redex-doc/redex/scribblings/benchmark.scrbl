@@ -3,7 +3,7 @@
 @(require scribble/manual
           scribble/bnf
           scribble/struct
-          scribble/eval
+          scribble/examples
           scribble/racket
           scribblings/guide/modfile
           redex/benchmark
@@ -97,15 +97,14 @@ module syntax. The syntax of @racket[path-spec] must be same as for
 
 @(define-runtime-path here ".")
 @(define bmark-eval (parameterize ([current-load-relative-directory here])
-                      (make-base-eval)))
-@(interaction-eval #:eval bmark-eval (require redex/benchmark))
-
+                      (make-base-eval '(require redex/benchmark))))
 
 For example, if the contents of the file mod-fx.rkt are:
 @(parameterize ([current-load-relative-directory here])
    (racketmodfile "mod-fx.rkt"))
 Then:
-@interaction[#:eval bmark-eval
+@examples[#:eval bmark-eval
+          #:label #f
   (define-rewrite xy-rw 
     x ==> y
     #:context (f)

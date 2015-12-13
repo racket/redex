@@ -1,6 +1,6 @@
 #lang scribble/manual
 
-@(require "common.rkt" scribble/eval
+@(require "common.rkt" scribble/examples
           (for-label racket/base
                      (except-in racket/gui make-color)
                      racket/pretty
@@ -11,8 +11,7 @@
                               vc-append hbl-append vl-append)
                      redex))
 
-@(define redex-eval (make-base-eval))
-@(interaction-eval #:eval redex-eval (require redex/reduction-semantics))
+@(define redex-eval (make-base-eval '(require redex/reduction-semantics)))
 
 @title{Binding}
 
@@ -67,8 +66,7 @@ binding form shadows the others.
 Scope is defined by @racket[#:refers-to] and @racket[#:exports]. Consider the definition of the
 untyped lambda calculus:
 
-@interaction[#:eval
-          redex-eval
+@examples[#:label #f #:eval redex-eval
           (define-language lc
             (e (e e)
                x
@@ -76,7 +74,7 @@ untyped lambda calculus:
             (x variable-not-otherwise-mentioned)
             #:binding-forms
             (λ (x_param) e_body #:refers-to x_param))
-]
+          ]
 
 In this simple case, in a @racket[λ] term, the @racket[e_body] subterm has the name from
 the @racket[x_param] subterm in scope. The symbols inside a beta must be names bound by the
@@ -85,25 +83,23 @@ the @racket[x_param] subterm in scope. The symbols inside a beta must be names b
 It is possible for a single subterm to refer to multiple other sources of names. In such a case, the
 shadowing direction must be specified by the @tech{beta} with a @racket[shadow] clause.
 
-@interaction[#:eval
-          redex-eval
+@examples[#:label #f #:eval redex-eval
           (define-extended-language lc-more-1 lc
             (e ....
                (let2 ((x e) (x e)) e))
             #:binding-forms
             (let2 ((x_1 e_1) (x_2 e_2)) e_body #:refers-to (shadow x_1 x_2)))
-]
+          ]
 
 Ellipses are also permitted inside @tech{betas}:
 
-@interaction[#:eval
-          redex-eval
+@examples[#:label #f #:eval redex-eval
           (define-extended-language lc-more-2 lc
             (e ....
                (let ((x e) ...) e))
             #:binding-forms
             (let ((x_val e_val) ...) e_body #:refers-to (shadow x_val ...)))
-]
+          ]
 
 If a pattern symbol is matched underneath ellipses, it may only be mentioned in a @tech{beta}
 underneath the same number of ellipses.
@@ -116,16 +112,16 @@ The @racket[#:exports] clause can be used to create more complex binding structu
 binding form with such a clause is mentioned, the names brought into scope
 are determined by recursively examining everything mentioned by that @racket[#:exports] clause.
 
-@interaction[#:eval
-          redex-eval
+@examples[#:label #f #:eval redex-eval
           (define-extended-language lc-more-3 lc-more-2
             (e ....
                (let* let*-clauses e))
             (let*-clauses (let*-clause x e let*-clauses)
                           ())
-          #:binding-forms
-          (let* let*-clauses e #:refers-to let*-clauses)
-          (let*-clause x_bnd e_val let*-clauses #:refers-to x_bnd) #:exports (shadow x_bnd let*-clauses))]
+            #:binding-forms
+            (let* let*-clauses e #:refers-to let*-clauses)
+            (let*-clause x_bnd e_val let*-clauses #:refers-to x_bnd)
+            #:exports (shadow x_bnd let*-clauses))]
 
 (Note that, in this example, we have departed from standard Racket syntax: A term representing
 a @racket[let*] might look like @racket[(let* (let*-clause x 1 (let*-clause y (* x x) ()))
@@ -176,8 +172,7 @@ separate binding form.
 
 For example:
 
-@interaction[#:eval
-          redex-eval
+@examples[#:label #f #:eval redex-eval
           (define-language lc-with-let*
             (e (e e)
                x
@@ -196,11 +191,10 @@ repetition or the outer binding form, both of which can refer to it by @racket[s
 @racket[clauses]). All subsequent repetitions of the subform will have @racket[tail-refers-to-beta]
 (here, @racket[x_v]) in scope.
 
-@interaction[#:eval
-          redex-eval
-          (term (let* ((a 1)
-                       (b (+ 1 a))
-                       (c (+ 1 a b)))
+@examples[#:label #f #:eval redex-eval
+          (term (let* ([a 1]
+                       [b (+ 1 a)]
+                       [c (+ 1 a b)])
                   (+ a b c)))]
 
 In the term above, each @racket[x_v] (i.e. @racket[a], @racket[b], and @racket[c]) is in scope in

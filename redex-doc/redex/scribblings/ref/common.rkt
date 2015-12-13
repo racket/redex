@@ -1,7 +1,6 @@
 #lang racket/base
 
 (require scribble/manual
-         scribble/eval
          scribble/racket
          (for-syntax racket/base
                      racket/syntax))

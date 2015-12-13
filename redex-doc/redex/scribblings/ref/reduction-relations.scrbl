@@ -1,5 +1,5 @@
 #lang scribble/manual
-@(require "common.rkt" scribble/eval
+@(require "common.rkt" scribble/examples
           (for-label racket/base
                      (except-in racket/gui make-color)
                      racket/pretty
@@ -10,8 +10,7 @@
                               vc-append hbl-append vl-append)
                      redex))
 
-@(define redex-eval (make-base-eval))
-@(interaction-eval #:eval redex-eval (require redex/reduction-semantics))
+@(define redex-eval (make-base-eval '(require redex/reduction-semantics)))
 
 @title{Reduction Relations}
 

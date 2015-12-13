@@ -1,6 +1,6 @@
 #lang scribble/manual
 @(require scribble/struct
-          scribble/eval
+          scribble/examples
           racket/port
           (for-syntax racket/base)
           (for-label racket/base
@@ -21,12 +21,10 @@
                  (make-element #f (list " " (hspace 1) " " (racketidfont (symbol->string 'a))))
                  ...)))))
 
-@(define redex-eval (make-base-eval))
-@(interaction-eval #:eval redex-eval
-                   (require redex/reduction-semantics redex/pict racket/port))
+@(define redex-eval (make-base-eval '(require redex/reduction-semantics redex/pict racket/port)))
+
 @(define-syntax-rule (ex e ...)
-   (with-eval-preserve-source-locations
-    (examples #:eval redex-eval e ...)))
+   (examples #:preserve-source-locations #:eval redex-eval e ...))
 
 @(define (ex-tests/proc line exps)
    (define err-only-p (open-output-string))

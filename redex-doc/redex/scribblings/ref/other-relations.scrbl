@@ -1,6 +1,6 @@
 #lang scribble/manual
 @(require "common.rkt"
-          scribble/eval
+          scribble/examples
           (for-label racket/base
                      (except-in racket/gui make-color)
                      racket/pretty
@@ -11,8 +11,7 @@
                               vc-append hbl-append vl-append)
                      redex))
 
-@(define redex-eval (make-base-eval))
-@(interaction-eval #:eval redex-eval (require redex/reduction-semantics))
+@(define redex-eval (make-base-eval '(require redex/reduction-semantics)))
 
 @(define (examples-link relative-path dir? text)
    (link (format "http://git.racket-lang.org/plt/~a/HEAD:/collects/redex/examples/~a"
@@ -248,19 +247,18 @@ successfully, with variables from the contract bound; a result of @racket[#f] is
 considered to be a contract violation and an exception is raised.
 
 For example, the following defines addition on natural numbers:
-@interaction[
-#:eval redex-eval
-       (define-language nats
-         (n ::= z (s n)))
-       (define-judgment-form nats
-         #:mode (sum I I O)
-         #:contract (sum n n n)
-         [-----------  "zero"
-          (sum z n n)]
-         
-         [(sum n_1 n_2 n_3)
-          ------------------------- "add1"
-          (sum (s n_1) n_2 (s n_3))])]
+@examples[#:label #f #:eval redex-eval
+          (define-language nats
+            (n ::= z (s n)))
+          (define-judgment-form nats
+            #:mode (sum I I O)
+            #:contract (sum n n n)
+            [-----------  "zero"
+             (sum z n n)]
+            
+            [(sum n_1 n_2 n_3)
+             ------------------------- "add1"
+             (sum (s n_1) n_2 (s n_3))])]
 
 The @racket[judgment-holds] form checks whether a relation holds for any 
 assignment of pattern variables in output positions.
@@ -280,18 +278,17 @@ pattern variable assignments.
 Declaring different modes for the same inference rules enables different forms
 of computation. For example, the following mode allows @racket[judgment-holds]
 to compute all pairs with a given sum.
-@interaction[
-#:eval redex-eval
-       (define-judgment-form nats
-         #:mode (sumr O O I)
-         #:contract (sumr n n n)
-         [------------
-          (sumr z n n)]
-         
-         [(sumr n_1 n_2 n_3)
-          --------------------------
-          (sumr (s n_1) n_2 (s n_3))])
-       (judgment-holds (sumr n_1 n_2 (s (s z))) (n_1 n_2))]
+ @examples[#:label #f #:eval redex-eval
+           (define-judgment-form nats
+             #:mode (sumr O O I)
+             #:contract (sumr n n n)
+             [------------
+              (sumr z n n)]
+             
+             [(sumr n_1 n_2 n_3)
+              --------------------------
+              (sumr (s n_1) n_2 (s n_3))])
+           (judgment-holds (sumr n_1 n_2 (s (s z))) (n_1 n_2))]
 
 A rule's @racket[where] and @racket[where/hidden] premises behave as in 
 @racket[reduction-relation] and @racket[define-metafunction].
@@ -360,29 +357,28 @@ one.
 
 Redex evaluates premises depth-first, even when it doing so leads to 
 non-termination. For example, consider the following definitions:
-@interaction[
-#:eval redex-eval
-       (define-language vertices
-         (v a b c))
-       (define-judgment-form vertices
-         #:mode (edge I O)
-         #:contract (edge v v)
-         [(edge a b)]
-         [(edge b c)])
-       (define-judgment-form vertices
-         #:mode (path I I)
-         #:contract (path v v)
-         [----------
-          (path v v)]
-         
-         [(path v_2 v_1)
-          --------------
-          (path v_1 v_2)]
-         
-         [(edge v_1 v_2)
-          (path v_2 v_3)
-          --------------
-          (path v_1 v_3)])]
+@examples[#:label #f #:eval redex-eval
+          (define-language vertices
+            (v a b c))
+          (define-judgment-form vertices
+            #:mode (edge I O)
+            #:contract (edge v v)
+            [(edge a b)]
+            [(edge b c)])
+          (define-judgment-form vertices
+            #:mode (path I I)
+            #:contract (path v v)
+            [----------
+             (path v v)]
+            
+            [(path v_2 v_1)
+             --------------
+             (path v_1 v_2)]
+            
+            [(edge v_1 v_2)
+             (path v_2 v_3)
+             --------------
+             (path v_1 v_3)])]
 Due to the second @racket[path] rule, the follow query fails to terminate:
 @racketinput[(judgment-holds (path a c))]
 
@@ -420,11 +416,10 @@ the pattern variables in @racket[judgment-id]'s output positions. In its second
 form, produces a list of terms by instantiating the supplied term template with
 each satisfying assignment of pattern variables.
 
-@interaction[#:eval 
-             redex-eval
-             (judgment-holds (sum (s (s z)) (s z) n))
-             (judgment-holds (sum (s (s z)) (s z) n) n)]
-See @racket[define-judgment-form] for more examples.
+ @examples[#:label #f #:eval redex-eval
+           (judgment-holds (sum (s (s z)) (s z) n))
+           (judgment-holds (sum (s (s z)) (s z) n) n)]
+ See @racket[define-judgment-form] for more examples.
 }
 
 @defform[(build-derivations judgment)]{

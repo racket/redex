@@ -7,7 +7,7 @@
   (for-label (all-from-out redex/reduction-semantics))
   (all-from-out
     "exercise/ex.rkt"
-    scribble/eval
+    scribble/examples
     racket/sandbox
     scribble/core
     scriblib/figure))
@@ -18,7 +18,7 @@
   (for-label redex/reduction-semantics)
   scribble/manual
   scribble/core
-  scribble/eval
+  scribble/examples
   racket/sandbox
   scriblib/figure)
 

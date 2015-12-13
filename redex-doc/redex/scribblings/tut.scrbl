@@ -2,7 +2,7 @@
 @(require scribble/manual
           scribble/bnf
           scribble/struct
-          scribble/eval
+          scribble/examples
           racket/runtime-path
           scriblib/autobib
           (for-syntax racket/base 
@@ -19,13 +19,12 @@
                      mrlib/graph
                      redex))
 
-@(define amb-eval (make-base-eval))
-@(interaction-eval #:eval amb-eval (require racket
+@(define amb-eval (make-base-eval '(require racket
                                             redex/reduction-semantics 
                                             redex/pict
                                             pict
-                                            racket/pretty))
-@(interaction-eval #:eval amb-eval (begin (pretty-print-columns 40) (random-seed 0)))
+                                            racket/pretty)))
+@(examples #:hidden #:eval amb-eval (begin (pretty-print-columns 40) (random-seed 0)))
 
 @(define orig-op (current-output-port))
 @(define orig-ep (current-error-port))
@@ -54,7 +53,7 @@
       (with-syntax ([line (syntax-line stx)]
                     [src (loc stx)])
         #'(begin (amb-try (interaction/test/proc passed? exp src line))
-                 (interaction #:eval amb-eval exp)))]))
+                 (examples #:label #f #:eval amb-eval exp)))]))
 @(amb-eval '(define (interaction/test/proc passed? val src line)
               (unless (passed? val)
                 (eprintf "~a: test case on line ~a failed\n  ~s\n  pred: ~s\n" 
@@ -124,18 +123,19 @@ to be using the @racketmodname[redex] DSL.
 
 Next, enter the following definition.
 
-@racketblock+eval[#:eval amb-eval
-                         (define-language L
-                           (e (e e)
-                              (λ (x t) e)
-                              x
-                              (amb e ...)
-                              number
-                              (+ e ...)
-                              (if0 e e e)
-                              (fix e))
-                           (t (→ t t) num)
-                           (x variable-not-otherwise-mentioned))]
+@examples[#:eval amb-eval
+          #:no-result
+          (define-language L
+            (e (e e)
+               (λ (x t) e)
+               x
+               (amb e ...)
+               number
+               (+ e ...)
+               (if0 e e e)
+               (fix e))
+            (t (→ t t) num)
+            (x variable-not-otherwise-mentioned))]
 
 
 The @racket[define-language] form gives a name to
@@ -298,11 +298,10 @@ to define type environments, which we do by extending
 the language @racket[L] with a new non-terminal 
 @racket[Γ], that we use to represent environments.
 
-@racketblock+eval[#:eval 
-                  amb-eval
-                  (define-extended-language L+Γ L
-                    [Γ · (x : t Γ)])]
-                  
+@examples[#:no-result #:eval amb-eval
+          (define-extended-language L+Γ L
+            [Γ · (x : t Γ)])]
+
 The @racket[define-extended-language] form accepts the
 name of the new language, the name of the extended 
 language and then a series of non-terminals just
@@ -315,50 +314,49 @@ of this use of @racket[define-judgment-form]
 has a contract declaration indicating that the judgments all have
 the shape @racket[(types Γ e t)]. 
 
-@racketblock+eval[#:eval 
-                  amb-eval
-                  (define-judgment-form
-                    L+Γ
-                    #:mode (types I I O)
-                    #:contract (types Γ e t)
-                    
-                    [(types Γ e_1 (→ t_2 t_3))
-                     (types Γ e_2 t_2)
-                     -------------------------
-                     (types Γ (e_1 e_2) t_3)]
-                    
-                    [(types (x : t_1 Γ) e t_2)
-                     -----------------------------------
-                     (types Γ (λ (x t_1) e) (→ t_1 t_2))]
-                    
-                    [(types Γ e (→ (→ t_1 t_2) (→ t_1 t_2)))
-                     ---------------------------------------
-                     (types Γ (fix e) (→ t_1 t_2))]
-                    
-                    [---------------------
-                     (types (x : t Γ) x t)]
-                    
-                    [(types Γ x_1 t_1)
-                     (side-condition (different x_1 x_2))
-                     ------------------------------------
-                     (types (x_2 : t_2 Γ) x_1 t_1)]
-                    
-                    [(types Γ e num) ...
-                     -----------------------
-                     (types Γ (+ e ...) num)]
-                    
-                    [--------------------
-                     (types Γ number num)]
-                    
-                    [(types Γ e_1 num)
-                     (types Γ e_2 t)
-                     (types Γ e_3 t)
-                     -----------------------------
-                     (types Γ (if0 e_1 e_2 e_3) t)]
-                    
-                    [(types Γ e num) ...
-                     --------------------------
-                     (types Γ (amb e ...) num)])]
+@examples[#:no-result #:eval amb-eval
+          (define-judgment-form
+            L+Γ
+            #:mode (types I I O)
+            #:contract (types Γ e t)
+            
+            [(types Γ e_1 (→ t_2 t_3))
+             (types Γ e_2 t_2)
+             -------------------------
+             (types Γ (e_1 e_2) t_3)]
+            
+            [(types (x : t_1 Γ) e t_2)
+             -----------------------------------
+             (types Γ (λ (x t_1) e) (→ t_1 t_2))]
+            
+            [(types Γ e (→ (→ t_1 t_2) (→ t_1 t_2)))
+             ---------------------------------------
+             (types Γ (fix e) (→ t_1 t_2))]
+            
+            [---------------------
+             (types (x : t Γ) x t)]
+            
+            [(types Γ x_1 t_1)
+             (side-condition (different x_1 x_2))
+             ------------------------------------
+             (types (x_2 : t_2 Γ) x_1 t_1)]
+            
+            [(types Γ e num) ...
+             -----------------------
+             (types Γ (+ e ...) num)]
+            
+            [--------------------
+             (types Γ number num)]
+            
+            [(types Γ e_1 num)
+             (types Γ e_2 t)
+             (types Γ e_3 t)
+             -----------------------------
+             (types Γ (if0 e_1 e_2 e_3) t)]
+            
+            [(types Γ e num) ...
+             --------------------------
+             (types Γ (amb e ...) num)])]
 
 The first clause gives
 the typing rule for application expressions, saying
@@ -377,10 +375,10 @@ checks in an extended environment, provided that the environment extension
 does not use the variable in question. 
 
 The @racket[different] function is a metafunction, defined as you might expect:
-@racketblock+eval[#:eval amb-eval
-                         (define-metafunction L+Γ
-                           [(different x_1 x_1) #f]
-                           [(different x_1 x_2) #t])]
+@examples[#:no-result #:eval amb-eval
+          (define-metafunction L+Γ
+            [(different x_1 x_1) #f]
+            [(different x_1 x_2) #t])]
 
 The @racket[#:mode] specification tells Redex how to compute derivations. In this case, 
 the mode specification indicates that @racket[Γ] and @racket[e] are to be 
@@ -473,7 +471,7 @@ two open parentheses is that Redex exploits Racket's s-expressions
 to reflect Redex terms as Racket values. Here's another way
 to write the same value
 
-@interaction[#:eval amb-eval (list (term (→ num num)))]
+@examples[#:label #f #:eval amb-eval (list (term (→ num num)))]
 
 Racket's printer does not know that it should use @racket[term] for the
 inner lists and @racket[list] (or @racket[quote]) for the
@@ -482,22 +480,22 @@ of them.
 
 We can combine @racket[judgment-holds] with Redex's unit test support 
 to build a small test suite:
-@interaction[#:eval amb-eval
-                    (test-equal 
-                     (judgment-holds 
-                      (types · (λ (x num) x) t)
-                      t)
-                     (list (term (→ num num))))
-                    (test-equal 
-                     (judgment-holds 
-                      (types · (amb 1 2 3) t)
-                      t)
-                     (list (term num)))
-                    (test-equal 
-                     (judgment-holds 
-                      (types · (+ 1 2) t)
-                      t)
-                     (list (term (→ num num))))]
+@examples[#:label #f #:eval amb-eval
+          (test-equal 
+           (judgment-holds 
+            (types · (λ (x num) x) t)
+            t)
+           (list (term (→ num num))))
+          (test-equal 
+           (judgment-holds 
+            (types · (amb 1 2 3) t)
+            t)
+           (list (term num)))
+          (test-equal 
+           (judgment-holds 
+            (types · (+ 1 2) t)
+            t)
+           (list (term (→ num num))))]
 
 Redex is silent when tests pass and gives the source location for the failures, as above.
 The @racket[test-equal] form accepts two expressions, evaluates them,
@@ -505,7 +503,7 @@ and checks to see if they are @racket[equal?] (structural equality).
 
 To see a summary of the tests run so far, call @racket[test-results].
 
-@interaction[#:eval amb-eval (test-results)]
+@examples[#:label #f #:eval amb-eval (test-results)]
 
 @exercise[]
 
@@ -611,12 +609,11 @@ always from left to right.
 To prepare for the reduction relation, we first define a metafunction
 for summation.
 
-@racketblock+eval[#:eval 
-                  amb-eval
-                  (define-metafunction Ev
-                    Σ : number ... -> number
-                    [(Σ number ...) 
-                     ,(apply + (term (number ...)))])]
+@examples[#:no-result #:eval amb-eval
+          (define-metafunction Ev
+            Σ : number ... -> number
+            [(Σ number ...) 
+             ,(apply + (term (number ...)))])]
 
 @amb/test[(term (Σ 1 2 3 4))
           (λ (x) (equal? x 10))]
@@ -655,14 +652,13 @@ expression forms in the language).
 To use this substitution function, we also need to lift it into Redex, 
 just like we did for @racket[Σ].
 
-@racketblock+eval[#:eval 
-                  amb-eval
-                  (require redex/tut-subst)
-                  (define-metafunction Ev
-                    subst : x v e -> e
-                    [(subst x v e) 
-                     ,(subst/proc x? (list (term x)) (list (term v)) (term e))])
-                  (define x? (redex-match Ev x))]
+@examples[#:no-result #:eval amb-eval
+          (require redex/tut-subst)
+          (define-metafunction Ev
+            subst : x v e -> e
+            [(subst x v e) 
+             ,(subst/proc x? (list (term x)) (list (term v)) (term e))])
+          (define x? (redex-match Ev x))]
 
 In this case, we use @racket[term] to extract the values of the Redex variables
 @racket[x], @racket[v], and @racket[e] and then pass them to @racket[subst/proc].
@@ -806,39 +802,39 @@ If you supply it a reduction relation and two terms,
 it will reduce the first term and make sure that it
 yields the second.
 
-@interaction[#:eval amb-eval
-                    (test-->>
-                     red
-                     (term ((if0 1 2 3)))
-                     (term (3)))
-                    (test-->>
-                     red
-                     (term ((+ (amb 1 2)
-                               (amb 10 20))))
-                     (term (11 21 12 22)))
-                    (test-results)]
+@examples[#:label #f #:eval amb-eval
+          (test-->>
+           red
+           (term ((if0 1 2 3)))
+           (term (3)))
+          (test-->>
+           red
+           (term ((+ (amb 1 2)
+                     (amb 10 20))))
+           (term (11 21 12 22)))
+          (test-results)]
 
 The @racket[test-->] form is like @racket[test-->>], except
 that it only reduces the term a single step. 
 
-@interaction[#:eval amb-eval
-                    (test-->
-                     red
-                     (term ((+ (amb 1 2) 3)))
-                     (term ((+ 1 3) (+ 2 3))))
-                    (test-results)]
+@examples[#:label #f #:eval amb-eval
+          (test-->
+           red
+           (term ((+ (amb 1 2) 3)))
+           (term ((+ 1 3) (+ 2 3))))
+          (test-results)]
 
 If a term
 produces multiple results, then each of the results
 must be listed.
 
-@interaction[#:eval amb-eval
-                    (test-->
-                     red
-                     (term ((+ 1 2) (+ 3 4)))
-                     (term (3 (+ 3 4)))
-                     (term ((+ 1 2) 7)))
-                    (test-results)]
+@examples[#:label #f #:eval amb-eval
+          (test-->
+           red
+           (term ((+ 1 2) (+ 3 4)))
+           (term (3 (+ 3 4)))
+           (term ((+ 1 2) 7)))
+          (test-results)]
 
 Technically, when using @racket[test-->>],
 it finds 
@@ -849,20 +845,20 @@ reduction graph, then it signals an error. (Watch out: when
 the reduction graph is infinite and there are no cycles,
 then @racket[test-->>] consumes all available memory.)
 
-@interaction[#:eval amb-eval
-                    (test-->>
-                     red
-                     (term (((fix (λ (x (→ num num)) x)) 1))))
-                    (test-results)]
+@examples[#:label #f #:eval amb-eval
+          (test-->>
+           red
+           (term (((fix (λ (x (→ num num)) x)) 1))))
+          (test-results)]
 
 To suppress this behavior, pass @racket[#:cycles-ok]
 to @racket[test-->>].
 
-@interaction[#:eval amb-eval
-                    (test-->>
-                     red #:cycles-ok
-                     (term (((fix (λ (x (→ num num)) x)) 1))))
-                    (test-results)]
+@examples[#:label #f #:eval amb-eval
+          (test-->>
+           red #:cycles-ok
+           (term (((fix (λ (x (→ num num)) x)) 1))))
+          (test-results)]
 
 This test case has no expected results but still passes, since 
 there are no irreducible terms reachable from the given term.
@@ -898,13 +894,12 @@ combinations that would not be thought of by a human test case writer.''
 
 To get a sense of how random testing works, we define this
 Racket predicate
-@racketblock+eval[#:eval 
-                  amb-eval
-                  (define (progress-holds? e)
-                    (if (types? e)
-                        (or (v? e)
-                            (reduces? e))
-                        #t))]
+@examples[#:no-result #:eval amb-eval
+          (define (progress-holds? e)
+            (if (types? e)
+                (or (v? e)
+                    (reduces? e))
+                #t))]
 that captures the statement of the progress result.
 
 The three helper functions @racket[types?], @racket[v?],
@@ -912,18 +907,17 @@ and @racket[reduces?] can be defined by using our earlier
 definitions of typing, the grammar, and the reduction relation,
 plus calls into Redex:
 
-@racketblock+eval[#:eval
-                  amb-eval
-                  (define (types? e)
-                    (not (null? (judgment-holds (types · ,e t)
-                                                t))))
-                  
-                  (define v? (redex-match Ev v))
-                  
-                  (define (reduces? e)
-                    (not (null? (apply-reduction-relation 
-                                 red
-                                 (term (,e))))))]
+@examples[#:no-result #:eval amb-eval
+          (define (types? e)
+            (not (null? (judgment-holds (types · ,e t)
+                                        t))))
+          
+          (define v? (redex-match Ev v))
+          
+          (define (reduces? e)
+            (not (null? (apply-reduction-relation 
+                         red
+                         (term (,e))))))]
 
 The only new construct here is @racket[apply-reduction-relation], which accepts
 a reduction and a term, and returns a list of expressions that it reduces to
@@ -933,9 +927,8 @@ term is reducible and @racket[#f] otherwise.
 Putting all of that together with @racket[redex-check] will cause
 Redex to randomly generate 1,000 @racket[e]s and attempt to falsify them:
 
-@interaction[#:eval
-             amb-eval
-             (redex-check Ev e (progress-holds? (term e)))]
+@examples[#:label #f #:eval amb-eval
+          (redex-check Ev e (progress-holds? (term e)))]
 
 The @racket[redex-check] form accepts the name of a language (@racket[Ev] in this case),
 a pattern (@racket[e] in this case), and a Racket expression that returns a
@@ -955,23 +948,21 @@ will record how it gets tested. Once that returns we can use
 @racket[covered-cases] to see exactly how many times each case
 fired.
 
-@interaction[#:eval
-             amb-eval
-             (let ([c (make-coverage red)])
-               (parameterize ([relation-coverage (list c)])
-                 (redex-check Ev e (progress-holds? (term e))))
-               (covered-cases c))]
+@examples[#:label #f #:eval amb-eval
+          (let ([c (make-coverage red)])
+            (parameterize ([relation-coverage (list c)])
+              (redex-check Ev e (progress-holds? (term e))))
+            (covered-cases c))]
 
 Not many of them! To improve coverage, we can tell @racket[redex-check]
 to try generating expressions using the patterns on the left-hand
 side of the rules to generate programs, and then check to see if progress for each of
 the expressions in the program:
 
-@interaction[#:eval
-             amb-eval
-             (check-reduction-relation 
-              red
-              (λ (p) (andmap progress-holds? p)))]
+@examples[#:label #f #:eval amb-eval
+          (check-reduction-relation 
+           red
+           (λ (p) (andmap progress-holds? p)))]
 
 The @racket[check-reduction-relation] is a shorthand for using @racket[redex-check] to
 generate elements of the domain of the given reduction relation (@racket[red] in this
@@ -986,14 +977,13 @@ Still no test failures, but installing the same coverage testing boilerplate aro
 the call to @racket[check-reduction-relation] tells us that we got much
 better coverage of the reduction system.
 
-@interaction[#:eval
-             amb-eval
-             (let ([c (make-coverage red)])
-               (parameterize ([relation-coverage (list c)])
-                 (check-reduction-relation 
-                  red
-                  (λ (p) (andmap progress-holds? p)))
-                 (covered-cases c)))]
+@examples[#:label #f #:eval amb-eval
+          (let ([c (make-coverage red)])
+            (parameterize ([relation-coverage (list c)])
+              (check-reduction-relation 
+               red
+               (λ (p) (andmap progress-holds? p)))
+              (covered-cases c)))]
 
 
 @exercise[]
@@ -1039,9 +1029,8 @@ Redex's typesetting facilities accept languages, metafunctions, reduction relati
 and judgment-forms and produce typeset output that can be included directly
 into a figure in a paper.
 
-@interaction[#:eval 
-             amb-eval
-             (render-reduction-relation red)]
+@examples[#:label #f #:eval amb-eval
+          (render-reduction-relation red)]
 
 The result of @racket[render-reduction-relation] is rendered directly in DrRacket's
 interactions window, and also can be saved as a @filepath{.ps} file by passing
@@ -1054,13 +1043,12 @@ If we pull it in with a @racket[require]:
 
 then we can use the pict primitives to combine typeset fragments into a larger whole.
 
-@interaction[#:eval 
-             amb-eval
-             (scale (vl-append
-                     20
-                     (language->pict Ev)
-                     (reduction-relation->pict red))
-                    3/2)]
+@examples[#:label #f #:eval amb-eval
+          (scale (vl-append
+                  20
+                  (language->pict Ev)
+                  (reduction-relation->pict red))
+                 3/2)]
 
 Generally speaking, Redex has reasonable default ways to typeset its
 definitions, except when they escapes to Racket. In that case,
@@ -1079,17 +1067,17 @@ and call it. In this case, we can use @racket[different] (defined earlier).
 
 Now when we typeset this reduction-relation there is no pink.
 
-@interaction[#:eval amb-eval (render-reduction-relation if0-false-rule)]
+@examples[#:label #f #:eval amb-eval (render-reduction-relation if0-false-rule)]
 
 Still, the typesetting is non-optimal, so we can use @racket[with-compound-rewriter]
 to adjust the way calls to @racket[different] typeset.
 
-@interaction[#:eval amb-eval 
-                    (with-compound-rewriter
-                     'different
-                     (λ (lws)
-                       (list "" (list-ref lws 2) " ≠ " (list-ref lws 3) ""))
-                    (render-reduction-relation if0-false-rule))]
+@examples[#:label #f #:eval amb-eval 
+          (with-compound-rewriter
+           'different
+           (λ (lws)
+             (list "" (list-ref lws 2) " ≠ " (list-ref lws 3) ""))
+           (render-reduction-relation if0-false-rule))]
 
 The compound rewriter is given a list of @racket[lw] structs that correspond to the 
 untypeset sequence for a use of @racket[different], and then can replace them with
