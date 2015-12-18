@@ -3,7 +3,7 @@
 @(require scribble/manual
           scribble/bnf
           scribble/struct
-          scribble/examples
+          scribble/example
           scribble/racket
           (for-syntax racket/base)
           (for-label racket/base

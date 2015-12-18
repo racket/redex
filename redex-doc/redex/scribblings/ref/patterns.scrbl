@@ -1,6 +1,6 @@
 #lang scribble/manual
 @(require "common.rkt"
-          scribble/examples
+          scribble/example
           (for-label racket/base
                      (except-in racket/gui make-color)
                      racket/pretty

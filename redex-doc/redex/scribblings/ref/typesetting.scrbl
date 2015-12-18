@@ -1,6 +1,6 @@
 #lang scribble/manual
 @(require scribble/struct
-          scribble/examples
+          scribble/example
           racket/port
           (for-syntax racket/base)
           (for-label racket/base

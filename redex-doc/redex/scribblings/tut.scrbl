@@ -2,7 +2,7 @@
 @(require scribble/manual
           scribble/bnf
           scribble/struct
-          scribble/examples
+          scribble/example
           racket/runtime-path
           scriblib/autobib
           (for-syntax racket/base 
