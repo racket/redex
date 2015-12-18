@@ -9,7 +9,7 @@
                      "pict-doc"
                      "slideshow-doc"
                      "at-exp-lib"
-                     "scribble-lib"
+                     ["scribble-lib" #:version 1.15]
                      "gui-lib"
                      "htdp-lib"
                      "pict-lib"
