@@ -435,7 +435,7 @@
                              stx
                              #'error-name))
        (define-values (orig-names new-names depths new-x1)
-         (let loop ([stx #'x1] [depth 0])
+         (let loop ([stx #'x1] [depth 0] [seen-an-ellipsis-at-this-depth? #f])
            (define ((combine orig-names new-names depths new-pat)
                     orig-names* new-names* depths* new-pat*)
              (values (append orig-names orig-names*)
@@ -454,17 +454,21 @@
              [(x (... ...) . xs)
               (let-values ([(orig-names new-names depths new-pat)
                             (call-with-values
-                             (λ () (loop #'xs depth))
+                             (λ () (loop #'xs depth #t))
                              (call-with-values
-                              (λ () (loop #'x (add1 depth)))
+                              (λ () (loop #'x (add1 depth) #f))
                               combine))])
+                (when seen-an-ellipsis-at-this-depth?
+                  (raise-syntax-error (syntax-e #'error-name)
+                                      "only one ellipsis is allowed in each sequence"
+                                      (cadr (syntax->list stx))))
                 (values orig-names new-names depths 
                         (list* (car new-pat) #'(... ...) (cdr new-pat))))]
              [(x . xs)
               (call-with-values
-               (λ () (loop #'xs depth))
+               (λ () (loop #'xs depth seen-an-ellipsis-at-this-depth?))
                (call-with-values
-                (λ () (loop #'x depth))
+                (λ () (loop #'x depth #f))
                 combine))]
              [_
               (values '() '() '() stx)])))
