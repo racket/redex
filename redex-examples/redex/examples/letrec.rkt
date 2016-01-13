@@ -15,18 +15,24 @@ BUG: letrec & let are not handled properly by substitution
   (e (set! x e)
      (let ((x e)) e)
      (letrec ((x e)) e)
+     (if e e e)
      (begin e e ...)
      (e e)
      x
      v)
   (v (lambda (x) e)
+     binop (binop v)
+     unop
      number)
+  (binop + - *)
+  (unop zero?)
   (x variable)
   (pc ((store (x v) ...) ec))
   (ec (ec e)
       (v ec)
       (set! variable ec)
       (let ((x ec)) e)
+      (if ec e e)
       (begin ec e e ...)
       hole))
 
@@ -101,6 +107,24 @@ BUG: letrec & let are not handled properly by substitution
    (==> (in-hole pc_1 ((lambda (x_1) e_1) v_1))
         (in-hole pc_1 (subst (x_1 v_1 e_1)))
         βv)
+
+   (==> (in-hole pc_1 ((binop v_1) v_2))
+        (in-hole pc_1
+                 ,((match (term binop) ['+ +] ['- -]['* *])
+                   (term v_1) (term v_2)))
+        δ-binop)
+
+   (==> (in-hole pc_1 (unop v_1))
+        (in-hole pc_1
+                 ,((match (term unop) ['zero? zero?])
+                   (term v_1)))
+        δ-unop)
+
+   (==> (in-hole pc_1 (if v_test e_then e_else))
+        (in-hole pc_1 ,(if (not (zero? (term v_test)))
+                           (term e_then)
+                           (term e_else)))
+        if)
    
    (==> ((store (name the-store any) ...)
          (in-hole ec_1 (let ((x_1 v_1)) e_1)))
@@ -117,14 +141,97 @@ BUG: letrec & let are not handled properly by substitution
    with
    [(--> a ,(collect (term b))) (==> a b)]))
 
+
+
 (define (run e) (traces reductions `((store) ,e)))
 
-(run '(letrec ((f (lambda (x)
-                    (letrec ((y (f 1))) 
-                      2))))
-        (f 3)))
+(define (show-some-reductions)
+  (run '(letrec ((f (lambda (x)
+                      (letrec ((y (f 1)))
+                        2))))
+          (f 3)))
 
-(run '(letrec ((f (lambda (x)
-                    (letrec ((y 1))
-                      (f 1)))))
-        (f 3)))
+  (run '(letrec ((f (lambda (x)
+                      (letrec ((y 1))
+                        (f 1)))))
+          (f 3))))
+
+(define (result-of prog)
+  (match (apply-reduction-relation* reductions `((store) ,prog))
+    [`(((store . ,_) ,res)) res]))
+
+
+(time
+ (test-equal
+  (result-of `(let ((x 5))
+                (begin
+                  (set! x 6)
+                  x)))
+  6)
+
+ (test-equal
+  (result-of
+   `(letrec ((f (lambda (x) (begin (set! f x) f))))
+      (begin (f 8)
+             f)))
+  8)
+
+ ;; changing `xx` to `x` produces an error, but it shouldn't
+
+ (test-equal
+  (result-of
+   `(let ((x 9999))
+      (let ((x 5))
+        (let ((double (lambda (x) (let ((xx x))
+                                    (begin (set! xx ((+ xx) xx)) xx)))))
+          ((+ (double ((+ (double (double x))) x))) (double x))))))
+  60)
+
+ (test-equal
+  (result-of
+   `(letrec ((fact
+              (lambda (x)
+                (if x
+                    ((* x) (fact ((- x) 1)))
+                    1))))
+      (fact 5)))
+  120)
+
+ (test-equal
+  (result-of
+   `(let ((even? 0))
+      (let ((odd? 0))
+        (begin
+          (set! even?
+                (lambda (x)
+                  (if x
+                      (odd? ((- x) 1))
+                      1)))
+          (set! odd?
+                (lambda (x)
+                  (if x
+                      (even? ((- x) 1))
+                      0)))
+          ((+
+            ((+ (odd? 17))
+             ((* (odd? 18)) 10)))
+           ((* (odd? 19)) 100))))))
+  101)
+
+ (test-equal
+  (result-of
+   `(let ((n 5))
+      (let ((acc 1))
+        (letrec ((imperative-fact (lambda (ignored)
+                                    (if n
+                                        (begin
+                                          (set! acc ((* acc) n))
+                                          (set! n ((- n) 1))
+                                          (imperative-fact 9999))
+                                        acc))))
+          (imperative-fact 9999)))))
+  120))
+
+
+
+(test-results)
