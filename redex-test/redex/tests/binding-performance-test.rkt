@@ -44,19 +44,16 @@
 
  (define-language L
    (e (bd x x)
-      (complex-bd ((x e) ...) ... e)
-      x)
+      (complex-bd ((x x) ...) ... x))
    (x variable-not-otherwise-mentioned))
 
  (define-language binding:L
    (e (bd x x)
-      (complex-bd ((x e) ...) ... e)
-      x)
+      (complex-bd ((x x) ...) ... x))
    (x variable-not-otherwise-mentioned)
    #:binding-forms
    (bd x x_body #:refers-to x)
-   (complex-bd ((x_0 e_0 #:refers-to x_0) ...) ... e_1 #:refers-to (shadow (shadow x_0 ...) ...))
-   )
+   (complex-bd ((x_0 x_v #:refers-to x_0) ...) ... x_body #:refers-to (shadow (shadow x_0 ...) ...)))
 
 
  ;; special values for `bd`
@@ -78,8 +75,8 @@
  ;; special values for `complex-bd`
  (define complex-bd-bspec
    (bspec-of (x e)
-             (complex-bd ((x_0 e_0 #:refers-to x_0) ...) ...
-                         e_1 #:refers-to (shadow (shadow x_0 ...) ...))))
+             (complex-bd ((x_0 x_v #:refers-to x_0) ...) ...
+                         x_body #:refers-to (shadow (shadow x_0 ...) ...))))
  (define cbd-v
    `(complex-bd ((a a) (b f1) (c c)) ((d f2)) c))
 
@@ -88,12 +85,12 @@
 
  (define cbd-v-w-s
    (value-with-spec
-    (match-bindings (first (redex-match L (complex-bd ((x_0 e_0) ...) ... e_1)
+    (match-bindings (first (redex-match L (complex-bd ((x_0 x_v) ...) ... x_body)
                                         cbd-v)))
     complex-bd-bspec))
  (define cbd-v-w-s-renamed
    (value-with-spec
-    (match-bindings (first (redex-match L (complex-bd ((x_0 e_0) ...) ... e_1)
+    (match-bindings (first (redex-match L (complex-bd ((x_0 x_v) ...) ... x_body)
                                         cbd-v-renamed)))
     complex-bd-bspec))
 
@@ -110,11 +107,28 @@
      (cond
       [(symbol=? (first v) 'bd)
        (define yy (gensym 'y))
-       `(bd ,yy ,yy)]
+       `(bd ,yy ,(if (symbol=? (second v) (third v))
+                     yy
+                     (third v)))]
       [else
-       ;; this assumes a lot about the structure of the input value
-       (let ([aa (gensym 'a)] [bb (gensym 'b)] [cc (gensym 'c)] [dd (gensym 'd)])
-         `(complex-bd ((,aa ,aa) (,bb f1) (,cc ,cc)) ((,dd f2)) ,cc))])))
+       (match-define `(complex-bd ((,x ,x-v) ...) ... ,x-body) v)
+       (define fresh-x (map (λ (x) (map gensym x)) x))
+
+       `(complex-bd
+         ;; each clause is simple to reconstruct
+         ,@(map (λ (x fresh-x x-v)
+                   (map (λ (x fresh-x x-v)
+                           `(,fresh-x ,(if (symbol=? x-v x) fresh-x x-v)))
+                        x fresh-x x-v))
+                x fresh-x x-v)
+         (match
+          (assq
+           x-body
+           (map ;; create a lookup table of in-scope names
+            (λ (x fresh-x) `(,x ,fresh-x))
+            (append* x) (append* fresh-x))) ;; flatten everything
+          [#f x-body]
+          [`(,_ ,fresh-x) fresh-x]))])))
 
  (define (binding:freshen-match v)
    (redex-match binding:L
@@ -126,6 +140,8 @@
      (if (symbol=? (first v) 'bd)
          bd-v-w-s
          cbd-v-w-s)))
+
+
 
 
  (perf-test (noop-match manual:freshen-match binding:freshen-match binding:freshen-skip-internal-match)
@@ -150,36 +166,36 @@
      (match-define `(bd ,lx ,lx_body) lhs)
      (match-define `(bd ,rx ,rx_body) rhs)
      (define new-name (gensym 'x))
-     (equal? `(bd ,new-name (if (symbol=? lx_body lx)
-                                new-name
-                                lx_body))
-             `(bd ,new-name (if (symbol=? rx_body rx)
-                                new-name
-                                rx_body)))]
+     (equal? `(bd ,new-name ,(if (symbol=? lx_body lx)
+                                 new-name
+                                 lx_body))
+             `(bd ,new-name ,(if (symbol=? rx_body rx)
+                                 new-name
+                                 rx_body)))]
     [else
-     ;; this assumes that all the `e`s are actually `x`s
-     (match-define `(complex-bd ((,l-x ,l-e-v) ...) ... ,l-e-body) lhs)
-     (match-define `(complex-bd ((,r-x ,r-e-v) ...) ... ,r-e-body) rhs)
+     (match-define `(complex-bd ((,l-x ,l-x-v) ...) ... ,l-x-body) lhs)
+     (match-define `(complex-bd ((,r-x ,r-x-v) ...) ... ,r-x-body) rhs)
 
      (define flat-l-x (append* l-x))
      (define flat-r-x (append* r-x))
-     (define flat-l-e-v (append* l-e-v))
-     (define flat-r-e-v (append* r-e-v))
+     (define flat-l-x-v (append* l-x-v))
+     (define flat-r-x-v (append* r-x-v))
 
 
      (and
       (andmap
-       (lambda (l-x l-e-v r-x r-e-v)
-         (or (symbol=? l-e-v r-e-v)
-             (and (symbol=? l-x l-e-v)
-                  (symbol=? r-x r-e-v))))
-       flat-l-x flat-l-e-v flat-r-x flat-r-e-v)
-      (or (symbol=? l-e-body r-e-body)
+       (lambda (l-x l-x-v r-x r-x-v)
+         (or (symbol=? l-x-v r-x-v)
+             (and (symbol=? l-x l-x-v)
+                  (symbol=? r-x r-x-v))))
+       flat-l-x flat-l-x-v flat-r-x flat-r-x-v)
+      (or (symbol=? l-x-body r-x-body)
           (ormap (lambda (l-x r-x)
-                   (and (symbol=? l-e-body l-x)
-                        (symbol=? r-e-body r-x)))
+                   (and (symbol=? l-x-body l-x)
+                        (symbol=? r-x-body r-x)))
                  flat-l-x
                  flat-r-x)))]))
+
 
  (define (binding:aeq? lhs rhs)
    (alpha-equivalent? binding:L lhs rhs))
@@ -206,8 +222,8 @@
 (module lazy-test racket
  (require redex)
  (require (submod ".." perf-test-tools))
- (require redex/examples/lazy)
- (require (prefix-in binding: redex/examples/lazy-with-binding))
+ (require "lazy.rkt")
+ (require (prefix-in binding: "lazy-with-binding.rkt"))
 
  ;; to avoid metafunction caching, we generate variables fresh each time
 
@@ -328,8 +344,8 @@
 (module stlc+lists-test racket
   (require redex)
   (require (submod ".." perf-test-tools))
-  (require redex/examples/stlc+lists)
-  (require (prefix-in binding: redex/examples/stlc+lists-with-binding))
+  (require "stlc+lists.rkt")
+  (require (prefix-in binding: "stlc+lists-with-binding.rkt"))
 
   (define (sum-list)
     (define x (gensym))
@@ -362,6 +378,3 @@
 (require 'micro-tests)
 (require 'lazy-test)
 (require 'stlc+lists-test)
-
-(module+ test
-  (module config info (define timeout 200)))
