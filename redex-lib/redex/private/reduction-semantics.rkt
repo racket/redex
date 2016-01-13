@@ -251,8 +251,7 @@
   (cond
     [(runtime-judgment-form? p)
      (define jf-res
-       (parameterize ([include-jf-rulename tag-with-names?]
-                      [default-language (runtime-judgment-form-lang p)])
+       (parameterize ([include-jf-rulename tag-with-names?])
          (call-judgment-form (runtime-judgment-form-name p)
                              (runtime-judgment-form-proc p)
                              (runtime-judgment-form-mode p)
