@@ -47,31 +47,37 @@
 
  ;; === Name utilities ===
 
- (define (names-mentioned-in-beta/rec beta)
+ (define (names-mentioned-in-beta/rec beta depth)
    (match beta
      [(shadow/internal betas)
-      (append* (map (λ (b) (names-mentioned-in-beta/rec b)) betas))]
+      (append* (map (λ (b) (names-mentioned-in-beta/rec b depth)) betas))]
      ;; PS: can we just return `names` here?
-     [(.../internal beta names) (names-mentioned-in-beta/rec beta)]
-     [name `(,name)]))
+     [(.../internal beta names) (names-mentioned-in-beta/rec beta (+ depth 1))]
+     [name `((,name ,depth))]))
 
  ;; names-mentioned-in-beta : beta -> (listof symbol)
  (define (names-mentioned-in-beta beta)
-   (remove-duplicates (names-mentioned-in-beta/rec beta)))
+   (remove-duplicates (map first (names-mentioned-in-beta/rec beta 0))))
 
 
- (define (names-imported-in/rec body)
+ (define (names-imported-in/rec body depth)
    (match body
-     [(import/internal sub-body beta) (append (names-imported-in/rec sub-body)
-                                              (names-mentioned-in-beta/rec beta))]
-     [(.../internal sub-body _) (names-imported-in/rec sub-body)]
+     [(import/internal sub-body beta) (append (names-imported-in/rec sub-body depth)
+                                              (names-mentioned-in-beta/rec beta depth))]
+     [(.../internal sub-body _) (names-imported-in/rec sub-body (+ depth 1))]
      [(...bind/internal _ _ _) '()]
-     [`(,car-body . ,cdr-body) (append (names-imported-in/rec car-body)
-                                       (names-imported-in/rec cdr-body))]
+     [`(,car-body . ,cdr-body) (append (names-imported-in/rec car-body depth)
+                                       (names-imported-in/rec cdr-body depth))]
      [anything-else `()]))
 
+ ;; names-imported-in : body -> (listof symbol)
  (define (names-imported-in body)
-   (remove-duplicates (names-imported-in/rec body)))
+   (remove-duplicates (map first (names-imported-in/rec body 0))))
+
+ ;; names-imported-in-with-depths : body -> (listof (list symbol number))
+ (define (names-imported-in-with-depths body form-name stx-for-error)
+   (dedupe-names-and-depths (names-imported-in/rec body 0) form-name stx-for-error))
+
 
  (define (dedupe-names-and-depths lst form-name stx-for-error)
   (remove-duplicates
