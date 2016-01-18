@@ -1,3 +1,20 @@
+v6.4
+
+  * add support for variable binding declarations in define-language
+    and have pattern match now preserve alpha equivalence, based on
+    those declarations.
+
+    This improvement is based on the ideas in Paul Stansifer's
+    dissertation and is implemented by Paul Stansifer.
+
+  * changed shortcuts in --> so that non-terminals are no
+    longer allowed for the names in the shortcut "parameters"
+
+    These shortcut names were never constrained to actually be
+    non-terminals, so this change is intended entirely to be
+    able to give a helpful error message in an attempt to avoid
+    confusion
+
 v6.3
 
   * Add new syntax error checking that ensures that each pattern
