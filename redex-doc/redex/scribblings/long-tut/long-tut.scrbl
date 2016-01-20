@@ -1,6 +1,6 @@
 #lang scribble/manual
 
-@(require scriblib/figure)
+@(require racket/runtime-path)
 
 @(require (for-label redex/reduction-semantics))
 
@@ -31,3 +31,28 @@ run July 27–31, 2015 at the University of Utah.
 
 @include-section{thu-aft.scrbl}
 @include-section{lab-thu-aft.scrbl}
+
+@(define (load-it file)
+   (apply
+    typeset-code
+    (call-with-input-file file
+      (λ (port)
+        (for/list ([l (in-lines port)])
+          (string-append l "\n"))))))
+
+@(define-runtime-path common.rkt "code/common.rkt")
+@section[#:tag "common.rkt"]{@filepath{common.rkt}}
+@(load-it common.rkt)
+
+
+@(define-runtime-path close.rkt "code/close.rkt")
+@section[#:tag "close.rkt"]{@filepath{close.rkt}}
+@(load-it close.rkt)
+
+@(define-runtime-path tc-common.rkt "code/tc-common.rkt")
+@section[#:tag "tc-common.rkt"]{@filepath{tc-common.rkt}}
+@(load-it tc-common.rkt)
+
+@(define-runtime-path extend-lookup.rkt "code/extend-lookup.rkt")
+@section[#:tag "extend-lookup.rkt"]{@filepath{extend-lookup.rkt}}
+@(load-it extend-lookup.rkt)

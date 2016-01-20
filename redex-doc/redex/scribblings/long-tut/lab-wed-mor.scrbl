@@ -12,7 +12,7 @@
 
 @common[]
 
-Also require @link["extend-lookup.rkt"]{extend-lookup.rkt}. Feel free to
+Also require @seclink["extend-lookup.rkt"]. Feel free to
 copy code from @secref{wed-mor} but make sure to add tests. 
 
 @; -----------------------------------------------------------------------------

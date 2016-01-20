@@ -11,8 +11,8 @@
 
 @common[]
 
-In addition to @filepath{common.rkt}, you also want to @racket[require]
-@link["close.rkt"]{close.rkt} for this lab. Furthermore, if you copy code
+In addition to @seclink["common.rkt"], you also want to @racket[require]
+@seclink["close.rkt"] for this lab. Furthermore, if you copy code
 from @secref{wed-aft}, make sure to copy the tests and to adapt the tests
 as you develop the machines.
 

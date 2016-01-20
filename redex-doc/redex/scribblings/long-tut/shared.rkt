@@ -4,7 +4,7 @@
   goals  ;; bulletize goals 
   ntt    ;; nested tt 
   common ;; where are the common definitions? 
-  (for-label (all-from-out redex/reduction-semantics))
+  (for-label (all-from-out redex/reduction-semantics racket/base))
   (all-from-out
     "exercise/ex.rkt"
     scribble/example
@@ -15,7 +15,7 @@
 ;; -----------------------------------------------------------------------------
 (require
   "exercise/ex.rkt"
-  (for-label redex/reduction-semantics)
+  (for-label racket/base redex/reduction-semantics)
   scribble/manual
   scribble/core
   scribble/example
@@ -39,7 +39,7 @@
 (define (common)
 @list{
 The following exercises refer to several definitions found in, and exported
-from, @link["common.rkt"]{common.rkt}. You may either copy these
+from, @seclink["common.rkt"]. You may either copy these
 definitions into your file or add the following @racket[require] statement
 to the top of your file: 
 @;%

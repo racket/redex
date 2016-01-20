@@ -13,7 +13,7 @@
 
 @common[]
 
-Also require @link["close.rkt"]{close.rkt} for the @racket[fv] function. 
+Also @racket[require] @seclink["close.rkt"] for the @racket[fv] function. 
 
 You also want to copy the following definitions into your drracket:
 @;%
