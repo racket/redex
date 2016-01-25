@@ -222,8 +222,8 @@
 (module lazy-test racket
  (require redex)
  (require (submod ".." perf-test-tools))
- (require "lazy.rkt")
- (require (prefix-in binding: "lazy-with-binding.rkt"))
+ (require redex/examples/lazy)
+ (require (prefix-in binding: redex/examples/lazy-with-binding))
 
  ;; to avoid metafunction caching, we generate variables fresh each time
 
@@ -344,8 +344,8 @@
 (module stlc+lists-test racket
   (require redex)
   (require (submod ".." perf-test-tools))
-  (require "stlc+lists.rkt")
-  (require (prefix-in binding: "stlc+lists-with-binding.rkt"))
+  (require redex/examples/stlc+lists)
+  (require (prefix-in binding: redex/examples/stlc+lists-with-binding))
 
   (define (sum-list)
     (define x (gensym))
