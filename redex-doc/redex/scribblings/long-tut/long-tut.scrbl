@@ -26,11 +26,7 @@ run July 27–31, 2015 at the University of Utah.
 @include-section{wed-aft.scrbl}
 @include-section{lab-wed-aft.scrbl}
 
-@include-section{thu-mor.scrbl}
-@include-section{lab-thu-mor.scrbl}
-
-@include-section{thu-aft.scrbl}
-@include-section{lab-thu-aft.scrbl}
+@include-section{thu.scrbl}
 
 @(define (load-it file)
    (apply

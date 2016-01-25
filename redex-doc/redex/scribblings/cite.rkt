@@ -8,11 +8,13 @@
          racket-virtual-machine
          palka-workshop
          list-machine
-         delim-cont-cont)
+         delim-cont-cont
+         aam)
 
 (define jar "Journal of Automated Reasoning")
 (define hosc "Higher-Order and Symbolic Computation")
 (define esop "European Symposium on Programming")
+(define icfp "International Conference on Functional Programming")
 
 (define (book-chapter-location
           #:title title
@@ -102,3 +104,10 @@
                                     #:pages '(229 248))
    #:date 2013
    #:url "http://dl.acm.org/citation.cfm?id=2450287"))
+
+(define aam
+  (make-bib
+   #:author (authors "David Van Horn" "Matthew Might")
+   #:title "Abstracting Abstract Machines"
+   #:date 2010
+   #:location (proceedings-location icfp)))
