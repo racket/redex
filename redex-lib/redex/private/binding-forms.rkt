@@ -438,6 +438,12 @@ to traverse the whole value at once, rather than one binding form at a time.
 
 ;; == Reference renaming ==
 
+;; Optimization opportunity: I believe that we can achieve soundness in a simpler way by renaming
+;; everything except exported binders (this has the advantage that, past a certain point, the
+;; binding structure of a term is irrelevant and can be ignored). This will result in things like
+;; (lambda (x) (+ x (lambda (x) x))) freshening to (lambda (x«7») (+ x«7» (lambda (x«7») x«7»))),
+;; which looks a little odd, but is safe.
+
 ;; apply-subst : symbol subst -> symbol
 (define (apply-subst name σ)
   (match (assoc name σ)
