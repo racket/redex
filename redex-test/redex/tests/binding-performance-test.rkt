@@ -375,6 +375,9 @@
   (perf-test (M? binding:M?) (list (complex-ho)) 25000)
   (perf-test (type-check binding:type-check) (list (complex-ho)) 5000))
 
-(require 'micro-tests)
-(require 'lazy-test)
-(require 'stlc+lists-test)
+(module test racket/base
+  (require (submod ".." micro-tests))
+  (require (submod ".." lazy-test))
+  (require (submod ".." stlc+lists-test))
+  (module config info
+    (define timeout 180)))
