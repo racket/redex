@@ -16,10 +16,13 @@
 
 @defform/subs[#:literals (::=)
               (define-language lang-name 
-                non-terminal-def ...)
+                non-terminal-def ...
+                maybe-binding-spec)
               ([non-terminal-def (non-terminal-name ...+ ::= @#,ttpattern ...+)
                                  (non-terminal-name @#,ttpattern ...+)
-                                 ((non-terminal-name ...+) @#,ttpattern ...+)])]{
+                                 ((non-terminal-name ...+) @#,ttpattern ...+)]
+               [maybe-binding-spec (code:line)
+                                   (code:line #:binding-forms binding-declaration ...)])]{
 
 Defines the grammar of a language. The @racket[define-language] form supports the
 definition of recursive @|pattern|s, much like a BNF, but for
@@ -52,6 +55,9 @@ Non-terminals used in @racket[define-language] are not bound in
 @pattech[side-condition] patterns and duplicates are not constrained
 to be the same unless they have underscores in them.
 
+When @racket[maybe-binding-spec] is provided, it declares binding specifications
+for certain forms in the language. For a detailed explanation of how to declare
+and use binding specifications, see @secref["sec:binding"].
 }
 
 @defidform[::=]{
@@ -61,10 +67,13 @@ Use of the @racket[::=] keyword outside a language definition is a syntax error.
 
 @defform/subs[#:literals (::=)
               (define-extended-language extended-lang base-lang 
-                non-terminal-def ...)
+                non-terminal-def ...
+                maybe-binding-spec)
               ([non-terminal-def (non-terminal-name ...+ ::= @#,ttpattern ...+)
                                  (non-terminal-name @#,ttpattern ...+)
-                                 ((non-terminal-name ...+) @#,ttpattern ...+)])]{
+                                 ((non-terminal-name ...+) @#,ttpattern ...+)]
+               [maybe-binding-spec (code:line)
+                                   (code:line #:binding-forms binding-declaration ...)])]{
 
 Extends a language with some new, replaced, or
 extended non-terminals. For example, this language:
@@ -97,6 +106,10 @@ non-terminals to the language.
 If a language is has a group of multiple non-terminals
 defined together, extending any one of those non-terminals
 extends all of them.
+
+When @racket[maybe-binding-spec] is provided, it declares binding specifications
+for the new forms in the extended language. For a detailed explanation of how to declare
+and use binding specifications, see @secref["sec:binding"].
 }
 
 @defform/subs[(define-union-language L base/prefix-lang ...)

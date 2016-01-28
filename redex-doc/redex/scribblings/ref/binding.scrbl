@@ -13,7 +13,7 @@
 
 @(define redex-eval (make-base-eval '(require redex/reduction-semantics)))
 
-@title{Binding}
+@title[#:tag "sec:binding"]{Binding}
 
 @declare-exporting[redex/reduction-semantics redex]
 
