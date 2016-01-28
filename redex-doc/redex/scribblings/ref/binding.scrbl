@@ -157,7 +157,7 @@ not naive equivalence. For example:
 
 @examples[#:eval
           redex-eval
-          (redex-match lc (any any) (term ((lambda (x) x) (lambda (y) y))))]
+          (redex-match lc (any any) (term ((λ (x) x) (λ (y) y))))]
 
 @section{Binding repetitions}
 
