@@ -262,7 +262,11 @@ to traverse the whole value at once, rather than one binding form at a time.
   (let loop ([rm red-match])
     (cond
      [(empty? rm) otherwise]
-     [(symbol=? (bind-name (first rm)) name) (bind-exp (first rm))]
+     [(and ;; check in case `name` is actually a literal keyword or
+           ;; some other non-symbol literal
+           (symbol? name)
+           (symbol=? (bind-name (first rm)) name))
+      (bind-exp (first rm))]
      [else (loop (rest rm))])))
 
 ;; ... with error

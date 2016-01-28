@@ -596,4 +596,16 @@
 
   (check-equal? (term (dl-param-test-mf)) #t)
 
+  ;; issue #23, keywords in grammar
+
+  (define-language kw-lang
+    [e (Λ (x #:kw x) e)
+       x
+       number]
+    [x variable-not-otherwise-mentioned]
+    #:binding-forms
+    (Λ (x_1 #:kw x_2) e #:refers-to x_1))
+
+  (parameterize ([default-language kw-lang])
+    (check-not-exn (λ () (term (substitute (Λ (x_1 #:kw x_2) 0) x_1 1)))))
  )
