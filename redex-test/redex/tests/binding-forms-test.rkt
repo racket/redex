@@ -596,6 +596,31 @@
 
   (check-equal? (term (dl-param-test-mf)) #t)
 
+  ;; ... and test--> and test-->>
+  (let ()
+    (define ans '())
+    (define-language L)
+    (define red (reduction-relation L (--> 0 1)))
+    (test--> red
+             (begin (set! ans
+                          (cons (eq? (default-language) L)
+                                ans))
+                    0)
+             (begin (set! ans
+                          (cons (eq? (default-language) L)
+                                ans))
+                    1))
+    (test-->> red
+              (begin (set! ans
+                           (cons (eq? (default-language) L)
+                                 ans))
+                     0)
+              (begin (set! ans
+                           (cons (eq? (default-language) L)
+                                 ans))
+                     1))
+    (check-equal? ans '(#t #t #t #t)))
+
   ;; issue #23, keywords in grammar
 
   (define-language kw-lang

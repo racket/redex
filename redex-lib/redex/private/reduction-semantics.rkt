@@ -2601,7 +2601,7 @@
            e1:expr
            e2:expr ...)
      #:declare equiv? (expr/c test-equiv-ctc #:name test-equiv-name)
-     #`(test-->>/procs 'test-->> red e1 (list e2 ...) 
+     #`(test-->>/procs 'test-->> red (λ () e1) (λ () (list e2 ...))
                        traverse-reduction-graph
                        #,(attribute cycles-ok?)
                        equiv?.c
@@ -2616,18 +2616,21 @@
            e1:expr
            e2:expr ...)
      #:declare equiv? (expr/c test-equiv-ctc #:name test-equiv-name)
-     #`(test-->>/procs 'test--> red e1 (list e2 ...) apply-reduction-relation/dummy-second-value #t equiv?.c #f #,(get-srcloc stx))]))
+     #`(test-->>/procs 'test--> red (λ () e1) (λ () (list e2 ...)) apply-reduction-relation/dummy-second-value #t equiv?.c #f #,(get-srcloc stx))]))
 
 (define (apply-reduction-relation/dummy-second-value red arg #:visit visit)
   (values (apply-reduction-relation red arg) #f))
 
-(define (test-->>/procs name red arg expected apply-red cycles-ok? equiv? pred srcinfo)
+(define (test-->>/procs name red arg-thnk expected-thnk apply-red cycles-ok? equiv? pred srcinfo)
   (unless (reduction-relation? red)
     (error name "expected a reduction relation as first argument, got ~e" red))
   (when pred
     (unless (and (procedure? pred)
                  (procedure-arity-includes? pred 1))
       (error 'test-->> "expected a procedure that accepted one argument for the #:pred, got ~e" pred)))
+  (define-values (arg expected)
+    (parameterize ([default-language (reduction-relation-lang red)])
+      (values (arg-thnk) (expected-thnk))))
   (inc-tests)
   (define visit-already-failed? #f)
   (define (visit t)
@@ -2639,7 +2642,6 @@
           (print-failed srcinfo)
           (eprintf/value-at-end "found a term that failed #:pred" t)))))
   (let-values ([(got got-cycle?) (apply-red red arg #:visit visit)])
-    
     (cond
       [(and got-cycle?
             (not cycles-ok?))
