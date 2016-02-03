@@ -351,13 +351,15 @@ This function sets @racket[dc-for-text-size]. See also
 @deftogether[(@defform[(render-judgment-form judgment-form-name)]{}
               @defform/none[#:literals (render-judgment-form)
                                        (render-judgment-form judgment-form-name filename)]{})]{
-Like @racket[render-metafunction] but for judgment forms.
+Like @racket[render-metafunction] but for judgment forms. The
+@racket[judgment-form-cases] parameter can be used to control which clauses
+are rendered.
      
  @ex[(define-judgment-form nums
        #:mode (eq I I)
        #:contract (eq K K)
        
-       [---------
+       [--------- eq-·
         (eq · ·)]
        
        [(eq K ·)
@@ -375,7 +377,10 @@ Like @racket[render-metafunction] but for judgment forms.
        [(eq K_1 K_2)
         --------------------
         (eq (1 K_1) (1 K_2))])
-     (render-judgment-form eq)]
+     (render-judgment-form eq)
+     (parameterize ([judgment-form-cases '("eq-·")])
+       (render-judgment-form eq))
+]
 
  @ex-tests[(redex-check
             nums
