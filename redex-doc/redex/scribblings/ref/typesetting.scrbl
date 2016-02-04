@@ -1029,6 +1029,15 @@ thunk), during the evaluation of expression.
 @racket[name-symbol] is expected to evaluate to a symbol. The value
 of @racket[string-or-thunk-returning-pict] is used whenever the symbol
 appears in a pattern.
+
+@ex[
+  (define-language lam-lang
+    (e (lambda (x) e)))
+  (with-atomic-rewriter
+   'lambda
+   "λ"
+   (render-term lam-lang (term (lambda (x) e))))
+]
 }
 
 @defform[(with-compound-rewriter name-symbol
