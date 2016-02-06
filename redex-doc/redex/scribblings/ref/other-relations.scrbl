@@ -13,12 +13,6 @@
 
 @(define redex-eval (make-base-eval '(require redex/reduction-semantics)))
 
-@(define (examples-link relative-path dir? text)
-   (link (format "http://git.racket-lang.org/plt/~a/HEAD:/collects/redex/examples/~a"
-                 (if dir? "tree" "blob")
-                 relative-path)
-         (filepath text)))
-
 @title{Other Relations}
 
 @declare-exporting[redex/reduction-semantics redex]
@@ -382,17 +376,24 @@ non-termination. For example, consider the following definitions:
 Due to the second @racket[path] rule, the follow query fails to terminate:
 @racketinput[(judgment-holds (path a c))]
 
-The @(examples-link "" #t "examples") directory demonstrates three use cases:
+There are three example files that come with Redex that
+demonstrates three use cases.
 @itemlist[
-@item{@(examples-link "define-judgment-form/typing-rules.rkt" #f "typing-rules.rkt") ---
+@item{@filepath{typing-rules.rkt} ---
       defines a type system in a way that supports mechanized typesetting.
       When a typing judgment form can be given a mode, it can also be encoded as
       a metafunction using @tech{@racket[where] clauses} as premises, but Redex
       cannot typeset that encoding as inference rules.}
-@item{@(examples-link "define-judgment-form/sos.rkt" #f "sos.rkt") ---
+@item{@filepath{sos.rkt} ---
       defines an SOS-style semantics in a way that supports mechanized typesetting.}
-@item{@(examples-link "define-judgment-form/multi-val.rkt" #f "multi-val.rkt") ---
-      defines a judgment form that serves as a multi-valued metafunction.}]}
+@item{@filepath{multi-val.rkt} ---
+      defines a judgment form that serves as a multi-valued metafunction.}]
+These files can be found via DrRacket's @onscreen{File|Open Require Path...} menu item.
+Type @litchar{redex/examples/d/} into the dialog and then
+choose one of the names listed above. Or, evaluate the expression
+@racketblock[(collection-file-path #,(list "\"" @bold{«filename.rkt»} "\"") "redex" "examples" "define-judgment-form")]
+replacing @bold{«filename.rkt»} with one of the names listed above.
+}
 
 @defform[(define-extended-judgment-form language judgment-form-id
            mode-spec
