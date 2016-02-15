@@ -59,6 +59,8 @@
  (define (names-mentioned-in-beta beta)
    (remove-duplicates (map first (names-mentioned-in-beta/rec beta 0))))
 
+ (define (names-mentioned-in-beta-with-depths beta form-name stx-for-error)
+   (names-mentioned-in-beta/rec beta 0))
 
  (define (names-imported-in/rec body depth)
    (match body
@@ -76,7 +78,7 @@
 
  ;; names-imported-in-with-depths : body -> (listof (list symbol number))
  (define (names-imported-in-with-depths body form-name stx-for-error)
-   (dedupe-names-and-depths (names-imported-in/rec body 0) form-name stx-for-error))
+   (names-imported-in/rec body 0))
 
 
  (define (dedupe-names-and-depths lst form-name stx-for-error)
@@ -252,14 +254,44 @@
 
          [atomic-pattern (values (syntax-e #'atomic-pattern) #'atomic-pattern)])))
 
-   (define import-names (names-imported-in bspec-body))
-   (define export-names (names-mentioned-in-beta export-beta))
+   (define import-names (names-imported-in-with-depths bspec-body form-name s-body))
+   (define export-names (names-mentioned-in-beta-with-depths export-beta form-name s-body))
+
+   (define pattern-names (names-transcribed-in-body bspec-body form-name s-body))
+
+   (define nonexistent-names (append 
+                              (remove* pattern-names import-names
+                                       (lambda (lhs rhs) (symbol=? (first lhs) (first rhs))))
+                              (remove* pattern-names export-names
+                                       (lambda (lhs rhs) (symbol=? (first lhs) (first rhs))))))
+
+   (define (check-referrents names-and-depths)
+     (unless (empty? names-and-depths)
+       (match (assoc (first (car names-and-depths)) pattern-names)
+         [#f (raise-syntax-error 
+              (syntax-e form-name)
+              (format "Undefined name imported or exported: ~a" (first (car names-and-depths)))
+              surface-bspec)]
+         [`(,_ ,pattern-depth)
+          (if (> pattern-depth (second (car names-and-depths)))
+              (raise-syntax-error 
+               (syntax-e form-name)
+               (format "Name ~a occurs at ellipsis depth ~a, but is referred to at ellipsis depth ~a"
+                       (first (car names-and-depths))
+                       pattern-depth
+                       (second (car names-and-depths)))
+               surface-bspec)
+              (check-referrents (cdr names-and-depths)))])))
+   
+   (check-referrents import-names)
+   (check-referrents export-names)
+   
 
    (values
     pat-body
-    (bspec bspec-body export-beta import-names export-names
-           (remove-duplicates (append import-names export-names))
-           (names-transcribed-in-body bspec-body form-name s-body))))
+    (bspec bspec-body export-beta (map first import-names) (map first export-names)
+           (remove-duplicates (map first (append import-names export-names)))
+           pattern-names)))
 
 
  (module+ test

@@ -443,6 +443,29 @@
    `((lambda (,x) ((lambda (,i) (x ,i)) (,x (lambda (,y) (,x (,y (lambda (,z) (,z (,y ,x))))))))))
    (all-distinct? x i y z 'x))
 
+  ;; Testing for these errors kinda belongs in "syn-err-tests/language-definition.rktd",
+  ;; but these errors are returned in terms of `(binding-form #:exports beta)`, which is
+  ;; not quite a subterm of the `define-language` 
+
+  #;
+  (define-language bad-binders
+    (e (e e)
+       (hi-im-a-binding-form x x e x x)
+       x)
+    (x variable-not-otherwise-mentioned)
+    #:binding-forms
+    (hi-im-a-binding-form x_0 x_1 e_1 #:refers-to (shadow x_4 x_0 x_1 x_2 x_3 x_5) x_2 x_3)
+    #:exports (shadow x_6 x_0 x_1 x_2 x_7))
+
+  #;
+  (define-language lang
+    (e (thing e* ([x e] ...))
+       integer)
+    (e* integer)
+    (x variable-not-otherwise-mentioned)
+    #:binding-forms
+    (thing e* #:refers-to x ([x e] ...)))
+
 )
 
 
