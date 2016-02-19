@@ -1344,8 +1344,8 @@
        (define post-condition (condition-or-false #'post-condition-stx))
        (define pats (syntax-e #'pats-stx))
        (define syn-error-name (if prev-metafunction
-                                  'define-metafunction
-                                  'define-metafunction/extension))
+                                  'define-metafunction/extension
+                                  'define-metafunction))
 
        (define lang-nts
          (definition-nts #'lang #'orig-stx syn-error-name))

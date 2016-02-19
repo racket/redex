@@ -169,7 +169,7 @@
           (with-syntax ([(syncheck-exp side-conditions-rewritten (names ...) (names/ellipses ...))
                          (rewrite-side-conditions/check-errs
                           ct-lang
-                          'reduction-relation
+                          orig-name
                           #t
                           #'x)]
                         [lang-stx rt-lang])

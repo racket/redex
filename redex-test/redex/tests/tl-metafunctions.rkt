@@ -805,4 +805,16 @@
   (test (term (free-vars (lambda (x) (x y)))) (list 'y))
   (test (term (free-vars (a (b (c (d e)))))) (term (a b c d e))))
 
+(define-namespace-anchor nsa)
+(define ns (namespace-anchor->namespace nsa))
+(test (parameterize ([current-namespace ns])
+        (with-handlers ([exn:fail? (λ (x)
+                                     (regexp-match? #rx"define-metafunction:"
+                                                    (exn-message x)))])
+          (expand #'(define-metafunction empty
+                      bad : any -> any
+                      [(bad arg) 0
+                                 (where n_1 0)]))))
+      #t)
+
 (print-tests-passed 'tl-metafunctions.rkt)
