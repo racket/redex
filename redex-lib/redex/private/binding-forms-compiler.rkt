@@ -289,7 +289,9 @@
 
    (values
     pat-body
-    (bspec bspec-body export-beta (map first import-names) (map first export-names)
+    (bspec bspec-body export-beta
+           (remove-duplicates (map first import-names))
+           (remove-duplicates (map first export-names))
            (remove-duplicates (map first (append import-names export-names)))
            pattern-names)))
 
@@ -320,17 +322,20 @@
 
    (check-equal?
     (surface-bspec->bspec #'((form x_11
+                                   x_1 x_2 x_444 x_9 x_3
                                    e_1 #:refers-to (shadow x_2 x_444)
                                    (x_22 x_33 #:refers-to (shadow x_1 x_2)
                                          (e_2 e_3 #:refers-to (shadow x_9))
                                          #:refers-to x_3)) #:exports nothing))
-    (bspec `(form x_11 ,(import/internal `e_1 (shadow/internal `(x_2 x_444)))
+    (bspec `(form x_11 x_1 x_2 x_444 x_9 x_3 ,(import/internal `e_1 (shadow/internal `(x_2 x_444)))
                   (x_22 ,(import/internal `x_33 (shadow/internal `(x_1 x_2)))
                         ,(import/internal `(e_2 ,(import/internal `e_3 (shadow/internal `(x_9))))
                                           `x_3)))
-           (shadow/internal '()) `(x_2 x_444 x_1 x_9 x_3) `()
+           (shadow/internal '())
            `(x_2 x_444 x_1 x_9 x_3)
-           `((form 0) (x_11 0) (e_1 0) (x_22 0) (x_33 0) (e_2 0) (e_3 0))))
+           `()
+           `(x_2 x_444 x_1 x_9 x_3)
+           (map (λ (nm) `(,nm 0)) `(form x_11 x_1 x_2 x_444 x_9 x_3 e_1 x_22 x_33 e_2 e_3))))
 
 
 
