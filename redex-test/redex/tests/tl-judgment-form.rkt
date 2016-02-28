@@ -615,4 +615,41 @@
            [(J b)]))
   (test (eval '(judgment-holds (J a))) #t))
 
+(define-namespace-anchor nsa)
+(define ns (namespace-anchor->namespace nsa))
+(test (parameterize ([current-namespace ns])
+        (with-handlers ([exn:fail? (λ (x)
+                                     (regexp-match? #rx"lambda[?]: mode spec"
+                                                    (exn-message x)))])
+          (expand '(module m racket/base
+                     (require redex/reduction-semantics)
+                     (define-language empty-language)
+                     (define-judgment-form empty-language
+                       #:mode (lambda? I)
+                       #:contract (lambda? any_e)
+                       [-----------
+                        (lambda? 1)])
+                     (define-metafunction empty-language
+                       not-lambda? : e -> boolean
+                       [(not-lambda? e)
+                        #f
+                        (judgment-holds (lambda?))]
+                       [(not-lambda? e) #t])))))
+      #t)
+
+(test (parameterize ([current-namespace ns])
+        (with-handlers ([exn:fail? (λ (x)
+                                     (regexp-match? #rx"lambda[?]: mode spec"
+                                                    (exn-message x)))])
+          (expand '(module m racket/base
+                     (require redex/reduction-semantics)
+                     (define-language empty-language)
+                     (define-judgment-form empty-language
+                       #:mode (lambda? I)
+                       #:contract (lambda? any_e)
+                       [-----------
+                        (lambda? 1)])
+                     (judgment-holds (lambda?))))))
+      #t)
+
 (print-tests-passed 'tl-judgment-form.rkt)
