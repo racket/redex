@@ -287,7 +287,15 @@
                   ((natural-let* ((aa (+ a b c)) (bb (+ aa b c)) (cc (+ aa bb cc))) (+ aa bb cc))))
                  #f)
 
+
+   ;; the old way of generating canonical names had a flaw
+   (check-equal? (aeq
+                  (lambda (a) (|1| a))
+                  (lambda (a) (a a)))
+                 #f)
    )
+
+
   (destr-test
    (1 2 3 (cl f (lambda (x) x) no-cl))
    (1 2 3 (cl f (lambda (,xx) ,xx) ,no-cl))

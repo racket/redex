@@ -87,7 +87,6 @@ to traverse the whole value at once, rather than one binding form at a time.
 
 (provide freshen α-equal? α-equal-hash-code safe-subst binding-forms-opened?)
 
-
 ;; == parameters ==
 
 ;; The binding forms in the current language
@@ -156,6 +155,8 @@ to traverse the whole value at once, rather than one binding form at a time.
       [(eq? redex-val-old-var v) redex-val-new-val]
       [else v]))))
 
+(define canonical-name-marker (gensym))
+
 ;; not exported, but useful here:
 (define (canonicalize language-bf-table match-pattern redex-val)
   (define current-name-id 0)
@@ -166,7 +167,7 @@ to traverse the whole value at once, rather than one binding form at a time.
     [all-the-way-down? #t]
     [name-generator (λ (orig)
                        (set! current-name-id (add1 current-name-id))
-                       (string->symbol (number->string current-name-id)))])
+                       `(,canonical-name-marker ,current-name-id))])
    
    (first (rec-freshen redex-val #f #t #f))))
 
