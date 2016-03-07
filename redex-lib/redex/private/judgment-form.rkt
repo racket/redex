@@ -1652,7 +1652,9 @@
                                                 (map (λ (f-id)
                                                        (with-syntax ([f-id f-id])
                                                          (if (judgment-form-id? #'f-id)
-                                                             #'(error 'generate-term "generation disabled for relations in term positions")
+                                                             #'(error 'generate-term 
+                                                                      "generation disabled for relations in term positions: ~a"
+                                                                      (syntax->datum #'f-id))
                                                              #'(metafunc-proc-gen-clauses f-id))))
                                                      (syntax->list fs)))
                                               (syntax->list #'((f ...) ...)))])
