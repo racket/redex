@@ -239,7 +239,7 @@
                (values #'more #t)]
               [_ (values #'after #f)]))
           (define judgment-form (lookup-judgment-form-id #'form-name))
-          (check-judgment-arity stx #'(form-name pats ...))
+          (check-judgment-arity stx premise)
           (define mode (judgment-form-mode judgment-form))
           (define judgment-proc (judgment-form-proc judgment-form))
           (define-values (input-template output-pre-pattern)
