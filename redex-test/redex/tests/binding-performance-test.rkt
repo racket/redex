@@ -380,4 +380,4 @@
   (require (submod ".." lazy-test))
   (require (submod ".." stlc+lists-test))
   (module config info
-    (define timeout 180)))
+    (define timeout 400)))
