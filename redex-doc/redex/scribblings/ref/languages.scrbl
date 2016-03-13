@@ -187,10 +187,10 @@ metafunctions, and by @racket[apply-reduction-relation].
 }
 
 @defproc[(alpha-equivalent? [lang compiled-lang?] [lhs any/c] [rhs any/c]) boolean?]{
-Returns @racket[#t] if (according to the binding specification in @racket[default-language])
-the bound names in @racket[lhs] and @racket[rhs] have the same structure, and,
-in everything but bound names, they are @racket[equal?]. If @racket[default-language]
-is @racket[#f] or has no binding forms, terms have no bound names and therefore
+Returns @racket[#t] if (according to the binding specification in @racket[lang])
+the bound names in @racket[lhs] and @racket[rhs] have the same structure and,
+in everything but bound names, they are @racket[equal?]. If @racket[lang]
+has no binding forms, terms have no bound names and therefore
 @racket[alpha-equivalent?] is the same as @racket[equal?].
 }
 

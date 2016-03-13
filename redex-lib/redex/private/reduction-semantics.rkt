@@ -2710,6 +2710,11 @@
 ;; I'm not sure if these two functions should be here, but they need to have
 ;; access to `match-pattern` to work.
 (define (alpha-equivalent? lang lhs rhs)
+  (unless (compiled-lang? lang)
+    (raise-argument-error 'alpha-equivalent?
+                          "compiled-lang?"
+                          0
+                          lang lhs rhs))
   (α-equal? (compiled-lang-binding-table lang) match-pattern lhs rhs))
 
 ;; special empty language that signals to `build-metafunction` that this metafunction 
