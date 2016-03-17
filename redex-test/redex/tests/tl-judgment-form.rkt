@@ -602,7 +602,19 @@
      '()))
   (test (< cpu 1000) #t))
 
+(let ()
+  (define-judgment-form empty-language
+    #:mode (foo I I)
+    #:contract (foo any any)
+    [------------------
+     (foo any any)])
 
+  (define msg
+    (with-handlers ([exn:fail? exn-message])
+      (term (foo (λ x x)))))
+
+  (test (regexp-match? #rx"foo: judgment form expects 2 inputs, got 1" msg)
+        #t))
 
 (parameterize ([current-namespace (make-base-namespace)])
   (eval '(require errortrace))
