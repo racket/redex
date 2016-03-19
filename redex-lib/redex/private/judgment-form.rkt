@@ -876,11 +876,18 @@
                        (if (jf-is-relation? #'jdg-name)
                            #`(λ (input)
                                (not (null? body-stx)))
-                           #`(λ (input)
-                               (call-with-values 
-                                (λ () (apply values input))
-                                (λ (binding ...)
-                                  (not (null? body-stx))))))))]))
+                           (let ([mode-as-lst (syntax->list #'mode)])
+                             #`(λ (input)
+                                 (check-length input
+                                               '#,(car mode-as-lst)
+                                               #,(- (length mode-as-lst) 1))
+                                 (let-values ([(binding ...) (apply values input)])
+                                   (not (null? body-stx))))))))]))
+
+(define (check-length input name input-size)
+  (unless (= (length input) input-size)
+    (error name "judgment form expects ~a inputs, got ~a"
+           input-size (length input))))
 
 (define-syntax (judgment-holds/derivation stx)
   (syntax-case stx ()
