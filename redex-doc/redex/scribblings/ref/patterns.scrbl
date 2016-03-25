@@ -152,7 +152,10 @@ If @racket[pat:symbol] is a non-terminal, it matches any of the right-hand
 sides of the non-terminal. If the non-terminal appears
 twice in a single pattern, then the match is constrained
 to expressions that are the same, unless the pattern is part
-of a @racket[define-language] definition, in which case there is no constraint. Also, the
+of a @racket[define-language] definition or a contract (e.g., in
+@racket[define-metafunction], @racket[define-judment-form], or
+@racket[define-relation])
+in which case there is no constraint. Also, the
 non-terminal will be bound in the expression in any
 surrounding @pattech[side-condition] patterns unless there the
 pattern is in a @racket[define-language] definition.
