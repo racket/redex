@@ -16,6 +16,7 @@ todo:
 (require racket/pretty
          racket/gui/base
          racket/list
+         racket/dict
          racket/class
          racket/set
          framework
@@ -23,7 +24,11 @@ todo:
          racket/contract
          "sexp-diffs.rkt"
          "size-snip.rkt"
-         redex/private/reduction-semantics)
+         redex/private/reduction-semantics
+         redex/private/lang-struct
+         redex/private/binding-forms
+         redex/private/struct
+         redex/private/matcher)
   
   (provide stepper stepper/seed
            
@@ -59,7 +64,12 @@ todo:
   (define (stepper/seed red seed [pp default-pretty-printer])
     (define term (car seed))
     ;; all-nodes-ht : hash[sexp -o> (is-a/c node%)]
-    (define all-nodes-ht (make-hash))
+
+    (define all-nodes-ht
+      (let* ([lang (reduction-relation-lang red)]
+             [term-equal? (lambda (x y) (α-equal? (compiled-lang-binding-table lang) match-pattern x y))]
+             [term-hash (lambda (x) (α-equal-hash-code (compiled-lang-binding-table lang) match-pattern x))])
+      (make-custom-hash term-equal? term-hash)))
     
     (define root (new node%
                       [pp pp]
@@ -412,7 +422,7 @@ todo:
               (send pb get-snip-location s sr sb #t)
               (send pb scroll-to s 0 0 (- (unbox sr) (unbox sl)) (- (unbox sb) (unbox st)) #t))))))
     
-    (hash-set! all-nodes-ht term root)
+    (dict-set! all-nodes-ht term root)
     (send root set-in-path? #t)
     
     (let loop ([term (car seed)]
@@ -547,7 +557,7 @@ todo:
                 (map (λ (x) (make-child x)) (get-successors)))))
       
       (define/private (make-child term)
-        (let ([already-there (hash-ref all-nodes-ht term #f)]
+        (let ([already-there (dict-ref all-nodes-ht term #f)]
               [mk-child-node
                (λ ()
                  (new node%
@@ -571,7 +581,7 @@ todo:
              already-there]
             [else
              (let ([child-node (mk-child-node)])
-               (hash-set! all-nodes-ht term child-node)
+               (dict-set! all-nodes-ht term child-node)
                child-node)])))
       
         (define/private (is-parent? node)
