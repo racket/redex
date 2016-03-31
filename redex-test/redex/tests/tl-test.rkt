@@ -100,6 +100,10 @@
                         (test-results))
         "One test passed.\n"))
 
+(test (capture-output (test-predicate even? 1)
+                      (test-results))
+      #rx"does not hold for: 1")
+
 (let ()
   (define red (reduction-relation empty-language (--> any (any))))
   (test (capture-output (test--> red (term (1 2 3)) (term ((1 2 3)))) (test-results))
