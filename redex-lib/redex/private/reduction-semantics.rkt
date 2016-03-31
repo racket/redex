@@ -2704,8 +2704,8 @@
   (unless (pred arg)
     (inc-failures)
     (print-failed srcinfo)
-    (eprintf/value-at-end "  ~v does not hold for"
-                          pred arg)))
+    (eprintf/value-at-end (format "  ~v does not hold for" pred)
+                          arg)))
 
 ;; I'm not sure if these two functions should be here, but they need to have
 ;; access to `match-pattern` to work.
