@@ -1,6 +1,6 @@
 #lang racket/base
 (require racket/promise)
-(provide (struct-out nt)
+(provide (struct-out nt) make-multi-name-nt
          (struct-out rhs)
          (struct-out bind)
          (struct-out mismatch-bind)
@@ -51,6 +51,9 @@
     (define the-hole (hole 'the-hole))
     (define the-not-hole (hole 'the-not-hole))
     (values the-hole the-not-hole hole?)))
+
+(define (make-multi-name-nt names rhs)
+  (make-nt (sort names symbol<?) rhs))
 
 ;; bindings = (make-bindings (listof rib))
 ;; rib = (make-bind sym sexp)

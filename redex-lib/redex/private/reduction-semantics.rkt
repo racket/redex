@@ -2140,8 +2140,8 @@
                                  nt->hole)
                (syntax/loc stx
                  (do-extend-language (begin r-syncheck-expr ... ... orig-lang)
-                                     (list (make-nt '(uniform-names ...)
-                                                    (list (make-rhs `r-rhs) ...)) ...)
+                                     (list (make-multi-name-nt '(uniform-names ...)
+                                                               (list (make-rhs `r-rhs) ...)) ...)
                                      binding-table
                                      (list (list '(uniform-names ...) rhs/lw ...) ...)))))
            
@@ -2185,7 +2185,7 @@
                          (syntax->list (syntax (name ...))))])
        (syntax/loc stx
          (do-extend-language (begin r-syncheck-expr ... ... lang)
-                             (list (make-nt '(uniform-names ...) (list (make-rhs `r-rhs) ...)) ...)
+                             (list (make-multi-name-nt '(uniform-names ...) (list (make-rhs `r-rhs) ...)) ...)
                              binding-table
                              (list (list '(uniform-names ...) rhs/lw ...) ...))))]))
 

@@ -226,7 +226,7 @@
             main
             [(X P) q])
           (void)))
-      "define-extended-language: new language does not have the same non-terminal aliases as the old, non-terminal P was not in the same group as X in the old language")
+      "define-extended-language: new language does not have the same non-terminal aliases as the old, non-terminal X was not in the same group as P in the old language")
 
 ;; underscores in literals
 (let ()
@@ -807,5 +807,15 @@
        (in-hole L E))
     (L hole))
   (test (get-nt-hole-map L) (make-hash '((L . 1) (E  . 1)))))
+
+(let ()
+  (define-language L1)
+  (define-extended-language L2 L1
+    ((l k) Zz))
+  (define-extended-language L3 L2
+    ((k l) .... Yy))
+  (test (redex-match? L3 k (term Zz)) #t)
+  (test (redex-match? L3 k (term Yy)) #t)
+  (test (redex-match L3 k (term Aa)) #f))
 
 (print-tests-passed 'tl-language.rkt)
