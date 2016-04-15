@@ -2696,6 +2696,24 @@
           (eprintf " (within ~a steps)" steps))
         (newline (current-error-port))))))
 
+(define-syntax (test-judgment-holds stx)
+  (syntax-parse stx
+    [(_ (jf . rest))
+     (unless (judgment-form-id? #'jf)
+       (raise-syntax-error 'test-judgment-holds
+                           "expected the name of a judgment-form"
+                           #'jf))
+     #`(test-judgment-holds/proc (λ () (judgment-holds (jf . rest)))
+                                 'jf
+                                 #,(get-srcloc stx))]))
+
+(define (test-judgment-holds/proc thunk name srcinfo)
+  (inc-tests)
+  (unless (thunk)
+    (inc-failures)
+    (print-failed srcinfo)
+    (eprintf "  judgment of ~a does not hold\n" name)))
+
 (define-syntax (test-predicate stx)
   (syntax-case stx ()
     [(_ p arg)
@@ -2847,6 +2865,7 @@
          test-->
          test-->>∃ (rename-out [test-->>∃ test-->>E])
          test-predicate
+         test-judgment-holds
          test-results
          default-equiv
          default-language

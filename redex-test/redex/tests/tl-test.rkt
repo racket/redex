@@ -105,6 +105,24 @@
       #rx"does not hold for: 1")
 
 (let ()
+  (define-judgment-form empty-language
+    #:mode (J I)
+    
+    [-----------
+     (J natural)]
+    
+    [(J any_1)
+     --------------
+     (J (any_1 any_2))])
+
+  (capture-output
+   (test-judgment-holds (J (0 x)))
+   (test-judgment-holds (J (x 0))))
+  
+  (test (capture-output (test-results))
+        "1 test failed (out of 2 total).\n"))
+
+(let ()
   (define red (reduction-relation empty-language (--> any (any))))
   (test (capture-output (test--> red (term (1 2 3)) (term ((1 2 3)))) (test-results))
         "One test passed.\n"))

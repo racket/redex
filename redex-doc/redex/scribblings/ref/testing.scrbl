@@ -147,6 +147,10 @@ relation @racket[rel-expr] to a term specified by @racket[goal-expr] in
        
        (test-results)]
 
+@defform[(test-judgment-holds (judgment-form pat/term ...))]{
+  Tests to see if @racket[(judgment-form pat/term ...)] holds.
+}
+
 @defform[(test-predicate p? e)]{
 Tests to see if the value of @racket[e] matches the predicate @racket[p?].
 }

@@ -65,6 +65,7 @@
          test-->
          test-->>∃ (rename-out [test-->>∃ test-->>E])
          test-predicate
+         test-judgment-holds
          test-results
 
          default-language
