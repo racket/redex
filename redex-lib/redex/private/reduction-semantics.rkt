@@ -1374,7 +1374,9 @@
                                       syn-error-name '()  
                                       #'effective-lang lang-nts #'lang
                                       sc/b 'flatten
-                                      #`(list (term #,rhs #:lang lang))
+                                      (if (free-identifier=? #'lang #'metafunction-leave-default-language-alone)
+                                          #`(list (term #,rhs))
+                                          #`(list (term #,rhs #:lang lang)))
                                       (syntax->list names) 
                                       (syntax->list names/ellipses)
                                       #t

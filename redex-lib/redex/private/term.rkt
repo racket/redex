@@ -49,16 +49,21 @@
                                         (syntax-e #'form))))
        (cond
          [lang-stx
-          (define-values (lang-nts lang-nt-ids)
+          (define-values (lang-nts lang-nt-ids lang-id)
             (let loop ([ls lang-stx])
               (define slv (syntax-local-value ls (λ () lang-stx)))
               (if (term-id? slv)
                   (loop (term-id-prev-id slv))
                   (values (language-id-nts ls 'term)
-                          (language-id-nt-identifiers ls 'term)))))
-          (quasisyntax/loc stx (term/nts t #,lang-nts #,lang-nt-ids))]
+                          (language-id-nt-identifiers ls 'term)
+                          ls))))
+          (quasisyntax/loc stx
+            (wdl #,lang-id
+                 (λ () #,(quasisyntax/loc stx (term/nts t #,lang-nts #,lang-nt-ids)))))]
          [else
           (syntax/loc stx (term/nts t #f #f))]))]))
+
+(define (wdl lang thunk) (parameterize ([default-language lang]) (thunk)))
 
 (define-syntax (term/nts stx)
   (syntax-case stx ()

@@ -664,4 +664,12 @@
 
   (parameterize ([default-language kw-lang])
     (check-not-exn (λ () (term (substitute (Λ (x_1 #:kw x_2) 0) x_1 1)))))
- )
+
+  (let ()
+    (define-language L
+      (e ::= (e e) (λ (x) e) x)
+      (x ::= variable-not-otherwise-mentioned)
+      #:binding-forms
+      (λ (x_1) e #:refers-to x_1))
+    (check-equal? (term (substitute (x y) x y) #:lang L)
+                  (term (y y)))))
