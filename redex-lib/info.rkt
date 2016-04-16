@@ -12,6 +12,7 @@
                "tex-table"
                "profile-lib"
                "typed-racket-lib"
+               "testing-util-lib"
                "2d-lib"))
 (define build-deps '("rackunit-lib"))
 

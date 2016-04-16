@@ -1,6 +1,7 @@
 #lang racket
 (require "private/test-util.rkt"
          redex/reduction-semantics
+         (only-in redex/private/reduction-semantics inform-rackunit?)
          (only-in redex/private/lang-struct make-bindings make-bind)
          racket/match
          racket/trace
@@ -15,7 +16,8 @@
 (define-syntax-rule 
   (capture-output arg1 args ...)
   (let ([p (open-output-string)])
-    (parameterize ([current-output-port p]
+    (parameterize ([inform-rackunit? #f]
+                   [current-output-port p]
                    [current-error-port p])
       arg1 args ...)
     (get-output-string p)))
