@@ -1,3 +1,7 @@
+v6.5
+
+  * bug fixes
+
 v6.4
 
   * add support for variable binding declarations in define-language
