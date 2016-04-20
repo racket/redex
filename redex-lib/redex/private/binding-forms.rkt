@@ -85,7 +85,8 @@ to traverse the whole value at once, rather than one binding form at a time.
 
 ;; == public interface ==
 
-(provide freshen α-equal? α-equal-hash-code safe-subst binding-forms-opened?)
+(provide freshen α-equal? α-equal-hash-code safe-subst binding-forms-opened?
+         make-α-hash)
 
 ;; == parameters ==
 
@@ -124,6 +125,14 @@ to traverse the whole value at once, rather than one binding form at a time.
 ;; (compiled-pattern redex-val -> (union #f mtch)) redex-val -> exact-integer
 (define (α-equal-hash-code language-bf-table match-pattern redex-val)
   (equal-hash-code (canonicalize language-bf-table match-pattern redex-val)))
+
+(define (α-equal-secondary-hash-code language-bf-table match-pattern redex-val)
+  (equal-secondary-hash-code (canonicalize language-bf-table match-pattern redex-val)))
+
+(define (make-α-hash language-bf-table match-pattern)
+  (make-custom-hash (λ (x y) (α-equal? language-bf-table match-pattern x y))
+                    (λ (x) (α-equal-hash-code language-bf-table match-pattern x))
+                    (λ (x) (α-equal-secondary-hash-code language-bf-table match-pattern x))))
 
 ;; α-equal? : (listof (list compiled-pattern bspec))
 ;; (compiled-pattern redex-val -> (union #f mtch)) redex-val -> boolean

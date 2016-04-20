@@ -574,7 +574,37 @@
   
   (test (judgment-holds (J2 1)) #t)
   (test (judgment-holds (J2 2)) #f))
-  
+
+(let ()
+  (define-language λ
+    (e ::=
+       (lambda (x) e)
+       (e e)
+       x)
+    (x ::= variable-not-otherwise-mentioned)
+    #:binding-forms
+    (lambda (x) e #:refers-to x))
+
+  (define-judgment-form λ
+    #:mode (traverse I O)
+    [(traverse e e_*)
+     ---------- "lambda"
+     (traverse (lambda (x) e) (lambda (x) e_*))]
+    [---------- "x"
+                (traverse x x)]
+    [(traverse e_1 e_1*)
+     ---------- "left"
+     (traverse (e_1 e_2) (e_1* e_2))]
+    [(traverse e_2 e_2*)
+     ---------- "right"
+     (traverse (e_1 e_2) (e_1 e_2*))])
+
+  (test (length
+         (judgment-holds (traverse ((lambda (x) (x x)) (lambda (x) (x x)))
+                                   any)
+                         any))
+        1))
+
 (let () 
   (define-judgment-form empty-language
     #:mode (J I)

@@ -5,9 +5,12 @@
          "fresh.rkt"
          "error.rkt"
          "search.rkt"
+         "lang-struct.rkt"
+         "binding-forms.rkt"
          racket/trace
          racket/list
          racket/stxparam
+         racket/dict
          "term-fn.rkt"
          "rewrite-side-conditions.rkt"
          (only-in "pat-unify.rkt"
@@ -371,7 +374,7 @@
            [else
             candidate])]
         [else (form-proc recur input derivation-init)])))
-  (define vecs
+  (define dwoos
     (if (or (eq? 'all traced) (memq form-name traced))
         (let ([outputs #f])
           (define spacers
@@ -399,29 +402,48 @@
             (apply trace-call form-name wrapped (assemble mode input spacers)))
           outputs)
         (form-proc/cache form-proc/cache input derivation-init)))
-  (remove-duplicates
-   (for/list ([v (in-list vecs)])
-     (define subs (derivation-with-output-only-subs v))
-     (define rulename (derivation-with-output-only-name v))
-     (define this-output (derivation-with-output-only-output v))
-     (derivation-subs-acc
-      (and subs (derivation (cons form-name (assemble mode input this-output))
-                            
-                            ;; just drop the subderivations 
-                            ;; and the name when we know we
-                            ;; won't be using them.
-                            ;; this lets the remove-duplicates
-                            ;; call just above do something 
-                            ;; and possibly avoid exponential blowup
-                            
-                            (if (include-entire-derivation)
-                                rulename
-                                "")
-                            (if (include-entire-derivation)
-                                (reverse subs)
-                                '())))
-      (and (include-jf-rulename) rulename)
-      this-output))))
+  
+  (define without-exact-duplicates-vec (apply vector (remove-duplicates dwoos)))
+  (define ht (make-α-hash (compiled-lang-binding-table ct-lang) match-pattern))
+  (for ([d (in-vector without-exact-duplicates-vec)]
+        [i (in-naturals)])
+    (define t (derivation-with-output-only-output d))
+    (dict-set! ht t (cons i (dict-ref ht t '()))))
+
+  (for ([(k v) (in-dict ht)])
+    (define main (vector-ref without-exact-duplicates-vec (car v)))
+    (for ([dup-i (in-list (cdr v))])
+      (define dup-candidate (vector-ref without-exact-duplicates-vec dup-i))
+      (when (or (not (include-entire-derivation))
+                (and (equal? (derivation-with-output-only-name main)
+                             (derivation-with-output-only-name dup-candidate))
+                     (equal? (derivation-with-output-only-subs main)
+                             (derivation-with-output-only-subs dup-candidate))))
+        (vector-set! without-exact-duplicates-vec dup-i #f))))
+  
+  (for/list ([v (in-vector without-exact-duplicates-vec)]
+             #:when v)
+    (define subs (derivation-with-output-only-subs v))
+    (define rulename (derivation-with-output-only-name v))
+    (define this-output (derivation-with-output-only-output v))
+    (derivation-subs-acc
+     (and subs (derivation (cons form-name (assemble mode input this-output))
+                           
+                           ;; just drop the subderivations
+                           ;; and the name when we know we
+                           ;; won't be using them.
+                           ;; this lets the remove-duplicates
+                           ;; call just above do something
+                           ;; and possibly avoid exponential blowup
+                           
+                           (if (include-entire-derivation)
+                               rulename
+                               "")
+                           (if (include-entire-derivation)
+                               (reverse subs)
+                               '())))
+     (and (include-jf-rulename) rulename)
+     this-output)))
 
 (define include-entire-derivation (make-parameter #f))
 (define include-jf-rulename (make-parameter #f))
