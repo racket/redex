@@ -818,4 +818,10 @@
   (test (redex-match? L3 k (term Yy)) #t)
   (test (redex-match L3 k (term Aa)) #f))
 
+(let ()
+  (define-language L
+    (A ::= (hole x_1) (hole x_1 (in-hole A x_1)))
+    (x ::= variable-not-otherwise-mentioned))
+  (test (redex-match? L (in-hole A x) (term (y z (z t)))) #t))
+
 (print-tests-passed 'tl-language.rkt)

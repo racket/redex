@@ -1753,7 +1753,15 @@ See match-a-pattern.rkt for more details
            (let ([mth (call-nt-proc/bindings (car rhss) term hole-info lang-α-equal?)])
              (cond
                [mth
-                (loop (cdr rhss) (append mth ans))]
+                (loop (cdr rhss)
+                      (let loop ([mth mth])
+                        (cond
+                          [(null? mth) ans]
+                          [else (cons (let ([mtch (car mth)])
+                                        (make-mtch empty-bindings
+                                                   (mtch-context mtch)
+                                                   (mtch-hole mtch)))
+                                      (loop (cdr mth)))])))]
                [else 
                 (loop (cdr rhss) ans)]))]))
       
