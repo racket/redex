@@ -66,7 +66,9 @@
   (define syms (filter symbol? (flatten (map syntax->datum ps-in))))
   (define (make-pat s) 
     (with-syntax ([(_ p _ _) 
-                   (rewrite-side-conditions/check-errs syms 'check-dq #t s)])
+                   (rewrite-side-conditions/check-errs syms 'check-dq #t s
+                                                       #:aliases (hash)
+                                                       #:nt-identifiers (hash))])
       #'(nts->any 'p)))
   (map make-pat ps-in))
 

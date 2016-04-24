@@ -37,7 +37,9 @@
      [(form-name (all-nts ...) . bf-forms)
       #`(second (first #,(compile-binding-forms #`bf-forms
                                                 (syntax->datum #`(all-nts ...))
-                                                #`form-name)))]))
+                                                #`form-name
+                                                (hash)
+                                                (hash))))]))
 
 
  (printf "Microbenchmarks~n")

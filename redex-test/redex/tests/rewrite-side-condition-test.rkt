@@ -7,6 +7,8 @@
 (define-syntax (rsc stx)
   (syntax-case stx ()
     [(_ pat (nts ...) bind-names?)
+     #'(rsc pat (nts ...) bind-names? ())]
+    [(_ pat (nts ...) bind-names? (the-aliases ...))
      (with-handlers ((exn:fail:syntax?
                       (λ (x)
                         #`'#,(exn-message x))))
@@ -15,7 +17,9 @@
                        (syntax->datum #'(nts ...))
                        'rsc
                        (syntax-e #'bind-names?)
-                       #'pat)])
+                       #'pat
+                       #:aliases (apply hash (syntax->datum #'(the-aliases ...)))
+                       #:nt-identifiers (hash))])
          #'(list `pat
                  `(vars ...)
                  `(vars/ellipses ...))))]))
@@ -32,6 +36,7 @@
               `((list (repeat 1 #f ..._!_3) (repeat 1 #f ..._!_3)) () ()))
 
 (check-equal? (rsc x (x) #t) `((name x (nt x)) (x) (x)))
+(check-equal? (rsc x (y) #t (x y)) `((name x (nt y)) (x) (x)))
 (check-equal? (rsc x (x) #f) `((nt x) () ()))
 (check-equal? (rsc x_1 (x) #t) `((name x_1 (nt x)) (x_1) (x_1)))
 (check-equal? (rsc x_1 (x) #f) `((name x_1 (nt x)) (x_1) (x_1)))

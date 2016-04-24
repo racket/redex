@@ -930,7 +930,7 @@
                           (compiled-lang-lang lang))])
        (unless the-nt
          (error 'unify "nonterminal ~a not found for provided language... nts found: ~a" 
-                nt (hash-keys (compiled-lang-nt-map lang))))
+                nt (map nt-name (compiled-lang-lang lang))))
        the-nt)))
   (match this-rhs
     [(list (rhs `(nt ,alias)))
@@ -940,7 +940,7 @@
        
 (define empty-lang
   (compiled-lang
-   #f #f #f #f #f #f #f #f #f #f #f '() #f (hash)
+   #f #f #f #f #f #f #f #f #f #f #f '() '() (hash)
    (make-hash) '() (lang-enumerators '() (delay '()))))
 
 (define unique-name-nums (make-parameter 0))

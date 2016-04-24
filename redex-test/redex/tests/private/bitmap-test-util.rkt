@@ -65,7 +65,11 @@
         [else
          (when (show-bitmap-test-gui?)
            (let ([failed-panel (make-failed-panel line-number bitmap-filename old-bitmap new-bitmap)])
-             (set! failed-panels (append failed-panels (list failed-panel)))))]))))
+             (set! failed-panels (append failed-panels (list failed-panel)))
+             (define count (length failed-panels))
+             (send (get-test-result-frame) set-label (format "bitmap-test.rkt; ~a failure~a"
+                                                             count
+                                                             (if (= count 1) "" "s")))))]))))
 
 (define (set-fonts/call thunk)
   (case (system-type)
@@ -105,10 +109,17 @@
            (equal? bytes1 bytes2)))))
 
 (define test-result-single-panel #f)
+(define test-result-frame #f)
 (define (get-test-result-single-panel)
+  (define-values (p f) (get-test-result-single-panel-and-frame))
+  p)
+(define (get-test-result-frame)
+  (define-values (p f) (get-test-result-single-panel-and-frame))
+  f)
+(define (get-test-result-single-panel-and-frame)
   (cond
     [test-result-single-panel
-     test-result-single-panel]
+     (values test-result-single-panel test-result-frame)]
     [else
      (let ()
        (define f (new frame% [label "bitmap-test.rkt failures"]))
@@ -134,8 +145,9 @@
        (define (update-gui) 
          (send sp active-child (list-ref failed-panels current-index)))
        (set! test-result-single-panel sp)
+       (set! test-result-frame f)
        (send f show #t)
-       sp)]))
+       (values sp f))]))
 
 (define (compute-diffs old-bitmap new-bitmap)
   (define ow (send old-bitmap get-width))
@@ -192,17 +204,17 @@
 
 (define (make-failed-panel line-number filename old-bitmap new-bitmap)
   (define-values (diff-bitmap number-of-different-pixels) (compute-diffs old-bitmap new-bitmap))
-  (define f (new vertical-panel% [parent (get-test-result-single-panel)]))
-  (define msg (new message% [label (format "line ~a" line-number)] [parent f]))
-  (define hp (new horizontal-panel% [parent f]))
+  (define trsp (new vertical-panel% [parent (get-test-result-single-panel)]))
+  (define msg (new message% [label (format "line ~a" line-number)] [parent trsp]))
+  (define hp (new horizontal-panel% [parent trsp]))
   (define vp1 (new vertical-panel% [parent hp]))
   (define vp2 (new vertical-panel% [parent hp]))
   (define computing/differences-msg 
-    (new message% [label (format "~a pixels different" number-of-different-pixels)] [parent f]))
+    (new message% [label (format "~a pixels different" number-of-different-pixels)] [parent trsp]))
   (define chk (new check-box% 
                    [label "Show diff"]
                    [value #t]
-                   [parent f]
+                   [parent trsp]
                    [callback (λ (_1 _2) (chk-callback))]))
   (define (chk-callback)
     (cond
@@ -211,7 +223,7 @@
       [else
        (send right-hand set-label new-bitmap)]))
   (define btn (new button%
-                   [parent f]
+                   [parent trsp]
                    [label "Save"]
                    [callback
                     (λ (x y)
@@ -232,4 +244,4 @@
   (define right-hand (new message%
                           [parent vp2]
                           [label diff-bitmap]))
-  f)
+  trsp)

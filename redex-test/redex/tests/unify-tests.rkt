@@ -646,14 +646,12 @@
                 (p*e 'a-var (hash)))
   (check-equal? (unify/format `(nt x) 'any (hash) ntl)
                 (p*e 'variable (hash)))
-  (check-equal? (unify/format `(nt y) 'any (hash) ntl)
-                (p*e 'variable (hash)))
   ;; asymmetry ok here - if the nt doesn't get unified against,
   ;; it doesn't get collapsed
-  (check-equal? (unify/format `(nt y) '(nt Q) (hash) ntl)
+  (check-equal? (unify/format `(nt x) '(nt Q) (hash) ntl)
                 `(different-orders=>different-results 
                  ,(p*e '(cstr (Q) variable) (env (hash) '()))
-                 ,(p*e '(cstr (Q) (nt y)) (env (hash) '()))))
+                 ,(p*e '(cstr (Q) (nt x)) (env (hash) '()))))
   )
 
 
@@ -792,10 +790,14 @@
       [(f-name lang t-1 t-2 env)
        (with-syntax ([(ignore-1 pat-1 (names-1 ...) (names/ellipses-1 ...))
                       (rewrite-side-conditions/check-errs
-                       (language-id-nts #'lang 'f-name) 'f-name stx #'t-1)]
+                       (language-id-nts #'lang 'f-name) 'f-name stx #'t-1
+                       #:aliases (hash)
+                       #:nt-identifiers (hash))]
                      [(ignore-2 pat-2 (names-2 ...) (names/ellipses-2 ...))
                       (rewrite-side-conditions/check-errs
-                       (language-id-nts #'lang 'f-name) 'f-name stx #'t-2)])
+                       (language-id-nts #'lang 'f-name) 'f-name stx #'t-2
+                       #:aliases (hash)
+                       #:nt-identifiers (hash))])
          #'(unify/format 'pat-1 'pat-2 env lang))])))
 
 (define-syntax u-test

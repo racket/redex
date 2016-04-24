@@ -36,15 +36,28 @@
   ;; the pattern. Also, uses of that identifier not in "pattern expression" positions
   ;; are signalled as syntax errors
   (define (rewrite-side-conditions/check-errs all-nts/lang-id what bind-names? orig-stx
-                                              #:rewrite-as-any-id [rewrite-as-any-id #f])
+                                              #:rewrite-as-any-id [rewrite-as-any-id #f]
+                                              #:aliases [_aliases #f]
+                                              #:nt-identifiers [_nt-identifiers #f])
+    (define aliases
+      (or _aliases
+          (and (identifier? all-nts/lang-id)
+               (language-id-nt-aliases
+                all-nts/lang-id what))))
+    (unless aliases
+      (error 'rewrite-side-conditions/check-errs
+             "expected either a language binding or an explicit #:aliases argument"))
     (define all-nts (if (identifier? all-nts/lang-id)
                         (language-id-nts all-nts/lang-id what)
                         all-nts/lang-id))
     (define nt->hole (and (identifier? all-nts/lang-id)
                           (language-id-nt-hole-map all-nts/lang-id #f)))
-    (define id-stx-table (if (identifier? all-nts/lang-id)
-                             (language-id-nt-identifiers all-nts/lang-id #f)
-                             (hash)))
+    (define nt-identifiers (or _nt-identifiers
+                               (and (identifier? all-nts/lang-id)
+                                    (language-id-nt-identifiers all-nts/lang-id #f))))
+    (unless nt-identifiers
+      (error 'rewrite-side-conditions/check-errs
+             "expected either a language binding or an explicit #:nt-identifiers argument"))
     (define (expected-exact name n stx)
       (raise-syntax-error what (format "~a expected to have ~a arguments" 
                                        name
@@ -109,7 +122,7 @@
                      assignments])))))
     
     (define (record-syncheck-use stx nt)
-      (define the-use (build-disappeared-use id-stx-table nt stx))
+      (define the-use (build-disappeared-use nt-identifiers nt stx))
       (when the-use
         (define old (syntax-property void-stx 'disappeared-use))
         (set! void-stx
@@ -225,9 +238,12 @@
            (identifier? term)
            (let ()
              (define-values (prefix-sym suffix-sym) (break-out-underscore term))
+             (define unaliased-sym (if prefix-sym
+                                       (hash-ref aliases prefix-sym prefix-sym)
+                                       (hash-ref aliases (syntax-e term) (syntax-e term))))
              (cond
                [suffix-sym
-                (define prefix-stx (datum->syntax term prefix-sym))
+                (define unaliased-prefix-stx (datum->syntax term unaliased-sym))
                 (define mismatch? (regexp-match? #rx"^!_" (symbol->string suffix-sym)))
                 (cond
                   [(eq? (syntax-e term) '_) (values `any '())] ;; don't bind wildcard
@@ -237,24 +253,24 @@
                     "found an ellipsis outside of a sequence"
                     orig-stx
                     term)]
-                  [(memq prefix-sym all-nts)
+                  [(memq unaliased-sym all-nts)
                    (record-syncheck-use term prefix-sym)
                    (cond
                      [mismatch?
-                      (values `(mismatch-name ,term (nt ,prefix-stx))
+                      (values `(mismatch-name ,term (nt ,unaliased-prefix-stx))
                               '())]
                      [else
                       (record-binder term under under-mismatch-ellipsis)
-                      (values `(name ,term (nt ,prefix-stx))
+                      (values `(name ,term (nt ,unaliased-prefix-stx))
                               (list (make-id/depth term (length under))))])]
-                  [(memq prefix-sym underscore-allowed)
+                  [(memq unaliased-sym underscore-allowed)
                    (cond
                      [mismatch?
-                      (values `(mismatch-name ,term ,prefix-stx)
+                      (values `(mismatch-name ,term ,unaliased-prefix-stx)
                               '())]
                      [else
                       (record-binder term under under-mismatch-ellipsis)
-                      (values `(name ,term ,prefix-stx)
+                      (values `(name ,term ,unaliased-prefix-stx)
                               (list (make-id/depth term (length under))))])]
                   [else
                    (raise-syntax-error
@@ -270,14 +286,15 @@
                  "found an ellipsis outside of a sequence"
                  orig-stx
                  term)]
-               [(memq (syntax-e term) all-nts)
-                (record-syncheck-use term (syntax-e term))
+               [(memq unaliased-sym all-nts)
+                (record-syncheck-use term prefix-sym)
                 (cond
                   [bind-names?
                    (record-binder term under under-mismatch-ellipsis)
-                   (values `(name ,term (nt ,term)) (list (make-id/depth term (length under))))]
+                   (values `(name ,term (nt ,unaliased-sym))
+                           (list (make-id/depth term (length under))))]
                   [else
-                   (values `(nt ,term) '())])]
+                   (values `(nt ,unaliased-sym) '())])]
                [(memq (syntax-e term) underscore-allowed)
                 (cond
                   [bind-names?

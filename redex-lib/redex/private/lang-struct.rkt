@@ -104,7 +104,6 @@
 ;;                       hash[sexp[pattern] -o> (cons compiled-pattern boolean)]
 ;;                       pict-builder
 ;;                       (listof symbol)
-;;                       (listof (listof symbol)) -- keeps track of `primary' non-terminals
 ;;                       hash[sym -o> pattern]
 ;;                       (listof (list compiled-pattern bspec))
 ;;                       (hash/c symbol? enum?)) ;; see enum.rkt
@@ -112,7 +111,7 @@
 (define-struct compiled-lang (lang delayed-cclang ht list-ht raw-across-ht raw-across-list-ht
                                    has-hole-or-hide-hole-ht cache binding-forms-absent-cache
                                    bind-names-cache pict-builder
-                                   literals nt-map collapsible-nts
+                                   literals aliases collapsible-nts
                                    ambiguity-cache binding-table enum-table))
 
 (define (compiled-lang-cclang x) (force (compiled-lang-delayed-cclang x)))

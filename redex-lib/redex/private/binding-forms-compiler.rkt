@@ -16,7 +16,7 @@
  ;;
  ;; Takes the syntax that comes after a `#:binding-forms` and returns
  ;; syntax<(listof (list pattern bspec))>
- (define (compile-binding-forms binding-forms-stx all-nts form-name)
+ (define (compile-binding-forms binding-forms-stx all-nts form-name aliases nt-identifiers)
    (syntax-case binding-forms-stx ()
      [((bf-name . bf-body) . rest-plus-exports)
       (begin
@@ -36,9 +36,11 @@
           (surface-bspec->pat&bspec #`((bf-name . bf-body) #:exports #,exports) form-name))
 
         (with-syntax ([(syncheck-expr rewritten-pat _ _)
-                       (rewrite-side-conditions/check-errs all-nts (syntax-e form-name) #t pat)])
+                       (rewrite-side-conditions/check-errs all-nts (syntax-e form-name) #t pat
+                                                           #:aliases aliases
+                                                           #:nt-identifiers nt-identifiers)])
           #`(cons (begin syncheck-expr `(rewritten-pat , `#,bspec))
-                  #,(compile-binding-forms rest-of-bfs all-nts form-name)))
+                  #,(compile-binding-forms rest-of-bfs all-nts form-name aliases nt-identifiers)))
         )]
      [() #`'()]
      [anything (raise-syntax-error (syntax-e form-name) "expected a parenthesized binding form." #`anything)]))

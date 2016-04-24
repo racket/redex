@@ -160,9 +160,7 @@
          (list (list def-name use-name)))))
 
 ;; extended language
-(let ([annotations (new collector%)])
-  (define-values (add-syntax done)
-    (make-traversal module-namespace #f))
+(let ()
   
   (define base-lang-def (identifier L1))
   (define base-lang-use1 (identifier L1))
@@ -175,6 +173,7 @@
   (define base-nt-alias (identifier f))
   (define alias-use (identifier f))
   (define extended-nt-name (identifier e))
+  (define extended-nt-name2 (identifier e))
   (define extended-nt-use (identifier e))
   
   (define base-lang-bindings
@@ -187,27 +186,50 @@
     (list extended-nt-name extended-nt-use))
   (define alias-bindings
     (list base-nt-alias alias-use))
+
+  (let ([annotations (new collector%)])
+    (define-values (add-syntax done)
+      (make-traversal module-namespace #f))
+    
+    (parameterize ([current-annotations annotations]
+                   [current-namespace module-namespace])
+      (add-syntax
+       (expand #`(let ()
+                   (define-language #,base-lang-def
+                     ((#,base-nt-name #,base-nt-alias) number))
+                   (define-extended-language #,extended-lang-def #,base-lang-use1
+                     (#,extended-nt-name .... variable))
+                   (redex-match #,base-lang-use2 #,base-nt-use 1)
+                   (redex-match #,extended-lang-use #,extended-nt-use 'x)
+                   (redex-match #,base-lang-use3 #,alias-use 2))))
+      (done))
+    
+    (test (send annotations collected-arrows)
+          (expected-arrows
+           (list base-lang-bindings
+                 extended-lang-bindings
+                 base-nt-bindings
+                 extended-nt-bindings
+                 alias-bindings))))
   
-  (parameterize ([current-annotations annotations]
-                 [current-namespace module-namespace])
-    (add-syntax
-     (expand #`(let ()
-                 (define-language #,base-lang-def
-                   ((#,base-nt-name #,base-nt-alias) number))
-                 (define-extended-language #,extended-lang-def #,base-lang-use1
-                   (#,extended-nt-name .... variable))
-                 (redex-match #,base-lang-use2 #,base-nt-use 1)
-                 (redex-match #,extended-lang-use #,extended-nt-use 'x)
-                 (redex-match #,base-lang-use3 #,alias-use 2))))
-    (done))
-  
-  (test (send annotations collected-arrows)
-        (expected-arrows
-         (list base-lang-bindings
-               extended-lang-bindings
-               base-nt-bindings
-               extended-nt-bindings
-               alias-bindings))))
+  (let ([annotations (new collector%)])
+    (define-values (add-syntax done)
+      (make-traversal module-namespace #f))
+    
+    (parameterize ([current-annotations annotations]
+                   [current-namespace module-namespace])
+      (add-syntax
+       (expand #`(let ()
+                   (define-language #,base-lang-def)
+                   (define-extended-language #,extended-lang-def #,base-lang-use1
+                     (#,extended-nt-name (#,extended-nt-name2)))
+                   (void))))
+      (done))
+    
+    (test (send annotations collected-arrows)
+          (expected-arrows
+           (list (list base-lang-def base-lang-use1)
+                 (list extended-nt-name extended-nt-name2))))))
   
     
 

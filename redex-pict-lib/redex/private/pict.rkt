@@ -579,12 +579,23 @@
 (define (do-language->pict what lang specd-non-terminals)
   (unless (compiled-lang-pict-builder lang)
     (error what "cannot render the result of define-union-language"))
-  (let ([all-non-terminals (hash-map (compiled-lang-ht lang) (λ (x y) x))])
-    (when specd-non-terminals
-      (check-non-terminals what specd-non-terminals lang))
-    (make-grammar-pict (compiled-lang-pict-builder lang) 
-                       (or specd-non-terminals all-non-terminals)
-                       all-non-terminals)))
+  (define pict-info (compiled-lang-pict-builder lang))
+  (define all-non-terminals (pict-info->all-nonterminals pict-info))
+  (when specd-non-terminals
+    (check-non-terminals what specd-non-terminals lang))
+  (make-grammar-pict pict-info
+                     (or specd-non-terminals all-non-terminals)
+                     all-non-terminals))
+
+(define (pict-info->all-nonterminals pict-info)
+  (cond
+    [(vector? pict-info)
+     (append (pict-info->all-nonterminals (vector-ref pict-info 0))
+             (map caar (vector-ref pict-info 1)))]
+    [else
+     (for*/list ([nt+rhs (in-list pict-info)]
+                 [nt (in-list (car nt+rhs))])
+       nt)]))
 
 (define render-language-nts (make-parameter #f))
 

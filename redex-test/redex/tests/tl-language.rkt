@@ -1,12 +1,48 @@
 #lang racket
 (require "private/test-util.rkt"
          redex/reduction-semantics
-         (only-in redex/private/lang-struct make-bindings make-bind)
+         (only-in redex/private/lang-struct
+                  make-bindings make-bind
+                  compiled-lang-lang compiled-lang-cclang
+                  nt-rhs nt-name rhs-pattern)
          racket/match
          (for-syntax redex/private/term-fn racket/base))
 
+(define-namespace-anchor ns-anchor)
+(define ns (namespace-anchor->namespace ns-anchor))
+
 (module test racket/base)
 (reset-count)
+
+(define-syntax (language-aliases stx)
+  (syntax-case stx ()
+    [(_ x)
+     (with-syntax ([x (language-id-nt-aliases #'x 'aliases)])
+       #''x)]))
+
+(define (language-nts-as-set lang)
+  (for/set ([nt (in-list (compiled-lang-lang lang))])
+    (nt-name nt)))
+
+(define (language-cross-nts lang)
+  (for/set ([nt (in-list (compiled-lang-cclang lang))])
+    (nt-name nt)))
+
+(define (get-bad-nt-references lang aliases)
+  (define not-really-nts (set))
+  (define nts (language-nts-as-set lang))
+  (for ([nt (in-list (compiled-lang-lang lang))])
+    (for ([rhs (in-list (nt-rhs nt))])
+      (let loop ([pat (rhs-pattern rhs)])
+        (match pat
+          [`(nt ,n)
+           (unless (set-member? nts n)
+             (set! not-really-nts (set-add not-really-nts n)))]
+          [(? list?)
+           (for ([pat (in-list pat)])
+             (loop pat))]
+          [_ (void)]))))
+  not-really-nts)
 
 (define-language empty-language)
 
@@ -150,6 +186,7 @@
     ((x y) 1 2 3))
   (define-extended-language lang2 lang
     ((z w) 5 6 7))
+  (test (language-aliases lang2) (hash 'y 'x 'w 'z))
   (test (pair? (redex-match lang2 z 5)) #t)
   (test (pair? (redex-match lang2 w 6)) #t))
 
@@ -207,26 +244,31 @@
   ;; this test ran into an infinite loop in an earlier version of redex.
   (test (redex-match replace-both X (term explode)) #f))
 
-(test (with-handlers ([exn? exn-message])
-        (let () 
-          (define-language main
-            [(X Y) z])
-          (define-extended-language new
-            main
-            [(X Y Z) q])
-          (void)))
-      "define-extended-language: new language extends old non-terminal X and also adds new shortcut Z")
+(let () 
+  (define-language main
+    [(X Y) z])
+  (define-extended-language new
+    main
+    [(X Y Z) q])
+  (test (language-aliases main) (hash 'Y 'X))
+  (test (language-aliases new) (hash 'Y 'X 'Z 'X)))
 
-(test (with-handlers ([exn? exn-message])
-        (let () 
-          (define-language main
-            [(X Y) z]
-            [(P Q) w])
-          (define-extended-language new
-            main
-            [(X P) q])
-          (void)))
-      "define-extended-language: new language does not have the same non-terminal aliases as the old, non-terminal X was not in the same group as P in the old language")
+(test (with-handlers ([exn:fail:syntax? exn-message])
+        (parameterize ([current-namespace ns])
+          (expand '(let () 
+                     (define-language main
+                       [(X Y) z]
+                       [(P Q) w])
+                     (define-extended-language new
+                       main
+                       [(X P) q])
+                     (void)))))
+      (regexp
+       (regexp-quote
+        (string-append
+         "define-extended-language: new language does not have the same non-terminal"
+         " aliases as the old;\n non-terminal X was not in the same group"
+         " as P in the original language"))))
 
 ;; underscores in literals
 (let ()
@@ -650,6 +692,58 @@
   (define-extended-language L4 L3)
   (void))
 
+(let ()
+  (define-language L1
+    [x y ::= number])
+  (define-language L2
+    [x ::= variable])
+  (define-union-language L L1 L2)
+  (test (language-nts L1) (list 'x 'y))
+  (test (language-nts L2) (list 'x))
+  (test (language-nts L) (list 'x 'y))
+  (test (redex-match? L y 0) #t)
+  (test (redex-match? L y 'x) #t)
+  (test (language-aliases L) (hash 'y 'x))
+  (test (language-nts-as-set L) (set 'x))
+  (test (language-cross-nts L) (set 'x-x))
+  (test (get-bad-nt-references L (language-aliases L))
+        (set)))
+
+(let ()
+  (define-language L1
+    [x y ::= number])
+  (define-language L2
+    [y z ::= variable])
+  (define-union-language L L1 L2)
+  (test (language-aliases L) (hash 'y 'x 'z 'x))
+  (test (language-nts-as-set L) (set 'x))
+  (test (language-cross-nts L) (set 'x-x))
+  (test (get-bad-nt-references L (language-aliases L))
+        (set)))
+
+(let ()
+  (define-language L1
+    [x y ::= number (x y)])
+  (define-language L2
+    [y z ::= variable (y z)])
+  (define-union-language L L1 L2)
+  (test (language-aliases L) (hash 'y 'x 'z 'x))
+  (test (language-nts-as-set L) (set 'x))
+  (test (language-cross-nts L) (set 'x-x))
+  (test (get-bad-nt-references L (language-aliases L))
+        (set)))
+
+(let ()
+  (define-language L1
+    [x y ::= number (X x) (Y y)])
+  (define-language L2
+    [oy z ::= variable (OY oy) (Z z)])
+  (define-union-language L (o L1) L2)
+  (test (language-aliases L) (hash 'oy 'ox 'z 'ox))
+  (test (language-nts-as-set L) (set 'ox))
+  (test (get-bad-nt-references L (language-aliases L))
+        (set)))
+
 (test (let ()
         (define-term x 1)
         (term (x x)))
@@ -819,9 +913,29 @@
   (test (redex-match L3 k (term Aa)) #f))
 
 (let ()
+  (define-language L1
+    [x y ::= number]
+    [z ::= whatever])
+  (define-extended-language L2 L1
+    [x y ::= .... variable])
+  (test (language-aliases L2) (hash 'y 'x))
+  (test (language-nts-as-set L2) (set 'x 'z))
+  (test (get-bad-nt-references L2 (language-aliases L2)) (set)))
+
+(let ()
+  (define-language L1
+    [x y ::= number]
+    [z ::= whatever])
+  (define-extended-language L2 L1
+    [y x ::= .... variable])
+  (test (language-aliases L2) (hash 'y 'x))
+  (test (language-nts-as-set L2) (set 'x 'z))
+  (test (get-bad-nt-references L2 (language-aliases L2)) (set)))
+
+(let ()
   (define-language L
     (A ::= (hole x_1) (hole x_1 (in-hole A x_1)))
     (x ::= variable-not-otherwise-mentioned))
-  (test (redex-match? L (in-hole A x) (term (y z (z t)))) #t))
+  (test (redex-match? L (in-hole A x) (term (y z (z t)))) #t))  
 
 (print-tests-passed 'tl-language.rkt)

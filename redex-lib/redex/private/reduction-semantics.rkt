@@ -16,17 +16,16 @@
                   α-equal? safe-subst binding-forms-opened?)
          (only-in "binding-forms-definitions.rkt"
                   shadow nothing)
-         (for-syntax "cycle-check.rkt"
-                     setup/path-to-relative)
          racket/trace
          racket/contract
          racket/list
          racket/set
          racket/pretty
-         data/union-find
          (rename-in racket/match (match match:)))
 
 (require (for-syntax syntax/name
+                     setup/path-to-relative
+                     "cycle-check.rkt"
                      "loc-wrapper-ct.rkt"
                      "rewrite-side-conditions.rkt"
                      "term-fn.rkt"
@@ -41,10 +40,13 @@
                      syntax/parse/experimental/contract
                      syntax/name
                      racket/syntax
-                     racket/match))
+                     racket/match
+                     data/union-find))
 
 (define (language-nts lang)
-  (hash-map (compiled-lang-ht lang) (λ (x y) x)))
+  (sort (append (hash-keys (compiled-lang-ht lang))
+                (compiled-lang-aliases lang))
+         symbol<?))
 
 (define-for-syntax (term-matcher orig-stx make-matcher)
   (syntax-case orig-stx ()
@@ -162,13 +164,17 @@
   (syntax-case stx ()
     [(_ red lang nt)
      (identifier? (syntax nt))
-     (with-syntax ([(syncheck-expr side-conditions-rewritten (names ...) (names/ellipses ...))
-                    (rewrite-side-conditions/check-errs #'lang
-                                                        'compatible-closure 
-                                                        #t
-                                                        (syntax (cross nt)))])
-       (syntax (begin syncheck-expr
-                      (do-context-closure red lang `side-conditions-rewritten 'compatible-closure))))]
+     (let ()
+       (define alias-table (language-id-nt-aliases #'lang 'compatible-closure))
+       (define orig-nt (syntax-e #'nt))
+       (define unaliased-nt (hash-ref alias-table orig-nt orig-nt))
+       (with-syntax ([(syncheck-expr side-conditions-rewritten (names ...) (names/ellipses ...))
+                      (rewrite-side-conditions/check-errs #'lang
+                                                          'compatible-closure 
+                                                          #t
+                                                          #`(cross #,unaliased-nt))])
+         (syntax (begin syncheck-expr
+                        (do-context-closure red lang `side-conditions-rewritten 'compatible-closure)))))]
     [(_ red lang nt)
      (raise-syntax-error 'compatible-closure "expected a non-terminal as last argument" stx (syntax nt))]))
 
@@ -1906,13 +1912,25 @@
                         [bindings
                          (record-nts-disappeared-bindings
                           #'lang-id
-                          (syntax->list #'(all-names ...)))]
-                        [binding-table
-                         (compile-binding-forms bf-defs (map syntax-e
-                                                             (syntax->list #'(all-names ...)))
-                                                #'form-name)])
+                          (syntax->list #'(all-names ...)))])
+
+         (define aliases
+           (for*/hash ([name-stx (in-list (syntax->list #'(name ...)))]
+                       #:unless (identifier? name-stx)
+                       [orig (in-value (syntax-e (car (syntax->list name-stx))))]
+                       [alias (in-list (cdr (syntax->list name-stx)))])
+             (values (syntax-e alias) orig)))
+           
+           (define nt-identifiers (build-nt-identifiers-table #'lang-id #'(all-names ...)))
+           
            (let ([all-names-stx-list (syntax->list #'(all-names ...))])
-             (with-syntax ([(((r-syncheck-expr r-rhs r-names r-names/ellipses) ...) ...) 
+             (with-syntax ([binding-table
+                            (compile-binding-forms bf-defs (map syntax-e
+                                                                (syntax->list #'(all-names ...)))
+                                                   #'form-name
+                                                   aliases
+                                                   nt-identifiers)]
+                           [(((r-syncheck-expr r-rhs r-names r-names/ellipses) ...) ...) 
                             ;; r-syncheck-expr has nothing interesting, I believe, so drop it
                             (map (lambda (rhss) 
                                    (map (lambda (rhs)
@@ -1920,7 +1938,9 @@
                                            (map syntax->datum all-names-stx-list)
                                            (syntax-e #'form-name)
                                            #f
-                                           rhs)) 
+                                           rhs
+                                           #:aliases aliases
+                                           #:nt-identifiers nt-identifiers)) 
                                         (syntax->list rhss)))
                                  (syntax->list (syntax ((rhs ...) ...))))]
                            [((rhs/lw ...) ...) 
@@ -1945,8 +1965,8 @@
                (for ([name (in-list all-names-stx-list)])
                  (hash-set! nt->hole (syntax-e name) 'unknown))
                (fill-nt-hole-map (syntax->datum #'(name ...))
-                                 (syntax->list #'((r-rhs ...) ...))
-                                 (syntax->list #'((rhs ...) ...))
+                                 (map syntax->list (syntax->list #'((r-rhs ...) ...)))
+                                 (map syntax->list (syntax->list #'((rhs ...) ...)))
                                  nt->hole)
                
                (define language-def
@@ -1966,14 +1986,8 @@
                                             (let ([l (syntax->list name-stx)])
                                               (map (λ (x) (list x (car l)))
                                                    (cdr l)))))
-                                      (syntax->list #'(name ...))))])
-                   
-                   ;; note: when there are multiple names for a single non-terminal,
-                   ;; we build equivalent non-terminals by redirecting all except the
-                   ;; first non-terminal to the first one, and then make the first one
-                   ;; actually have all of the productions. This should produce better
-                   ;; caching behavior and should compile faster than duplicating the
-                   ;; right-hand sides.
+                                      (syntax->list #'(name ...))))]
+                               [(alias-names ...) (hash-keys aliases)])
                    (prune-syntax
                     (syntax/loc stx
                       (define define-language-name
@@ -1981,11 +1995,10 @@
                           (let ([all-names 1] ...)
                             (begin (void) refs ...))
                           (compile-language
-                           (list (list '(uniform-names ...) rhs/lw ...) ...)
-                           (list (make-nt 'first-names (list (make-rhs `r-rhs) ...)) ...
-                                 (make-nt 'new-name (list (make-rhs '(nt orig-name)))) ...)
-                           (mk-uf-sets '((uniform-names ...) ...))
-                           binding-table)))))))
+                           (list (list 'name rhs/lw ...) ...)
+                           (list (make-nt 'first-names (list (make-rhs `r-rhs) ...)) ...)
+                           binding-table
+                           '(alias-names ...))))))))
                
                (define errortrace-safe-language-def ;; this keeps things from breaking at the top level if `errortrace` is on
                  (if (eq? 'top-level (syntax-local-context))
@@ -2011,7 +2024,10 @@
                             (identifier? #'x)
                             #'define-language-name]))
                        '(all-names ...)
-                       (to-table #'lang-id #'(all-names ...))
+                       '#,aliases
+                       (hash #,@(apply append (for/list ([(k v) (in-hash nt-identifiers)])
+                                                (with-syntax ([k k] [v v])
+                                                  (list #''k #'#'v)))))
                        '#,nt->hole
                        binding-table)))
                    #,errortrace-safe-language-def)))))))]))
@@ -2031,8 +2047,8 @@
           [orig-prods (in-list orig-prodss)])
       (define nt-hole-count
         (for/fold ([nt-hole-count (hash-ref nt->hole (car names))])
-                  ([prod (in-list (syntax->list prods))]
-                   [orig-prod (in-list (syntax->list orig-prods))])
+                  ([prod (in-list prods)]
+                   [orig-prod (in-list orig-prods)])
           (cond
             [(equal? (syntax-e prod) '....) nt-hole-count]
             [else
@@ -2058,15 +2074,14 @@
                              (if old (cons new old) new)))])))
 
 (define-for-syntax (lang-nt-id lang-stx nt-stx)
-  (format-id nt-stx "~a:~a" 
+  (format-id nt-stx "~a:~a"
              (syntax->datum lang-stx) 
              (syntax->datum nt-stx)
              #:source nt-stx
              #:props nt-stx))
              
-
-(define-for-syntax (to-table lang x)
-  (for/hash ([id (in-list (syntax->list x))])
+(define-for-syntax (build-nt-identifiers-table lang x)
+  (for/hash ([id (in-list (if (syntax? x) (syntax->list x) x))])
     (values (syntax-e id) (lang-nt-id lang id))))
 
 (define-struct binds (source binds))
@@ -2081,115 +2096,163 @@
                (raise-syntax-error 'define-extended-language "expected an identifier" stx #'orig-lang))
 
        (define-values (nt-defs bf-defs) (split-def-lang-defs #'defs))
-       (let ([old-names (language-id-nts #'orig-lang 'define-extended-language)]
-             [old-binding-table (language-id-binding-table #'orig-lang 'define-extended-language)]
-             [non-terms (parse-non-terminals nt-defs stx)])
-         (with-syntax* ([((names rhs ...) ...) non-terms]
-                        [(all-names ...)
-                         ;; The names may have duplicates if the extended language
-                         ;; extends non-terminals in the parent language. They need
-                         ;; to be removed for `define-union-language`
-                         (remove-duplicates
-                          (apply append old-names (map car non-terms))
-                          (λ (n1 n2)
-                            (let ([n1 (if (syntax? n1) (syntax-e n1) n1)]
-                                  [n2 (if (syntax? n2) (syntax-e n2) n2)])
-                              (eq? n1 n2))))]
-                        [binding-table
-                         #`(append #,(compile-binding-forms
-                                      bf-defs
-                                      (map syntax-e (syntax->list #'(all-names ...)))
-                                      #'form-name)
-                                   `#,old-binding-table)]
-                        [(define-language-name) (generate-temporaries #'(name))]
-                        [(nt-ids ...) (apply append (map car non-terms))]
-                        [uses
-                         (record-nts-disappeared-bindings #'orig-lang
-                                                          (syntax->list #'(nt-ids ...))
-                                                          'disappeared-use)]
-                        [bindings
-                         (record-nts-disappeared-bindings #'name (syntax->list #'(nt-ids ...)))])
-           (define all-extended-nts
-             (append (language-id-nts #'orig-lang 'define-extended-language)
-                     (map syntax-e
-                          (syntax->list #'(all-names ...)))))
-           (define nt->hole
-             (hash-copy
-              (language-id-nt-hole-map #'orig-lang 'define-extended-language)))
-           (for ([names (in-list (syntax->datum #'(names ...)))])
-             (for ([name (in-list names)])
-               (unless (hash-ref nt->hole name #f)
-                 (hash-set! nt->hole name 'unknown))))
-           (define extended-language-stx
-             (with-syntax ([(((r-syncheck-expr r-rhs r-names r-names/ellipses) ...) ...)
-                            (for/list ([rhss (in-list (syntax->list (syntax ((rhs ...) ...))))])
-                              (for/list ([x (in-list (syntax->list rhss))])
-                                (rewrite-side-conditions/check-errs
-                                 all-extended-nts
-                                 'define-extended-language
-                                 #f
-                                 x)))]
-                           [((rhs/lw ...) ...)
-                            (map (lambda (rhss) (map to-lw/proc (syntax->list rhss)))
-                                 (syntax->list (syntax ((rhs ...) ...))))]
-                           [((uniform-names ...) ...)
-                            (map (λ (x) (if (identifier? x) (list x) x))
-                                 (syntax->list (syntax (names ...))))])
 
-               (fill-nt-hole-map (syntax->datum #'((uniform-names ...) ...))
-                                 (syntax->list #'((r-rhs ...) ...))
-                                 (syntax->list #'((rhs ...) ...))
-                                 nt->hole)
+       (define aliases (hash-copy (language-id-nt-aliases #'orig-lang 'define-extended-language)))
+
+       (define old-names (language-id-nts #'orig-lang 'define-extended-language))
+       (define old-binding-table (language-id-binding-table #'orig-lang 'define-extended-language))
+       (define non-terms (parse-non-terminals nt-defs stx))
+       
+       ;; namess : (listof (listof identifier?))
+       ;; rhsss : (listof (listof syntax?))
+       (define-values (namess rhsss)
+         (with-syntax ([((names rhs ...) ...) non-terms])
+           (values (for/list ([names (in-list (syntax->list #'(names ...)))])
+                     (syntax->list names))
+                   (map syntax->list (syntax->list #'((rhs ...) ...))))))
+
+       ;; fill in the alias table for the extended language and
+       ;; check for alias-related syntax errors
+       (define alias-overlap-ht (make-hash))
+       (for ([names (in-list namess)])
+         
+         ;; fill in the aliases table when the names aren't already in there
+         ;; and the names aren't non-terminals in the parent language
+         (let ([first-name (syntax-e (car names))])
+           (unless (hash-ref aliases first-name #f)
+             (for ([name (in-list (cdr names))])
+               (unless (member (syntax-e name) old-names)
+                 (unless (hash-ref aliases (syntax-e name) #f)
+                   (hash-set! aliases (syntax-e name) first-name))))))
+         
+         (define first (car names))
+         (define unaliased-first (hash-ref aliases (syntax-e first) (syntax-e first)))
+         (when (hash-ref alias-overlap-ht unaliased-first #f)
+           (define orig (hash-ref alias-overlap-ht unaliased-first))
+           (raise-syntax-error
+            'define-extended-language
+            (string-append
+             "two different clauses apply to the same alias group\n;"
+             (format " ~a and ~a are from the same group"
+                     (syntax-e orig) (syntax-e first)))
+            stx
+            orig (list first)))
+         (hash-set! alias-overlap-ht unaliased-first first)
+         (for ([name (in-list (cdr names))])
+           (define this-unaliased (hash-ref aliases (syntax-e name) (syntax-e name)))
+           (unless (equal? this-unaliased unaliased-first)
+             (raise-syntax-error
+              'define-extended-language
+              (string-append
+               "new language does not have the same non-terminal aliases as the old;\n"
+               (format " non-terminal ~a was not in the same group as ~a in the original language"
+                       (syntax-e first) (syntax-e name)))
+              stx
+              first (list name)))))
+
+       (define unaliased-new-names
+         (for/list ([names (in-list namess)])
+           (define name (syntax-e (car names)))
+           (hash-ref aliases name name)))
+
+       (define unaliased-all-names (remove-duplicates (append old-names unaliased-new-names)))
+       
+       (for ([rhss (in-list rhsss)]
+             [the-name (in-list unaliased-new-names)]
+             #:when #t
+             [rhs (in-list rhss)])
+         (when (equal? (syntax-e rhs) '....)
+           (unless (member the-name old-names)
+             (raise-syntax-error
+              #f
+              (format "cannot extend the `~a' non-terminal because `~s' does not define it"
+                      the-name
+                      (syntax->datum #'orig-lang))
+              stx rhs))))
+
+       (define all-nts-from-input (apply append namess))
+
+       (define nt-identifiers (build-nt-identifiers-table #'name all-nts-from-input))
+
+       (with-syntax* ([((names rhs ...) ...) non-terms]
+                      [binding-table
+                       #`(append
+                          #,(compile-binding-forms bf-defs unaliased-all-names
+                                                   #'form-name aliases nt-identifiers)
+                          `#,old-binding-table)]
+                      [(define-language-name) (generate-temporaries #'(name))]
+                      [uses
+                       (record-nts-disappeared-bindings #'orig-lang
+                                                        all-nts-from-input
+                                                        'disappeared-use)]
+                      [bindings
+                       (record-nts-disappeared-bindings #'name all-nts-from-input)])
+
+         (define nt->hole
+           (hash-copy
+            (language-id-nt-hole-map #'orig-lang 'define-extended-language)))
+         (for ([names (in-list (syntax->datum #'(names ...)))])
+           (for ([name (in-list names)])
+             (unless (hash-ref nt->hole name #f)
+               (hash-set! nt->hole name 'unknown))))
+         
+         (define extended-language-stx
+           (with-syntax ([(((r-syncheck-expr r-rhs r-names r-names/ellipses) ...) ...)
+                          (for/list ([rhss (in-list rhsss)])
+                            (for/list ([rhs (in-list rhss)])
+                              (rewrite-side-conditions/check-errs
+                               unaliased-all-names
+                               'define-extended-language
+                               #f
+                               rhs
+                               #:aliases aliases
+                               #:nt-identifiers nt-identifiers)))]
+                         [((rhs/lw ...) ...)
+                          (for/list ([rhss (in-list rhsss)])
+                            (map to-lw/proc rhss))])
+             (fill-nt-hole-map (map list unaliased-new-names)
+                               (map syntax->list (syntax->list #'((r-rhs ...) ...)))
+                               rhsss
+                               nt->hole)
+             
+             (with-syntax ([(primary-name ...) unaliased-new-names]
+                           [((all-names ...) ...) namess]
+                           [(alias-names ...) (hash-keys aliases)])
                (syntax/loc stx
-                 (do-extend-language (begin r-syncheck-expr ... ... orig-lang)
-                                     (list (make-multi-name-nt '(uniform-names ...)
-                                                               (list (make-rhs `r-rhs) ...)) ...)
-                                     binding-table
-                                     (list (list '(uniform-names ...) rhs/lw ...) ...)))))
-           
-           (quasisyntax/loc stx
-             (begin
-               uses
-               bindings
-               (define define-language-name #,extended-language-stx)
-               (define-syntax name
-                 (make-set!-transformer
-                  (make-language-id
-                   (λ (stx)
-                     (syntax-case stx (set!)
-                       [(set! x e) (raise-syntax-error 'define-extended-language "cannot set! identifier" stx #'e)]
-                       [(x e (... ...)) #'(define-language-name e (... ...))]
-                       [x 
-                        (identifier? #'x)
-                        #'define-language-name]))
-                   '(all-names ...)
-                   (to-table #'name #'(nt-ids ...))
-                   '#,nt->hole
-                   binding-table))))))))]))
-
-(define-syntax (extend-language stx)
-  (syntax-case stx ()
-    [(_ lang (all-names ...) binding-table (name rhs ...) ...)
-     (with-syntax ([(((r-syncheck-expr r-rhs r-names r-names/ellipses) ...) ...)
-                    (for/list ([rhss (in-list (syntax->list (syntax ((rhs ...) ...))))])
-                      (for/list ([x (in-list (syntax->list rhss))])
-                        (rewrite-side-conditions/check-errs
-                         (append (language-id-nts #'lang 'define-extended-language)
-                                 (map syntax-e
-                                      (syntax->list #'(all-names ...))))
-                         'define-extended-language
-                         #f
-                         x)))]
-                   [((rhs/lw ...) ...) (map (lambda (rhss) (map to-lw/proc (syntax->list rhss)))
-                                            (syntax->list (syntax ((rhs ...) ...))))]
-                   [((uniform-names ...) ...)
-                    (map (λ (x) (if (identifier? x) (list x) x))
-                         (syntax->list (syntax (name ...))))])
-       (syntax/loc stx
-         (do-extend-language (begin r-syncheck-expr ... ... lang)
-                             (list (make-multi-name-nt '(uniform-names ...) (list (make-rhs `r-rhs) ...)) ...)
-                             binding-table
-                             (list (list '(uniform-names ...) rhs/lw ...) ...))))]))
+                 (do-extend-language
+                  (begin r-syncheck-expr ... ... orig-lang)
+                  (list (make-nt 'primary-name
+                                 (list (make-rhs `r-rhs) ...)) ...)
+                  binding-table
+                  (list (list '(all-names ...) rhs/lw ...) ...)
+                  '(alias-names ...))))))
+         
+         (quasisyntax/loc stx
+           (begin
+             uses
+             bindings
+             (define define-language-name #,extended-language-stx)
+             (define-syntax name
+               (make-set!-transformer
+                (make-language-id
+                 (λ (stx)
+                   (syntax-case stx (set!)
+                     [(set! x e) (raise-syntax-error 'define-extended-language "cannot set! identifier" stx #'e)]
+                     [(x e (... ...)) #'(define-language-name e (... ...))]
+                     [x 
+                      (identifier? #'x)
+                      #'define-language-name]))
+                 '#,unaliased-all-names
+                 
+                 ;; make sure the aliases hash is immutable
+                 '#,(for/hash ([(k v) (in-hash aliases)])
+                      (values k v))
+                 
+                 (hash #,@(apply append (for/list ([(k v) (in-hash nt-identifiers)])
+                                          (with-syntax ([k k] [v v])
+                                            (list #''k #'#'v)))))
+                 '#,nt->hole
+                 binding-table)))))))]))
 
 (define extend-nt-ellipses '(....))
 
@@ -2197,7 +2260,7 @@
 ;;    -> compiled-lang
 ;; note: the nts that come here are an abuse of the `nt' struct; they have
 ;; lists of symbols in the nt-name field.
-(define (do-extend-language old-lang new-nts binding-table new-pict-infos)
+(define (do-extend-language old-lang new-nts binding-table new-pict-infos alias-names)
   (unless (compiled-lang? old-lang)
     (error 'define-extended-language "expected a language as first argument, got ~e" old-lang))
   
@@ -2205,77 +2268,29 @@
         [old-ht (make-hasheq)]
         [new-ht (make-hasheq)])
     
-    
-    (for-each (λ (nt) 
-                (hash-set! old-ht (nt-name nt) nt)
-                (hash-set! new-ht (nt-name nt) nt))
-              old-nts)
-    
-    (for-each (λ (raw-nt)
-                (let* ([names (nt-name raw-nt)]
-                       [rhs (nt-rhs raw-nt)]
-                       [primary-names (map (λ (name) (find-primary-nt name old-lang)) names)]
-                       [main-primary (car primary-names)])
-                  
-                  ;; error checking
-                  (when (and (ormap not primary-names)
-                             (ormap symbol? primary-names))
-                    (error 'define-extended-language "new language extends old non-terminal ~a and also adds new shortcut ~a"
-                           (ormap (λ (x y) (and (symbol? x) y)) primary-names names)
-                           (ormap (λ (x y) (and (not x) y)) primary-names names)))
-                  
-                  ;; error checking
-                  (when (andmap symbol? primary-names)
-                    (let ([main-orig (car names)])
-                      (let loop ([primary-names (cdr primary-names)]
-                                 [names (cdr names)])
-                        (cond
-                          [(null? primary-names) void]
-                          [else 
-                           (unless (eq? main-primary (car primary-names))
-                             (error 'define-extended-language
-                                    (string-append 
-                                     "new language does not have the same non-terminal aliases as the old,"
-                                     " non-terminal ~a was not in the same group as ~a in the old language")
-                                    (car names)
-                                    main-orig))
-                           (loop (cdr primary-names) (cdr names))]))))
-                                  
-                  
-                  ;; rebind original nt
-                  (let ([nt (make-nt (or main-primary (car names)) rhs)])
-                    (cond
-                      [(ormap (λ (rhs) (member (rhs-pattern rhs) extend-nt-ellipses))
-                              (nt-rhs nt))
-                       (unless (hash-ref old-ht (nt-name nt) #f)
-                         (error 'define-extended-language
-                                "the language extends the ~s non-terminal, but that non-terminal is not in the old language"
-                                (nt-name nt)))
-                       (hash-set! new-ht 
-                                  (nt-name nt)
-                                  (make-nt
-                                   (nt-name nt)
-                                   (append (nt-rhs (hash-ref old-ht (nt-name nt)))
-                                           (filter (λ (rhs) (not (member (rhs-pattern rhs) extend-nt-ellipses)))
-                                                   (nt-rhs nt)))))]
-                      [else
-                       (hash-set! new-ht (nt-name nt) nt)]))
-                  
-                  ;; add new shortcuts (if necessary)
-                  (unless main-primary
-                    (for-each (λ (shortcut-name)
-                                (hash-set! new-ht 
-                                           shortcut-name 
-                                           (make-nt shortcut-name (list (make-rhs `(nt ,(car names)))))))
-                              (cdr names)))))
-                  
-              new-nts)
+    (for ([nt (in-list old-nts)])
+      (hash-set! old-ht (nt-name nt) nt)
+      (hash-set! new-ht (nt-name nt) nt))
+
+    (for ([nt (in-list new-nts)])
+      (cond
+        [(ormap (λ (rhs) (member (rhs-pattern rhs) extend-nt-ellipses))
+                (nt-rhs nt))
+         (hash-set! new-ht 
+                    (nt-name nt)
+                    (make-nt
+                     (nt-name nt)
+                     (append (nt-rhs (hash-ref old-ht (nt-name nt)))
+                             (filter (λ (rhs) (not (member (rhs-pattern rhs) extend-nt-ellipses)))
+                                     (nt-rhs nt)))))]
+        [else
+         (hash-set! new-ht (nt-name nt) nt)]))
     
     (compile-language (vector (compiled-lang-pict-builder old-lang)
                               new-pict-infos)
                       (hash-map new-ht (λ (x y) y))
-                      (compiled-lang-nt-map old-lang)
-                      binding-table)))
+                      binding-table
+                      alias-names)))
 
 (define-syntax (define-union-language stx)
   (syntax-case stx ()
@@ -2285,28 +2300,38 @@
          (raise-syntax-error 'define-extended-language "expected an identifier" stx #'name))
        (when (null? (syntax->list #'(orig-langs ...)))
          (raise-syntax-error 'define-union-language "expected at least one additional language" stx))
+       
+       (define (add-prefix prefix no-prefix-nt)
+         (string->symbol (string-append (or prefix "")
+                                        (symbol->string no-prefix-nt))))
+
        ;; normalized-orig-langs : (listof (list string[prefix] id (listof symbol)[nts] stx[orig clause in union] hole-map))
        (define normalized-orig-langs
          (for/list ([orig-lang (in-list (syntax->list #'(orig-langs ...)))])
            (syntax-case orig-lang ()
-             [x (identifier? #'x)
-                (list #f
-                      #'x
-                      (language-id-nts #'x 'define-union-language)
-                      orig-lang
-                      (language-id-nt-hole-map #'x 'define-union-language))]
-             [(prefix lang)
-              (and (identifier? #'prefix)
-                   (identifier? #'lang))
-              (list (symbol->string (syntax-e #'prefix))
+             [lang
+              (identifier? #'lang)
+              (list #f
                     #'lang
                     (language-id-nts #'lang 'define-union-language)
                     orig-lang
-                    (language-id-nt-hole-map #'lang 'define-union-language))]
+                    (language-id-nt-hole-map #'lang 'define-union-language)
+                    (language-id-nt-aliases #'lang 'define-union-language))]
+             [(prefix lang)
+              (and (identifier? #'prefix)
+                   (identifier? #'lang))
+              (let ([prefix-str (symbol->string (syntax-e #'prefix))])
+                (list prefix-str
+                      #'lang
+                      (language-id-nts #'lang 'define-union-language)
+                      orig-lang
+                      (language-id-nt-hole-map #'lang 'define-union-language)
+                      (for/hash ([(k v) (language-id-nt-aliases #'lang 'define-union-language)])
+                        (values (add-prefix prefix-str k) (add-prefix prefix-str v)))))]
              [else (raise-syntax-error 'define-union-language 
                                        "malformed additional language"
                                        stx orig-lang)])))
-       
+
        ;; ht : sym -o> (listof stx)
        ;; maps each non-terminal (with its prefix) to a
        ;; list of syntax objects that they come from in the original
@@ -2330,35 +2355,99 @@
          (define prefix (list-ref normalized-orig-lang 0))
          (define this-lang-hole->nt (list-ref normalized-orig-lang 4))
          (for ([no-prefix-nt (in-list (list-ref normalized-orig-lang 2))])
-           (define with-prefix-nt (string->symbol (string-append (or prefix  "")
-                                                                 (symbol->string no-prefix-nt))))
+           (define with-prefix-nt (add-prefix prefix no-prefix-nt))
            (check-hole-matching! with-prefix-nt (hash-ref this-lang-hole->nt no-prefix-nt))
            (let ([prev (hash-ref names-table with-prefix-nt '())])
              (hash-set! names-table with-prefix-nt (cons (list-ref normalized-orig-lang 3) prev)))))
+
+       ;; work out the aliasing for the union language
+       (define aliases
+         (let ()
+           
+           ;; a hash mapping (alias or non-alias) non-terminal names to
+           ;; union-find sets. each uf set's canonical element is a
+           ;; racket/set set that has all of the non-alias non-terminals in it,
+           ;; the name to use for the final non-terminal, and an index
+           ;; indicating which argument to define-union-language the name comes from
+           ;; (to make the decision about which real non-terminal name to use
+           ;; when multiple get joined together)
+           (define nts (make-hash))
+           
+           ;; first add the real non-terminals into nts
+           (for ([normalized-orig-lang (in-list normalized-orig-langs)]
+                 [i (in-naturals)]
+                 #:when #t
+                 [prefix (in-value (list-ref normalized-orig-lang 0))]
+                 #:when #t
+                 [nt (in-list (list-ref normalized-orig-lang 2))])
+             (define nt-with-prefix (add-prefix prefix nt))
+             (unless (hash-ref nts nt-with-prefix #f)
+               ;; if there is overlap in the real non-terminals, still just
+               ;; make only one entry in the nts table
+               (hash-set! nts nt-with-prefix (uf-new (vector i nt-with-prefix)))))
+           
+           ;; next add in the aliases, noting that an alias for one
+           ;; language could have been a non-terminal already in another one
+           (for* ([normalized-orig-lang (in-list normalized-orig-langs)]
+                  [(alias real) (in-hash (list-ref normalized-orig-lang 5))])
+             (unless (hash-ref nts alias #f) (hash-set! alias (uf-new #f)))
+             (define real-set (hash-ref nts real))
+             (define real-info (uf-find real-set))
+             (define alias-set (hash-ref nts alias))
+             (define alias-info (uf-find alias-set))
+             (define new-info
+               (cond
+                 [alias-info
+                  (if (< (vector-ref alias-info 0)
+                         (vector-ref real-info 0))
+                      alias-info
+                      real-info)]
+                 [else real-info]))
+             (uf-union! real-set alias-set)
+             (uf-set-canonical! real-set new-info))
+           
+           ;; at this point, the canonical elements in the 'nts' hash
+           ;; will either have the same non-terminal as the key
+           ;; (which means they are real non-terminals in the union language)
+           ;; or the will not (which means they are alias non-terminals
+           ;; in the union language). Build the aliases table accordingly
+           
+           (define aliases (make-hash))
+           (for ([(nt set) (in-hash nts)])
+             (define info (uf-find set))
+             (unless (equal? nt (vector-ref info 1))
+               (hash-set! aliases nt (vector-ref info 1))))
+
+           ;; make the hash be immutable
+           (for/hash ([(k v) (in-hash aliases)])
+             (values k v))))
 
        (define binding-table-val
          #`(append
             #,@(map
                 (match-lambda
-                 [`(,prefix ,lang ,nts ,_ ,_)
+                 [`(,prefix ,lang ,_ ,_ ,_ ,_)
                   #` ` #,(map
                           (if prefix
                               (match-lambda
                                [`(,pat ,bspec)
-                                `(,(prefix-nts prefix pat)  ,bspec)])
+                                `(,(prefix-nts prefix pat aliases) ,bspec (hash))])
                               (λ (x) x))
 
                           (language-id-binding-table lang 'define-union-language))])
                 normalized-orig-langs)))
        
+       (define nt-identifiers (build-nt-identifiers-table #'name '()))
+       
        (with-syntax ([(all-names ...) (sort (hash-map names-table (λ (x y) x)) string<=? #:key symbol->string)]
-                     [((prefix old-lang _1 _2 _3) ...) normalized-orig-langs]
+                     [((prefix old-lang _1 _2 _3 _4) ...) normalized-orig-langs]
                      [(define-language-name) (generate-temporaries #'(name))]
                      [binding-table binding-table-val])
          #`(begin
              (define define-language-name (union-language
                                            (list (list 'prefix old-lang) ...)
-                                           binding-table))
+                                           binding-table
+                                           '#,aliases))
              (define-syntax name
                (make-set!-transformer
                 (make-language-id
@@ -2370,50 +2459,26 @@
                       (identifier? #'x)
                       #'define-language-name]))
                  '(all-names ...)
-                 (to-table #'name #'())
+                 '#,aliases
+                 (hash #,@(apply append (for/list ([(k v) (in-hash nt-identifiers)])
+                                          (with-syntax ([k k] [v v])
+                                            (list #''k #'#'v)))))
                  '#,nt->hole
                  binding-table))))))]))
 
-(define (union-language old-langs/prefixes binding-table)
+(define (union-language old-langs/prefixes binding-table aliases)
   (define (add-prefix prefix sym)
     (if prefix
         (string->symbol
          (string-append prefix
                         (symbol->string sym)))
         sym))
-  ;; nt-maps-with-prefixes : (listof hash[symbol -o> uf-set?])
-  ;; add prefixes on the canonical elements and in the
-  ;; hash-table domains
-  (define nt-maps-with-prefixes
-    (for/list ([old-pr (in-list old-langs/prefixes)])
-      (define prefix (list-ref old-pr 0))
-      (define nt-map (compiled-lang-nt-map (list-ref old-pr 1)))
-      (cond
-        [prefix
-         (define already-prefixed '())
-         (for/hash ([(nt a-uf-set) (in-hash nt-map)])
-           (define already-prefixed?
-             (for/or ([x (in-list already-prefixed)])
-               (uf-same-set? x a-uf-set)))
-           (unless already-prefixed?
-             (uf-set-canonical! a-uf-set (add-prefix prefix (uf-find a-uf-set)))
-             (set! already-prefixed (cons a-uf-set already-prefixed)))
-           (values (add-prefix prefix nt) a-uf-set))]
-        [else nt-map])))
-
-  ;; combine all of the nt-maps into a single one,
-  ;; unioning the sets as approrpriate
-  (define new-nt-map (car nt-maps-with-prefixes))
-  (for ([nt-map (in-list (cdr nt-maps-with-prefixes))])
-    (for ([(k this-uf-set) (in-hash nt-map)])
-      (define final-uf-set (hash-ref new-nt-map k #f))
-      (cond
-        [final-uf-set 
-         (uf-union! final-uf-set this-uf-set)]
-        [else
-         (set! new-nt-map (hash-set new-nt-map k this-uf-set))])))
-
+  
   (define names-table (make-hash))
+
+  ;; add prefixes and rewrite aliases in the right-hand side of the
+  ;; nonterminals and add prefixes to the non-terminals
+  ;; as they are added into `names-table`
   (for ([old-lang/prefix (in-list old-langs/prefixes)])
     (define prefix (list-ref old-lang/prefix 0))
     (define lang (compiled-lang-lang (list-ref old-lang/prefix 1)))
@@ -2421,24 +2486,27 @@
       (define name (add-prefix prefix (nt-name nt)))
       (define new-rhses
         (for/set ([rhs (in-list (nt-rhs nt))])
-          (if prefix 
-              (make-rhs (prefix-nts prefix (rhs-pattern rhs)))
-              rhs)))
+          (make-rhs (prefix-nts prefix (rhs-pattern rhs) aliases))))
       (hash-set! names-table 
                  name
                  (set-union new-rhses (hash-ref names-table name (set))))))
+  
+  ;; some of the non-terminals may have become aliases because of
+  ;; the unioning process, in that case move their right-hand sides
+  ;; over to the correct name and remove the alias from `names-table`.
+  (for ([name (in-list (hash-keys names-table))])
+    (define aliased-to (hash-ref aliases name #f))
+    (when aliased-to
+      (hash-set! names-table aliased-to
+                 (set-union (hash-ref names-table name)
+                            (hash-ref names-table aliased-to)))
+      (hash-remove! names-table name)))
 
   (compile-language #f
                     (hash-map names-table (λ (name set) (make-nt name (set->list set))))
-                    new-nt-map binding-table))
+                    binding-table
+                    (hash-keys aliases)))
 
-
-;; find-primary-nt : symbol lang -> symbol or #f
-;; returns the primary non-terminal for a given nt, or #f if `nt' isn't bound in the language.
-(define (find-primary-nt nt lang)
-  (define uf/f (hash-ref (compiled-lang-nt-map lang) nt #f))
-  (and uf/f
-       (uf-find uf/f)))
 
 (define (apply-reduction-relation* reductions exp
                                    #:all? [return-all? #f]

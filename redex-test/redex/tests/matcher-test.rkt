@@ -856,24 +856,22 @@
   (define (test-empty/proc line pat exp ans)
     (run-match-test
      line
-     `(match-pattern (compile-pattern (compile-language 'pict-stuff-not-used '() (hash) no-binding-forms) ',pat #t) ',exp)
+     `(match-pattern (compile-pattern (compile-language 'pict-stuff-not-used '() no-binding-forms '()) ',pat #t) ',exp)
      (match-pattern 
-      (compile-pattern (compile-language 'pict-stuff-not-used '() (hash) no-binding-forms) pat #t)
+      (compile-pattern (compile-language 'pict-stuff-not-used '() no-binding-forms '()) pat #t)
       exp)
      ans))
   
   ;; test-lang : sexp[pattern] sexp[term] answer (list/c nt) -> void
   ;; returns #t if pat matching exp with the language defined by the given nts
-  (define (test-lang line pat exp ans nts)
-    (let ([nt-map (mk-uf-sets (map (λ (x) (list (nt-name x)))
-                                   nts))])
-      (run-match-test
-       line
-       `(match-pattern (compile-pattern (compile-language 'pict-stuff-not-used ',nts ,nt-map no-binding-forms) ',pat #t) ',exp)
-       (match-pattern 
-        (compile-pattern (compile-language 'pict-stuff-not-used nts nt-map no-binding-forms) pat #t)
-        exp)
-       ans)))
+(define (test-lang line pat exp ans nts)
+  (run-match-test
+   line
+   `(match-pattern (compile-pattern (compile-language 'pict-stuff-not-used ',nts no-binding-forms '()) ',pat #t) ',exp)
+   (match-pattern 
+    (compile-pattern (compile-language 'pict-stuff-not-used nts no-binding-forms '()) pat #t)
+    exp)
+   ans))
   
   (define xab-lang #f)
   ;; test-xab : sexp[pattern] sexp[term] answer -> void
@@ -931,8 +929,8 @@
       (set! xab-lang
             (compile-language 'pict-stuff-not-used
                               nts
-                              (mk-uf-sets (map (λ (x) (list (nt-name x))) nts))
-                              no-binding-forms))))
+                              no-binding-forms
+                              '()))))
     (run-match-test
      line
      `(match-pattern (compile-pattern xab-lang ',pat #t) ',exp)
@@ -951,8 +949,8 @@
                             (list (make-rhs 'a)))
                    (make-nt 'bb
                             (list (make-rhs 'b))))
-             (mk-uf-sets '((aa) (bb)))
-             no-binding-forms)))
+             no-binding-forms
+             '())))
     (run-match-test
      line
      `(match-pattern (compile-pattern ab-lang ',pat #t) ',exp)
@@ -996,7 +994,7 @@
      (let ([mtch ((compiled-pattern-cp
                    (let ([nts (map (λ (nt-def) (nt (car nt-def) (map rhs (cdr nt-def)))) nts/sexp)])
                      (compile-pattern (compile-language 'pict-stuff-not-used nts 
-                                                        (mk-uf-sets (map (λ (x) (list (nt-name x))) nts )) no-binding-forms)
+                                                        no-binding-forms '())
                                       pat #t)))
                   exp
                   #t

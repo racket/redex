@@ -513,6 +513,47 @@
        '(4 2))
       (list '8))
 
+(let ()
+  (define-language L [e ::= natural (e)][m ::= e])
+  (define lc--> (reduction-relation L (--> 0 1)))
+  
+  (test (apply-reduction-relation
+         (compatible-closure lc--> L e)
+         (term (0)))
+        (list (term (1))))
+  
+  ;; this test case illustrates that the old strategy for
+  ;; turning the non-terminal aliases into new non-terminals
+  ;; is bogus; this is the expected result for the the
+  ;; language above, which means that we cannot compile
+  ;; the non-terminal (plus alias) definition:
+  ;;   [e m ::= natural (e)]
+  ;; into the language above
+  (test (apply-reduction-relation
+         (compatible-closure lc--> L m)
+         (term (0)))
+        (list)))
+
+(let ()
+  
+  (define-language lc
+    [e m ::= natural x (λ (x) e) (e e)]
+    [x ::= variable-not-otherwise-mentioned]
+    #:binding-forms
+    (λ (x) e #:refers-to x))
+  
+  (define lc-->
+    (reduction-relation
+     lc
+     (--> ((λ (x) e) m) (substitute e x m))))
+  
+  (test (apply-reduction-relation (compatible-closure lc--> lc e)
+                                  (term (λ (x) ((λ (y) y) 1))))
+        (list (term (λ (x) 1))))
+  (test (apply-reduction-relation (compatible-closure lc--> lc m)
+                                  (term (λ (x) ((λ (y) y) 1))))
+        (list (term (λ (x) 1)))))
+
 (test (with-handlers ((exn:fail? exn-message))
         (apply-reduction-relation
          (context-closure 
