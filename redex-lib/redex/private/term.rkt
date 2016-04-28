@@ -54,7 +54,8 @@
               (define slv (syntax-local-value ls (λ () lang-stx)))
               (if (term-id? slv)
                   (loop (term-id-prev-id slv))
-                  (values (language-id-nts ls 'term)
+                  (values (append (hash-keys (language-id-nt-aliases ls 'term))
+                                  (language-id-nts ls 'term))
                           (language-id-nt-identifiers ls 'term)
                           ls))))
           (quasisyntax/loc stx

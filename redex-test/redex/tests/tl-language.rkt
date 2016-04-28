@@ -562,6 +562,20 @@
                    (term (number_1 6) #:lang L))
         '(5 6)))
 
+;; make sure the "before underscore" check works (no syntax error)
+(let ()
+  (define-extended-language L2 empty-language [(τ υ) whatever])
+  (test (begin (term υ_1 #:lang L2) (void))
+        (void)))
+
+;; make sure the "before underscore" check works (no syntax error)
+(let ()
+  (define-language L1 [x y ::= variable])
+  (define-language L2 [n m ::= natural])
+  (define-union-language L (: L1) (^ L2))
+  (test (begin (term :x_1 #:lang L) (void)) (void))
+  (test (begin (term ^n_1 #:lang L) (void)) (void)))
+
 (let ()
   ;; test to make sure that reasonable short-circuiting is happening
   ;; when matching lists of differing length to avoid exponential behavior
