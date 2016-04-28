@@ -2431,7 +2431,7 @@
                           (if prefix
                               (match-lambda
                                [`(,pat ,bspec)
-                                `(,(prefix-nts prefix pat aliases) ,bspec (hash))])
+                                `(,(prefix-nts prefix pat aliases) ,bspec)])
                               (λ (x) x))
 
                           (language-id-binding-table lang 'define-union-language))])
