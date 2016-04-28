@@ -1,6 +1,7 @@
 #lang racket
 
-(module+ test
+(module+ test)
+
   (require rackunit)
   (require redex/reduction-semantics)
 
@@ -474,12 +475,10 @@
     #:binding-forms
     (thing e* #:refers-to x ([x e] ...)))
 
-)
 
 
 ;; == interactions with `extend-language` and `union-language` ==
 
-(module+ test
   (define-language va-lc
     (x variable-not-otherwise-mentioned)
     (expr x
@@ -672,4 +671,4 @@
       #:binding-forms
       (λ (x_1) e #:refers-to x_1))
     (check-equal? (term (substitute (x y) x y) #:lang L)
-                  (term (y y)))))
+                  (term (y y))))
