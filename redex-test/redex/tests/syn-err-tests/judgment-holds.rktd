@@ -10,3 +10,18 @@
      #:mode (name I)
      [(name a)])
    (judgment-holds bad-judgment)))
+
+(#rx"mode specifies a 2-ary relation but use supplied 1 term"
+ ([bad-judgment (test Z)])
+ ()
+ (let ()
+   (define-language nats
+     (nat Z (S Z)))
+   
+   (define-judgment-form nats
+     #:mode (test I O)
+     [---------
+      (test nat one)])
+   
+   (test-judgment-holds
+    bad-judgment)))

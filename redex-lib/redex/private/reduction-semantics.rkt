@@ -2771,7 +2771,7 @@
        (raise-syntax-error 'test-judgment-holds
                            "expected the name of a judgment-form"
                            #'jf))
-     #`(test-judgment-holds/proc (λ () (judgment-holds (jf . rest)))
+     #`(test-judgment-holds/proc (λ () (judgment-holds #,(list-ref (syntax->list stx) 1)))
                                  'jf
                                  #,(get-srcloc stx))]))
 
