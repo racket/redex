@@ -123,6 +123,35 @@
         "1 test failed (out of 2 total).\n"))
 
 (let ()
+  
+  (define-language nats
+    (nat Z (S nat)))
+  
+  (define-judgment-form nats
+    #:mode (J I O)
+    [
+     -----------
+     (J Z (S Z))]
+    [
+     -----------
+     (J Z Z)]
+    
+    [(J nat_1 nat_2)
+     -----------------------
+     (J (S nat_1) (S nat_2))])
+  
+  (test (capture-output (test-judgment-holds (J (S (S Z)) (S natural))))
+        (regexp
+         (string-append
+          (regexp-quote "judgment of J does not match expected output patterns, got:")
+          "[\n ]*"
+          (regexp-quote "(S (S (S Z)))")
+          "[\n ]*"
+          (regexp-quote "(S (S Z))"))))
+  (test (capture-output (test-results))
+        "1 test failed (out of 1 total).\n"))
+
+(let ()
   (define red (reduction-relation empty-language (--> any (any))))
   (test (capture-output (test--> red (term (1 2 3)) (term ((1 2 3)))) (test-results))
         "One test passed.\n"))

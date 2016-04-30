@@ -2771,16 +2771,79 @@
        (raise-syntax-error 'test-judgment-holds
                            "expected the name of a judgment-form"
                            #'jf))
-     #`(test-judgment-holds/proc (λ () (judgment-holds #,(list-ref (syntax->list stx) 1)))
-                                 'jf
-                                 #,(get-srcloc stx))]))
+     (define a-judgment-form (syntax-local-value #'jf))
+     (define mode (judgment-form-mode a-judgment-form))
+     (define orig-jf-stx (list-ref (syntax->list stx) 1))
+     (define jf-list (syntax->list #'(jf . rest)))
+     (cond
+       [(and jf-list (= (length jf-list) (+ 1 (length mode))))
+        (define suffix 0)
+        (let loop ([stx (syntax->datum #'rest)])
+          (cond
+            [(pair? stx) (loop (car stx)) (loop (cdr stx))]
+            [(symbol? stx)
+             (define str (symbol->string stx))
+             (define m (regexp-match #rx"^any_([0-9]+)$" (symbol->string stx)))
+             (when m
+               (set! suffix (max suffix (string->number (list-ref m 1)))))]
+            [else (void)]))
+        (define syncheck-exprs #'(void))
+        (define pats '())
+        (define any-vars '())
+        (define jf-stx
+          (quasisyntax/loc orig-jf-stx
+            (jf #,@
+                (for/list ([IO (in-list mode)]
+                           [arg (cdr jf-list)]
+                           [i (in-naturals 1)])
+                  (cond
+                    [(equal? IO 'I) arg]
+                    [else
+                     (set! suffix (+ suffix 1))
+                     (with-syntax ([(syncheck-expr side-conditions-rewritten (names ...) (names/ellipses ...))
+                                    (rewrite-side-conditions/check-errs (judgment-form-lang a-judgment-form)
+                                                                        'test-judgment-holds #t stx)])
+                       (define any-var (string->symbol (format "any_~a" (+ i suffix))))
+                       (set! syncheck-exprs #`(begin syncheck-expr #,syncheck-exprs))
+                       (set! pats (cons #'side-conditions-rewritten pats))
+                       (set! any-vars (cons any-var any-vars))
+                       any-var)])))))
+        (define judgment-holds-expr #`(judgment-holds #,jf-stx (#,@any-vars)))
+        #`(begin
+            #,syncheck-exprs
+            (test-judgment-holds/proc (λ () (judgment-holds #,jf-stx (#,@any-vars)))
+                                      'jf
+                                      #,(judgment-form-lang a-judgment-form)
+                                      `(list #,@pats)
+                                      #,(get-srcloc stx)))]
+       [else
+        ;; this case should always result in a syntax error
+        #`(judgment-holds #,orig-jf-stx)])]))
 
-(define (test-judgment-holds/proc thunk name srcinfo)
+(define (test-judgment-holds/proc thunk name lang pat srcinfo)
   (inc-tests)
-  (unless (thunk)
-    (inc-failures)
-    (print-failed srcinfo)
-    (eprintf "  judgment of ~a does not hold\n" name)))
+  (define results (thunk))
+  (cond
+    [(null? results)
+     (inc-failures)
+     (print-failed srcinfo)
+     (eprintf "  judgment of ~a does not hold\n" name)]
+    [else
+     (define cpat (compile-pattern lang pat #t))
+     (define one-matched?
+       (for/or ([result (in-list results)])
+         (match-pattern? cpat result)))
+     (unless one-matched?
+       (inc-failures)
+       (print-failed srcinfo)
+       (eprintf "  judgment of ~a does not match expected output patterns, got:\n" name)
+       (for ([result (in-list results)])
+         (eprintf "  ")
+         (for ([ele (in-list result)]
+               [i (in-naturals)])
+           (unless (= i 0) (printf " "))
+           (eprintf "~s" ele))
+         (eprintf "\n")))]))
 
 (define-syntax (test-predicate stx)
   (syntax-case stx ()
