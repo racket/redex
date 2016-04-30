@@ -21,6 +21,7 @@
          racket/list
          racket/set
          racket/pretty
+         rackunit/log
          (rename-in racket/match (match match:)))
 
 (require (for-syntax syntax/name
@@ -2613,11 +2614,18 @@
 ;                                                                               
 ;                                                                               
 ;                                                                               
-
+(define inform-rackunit? (make-parameter #t))
 (define tests 0)
 (define test-failures 0)
-(define (inc-failures) (set! test-failures (+ test-failures 1)))
-(define (inc-tests) (set! tests (+ tests 1)))
+(define (inc-failures)
+  (when (inform-rackunit?)
+    (test-log! #f))
+  (set! tests (+ tests 1))
+  (set! test-failures (+ test-failures 1)))
+(define (inc-successes)
+  (when (inform-rackunit?)
+    (test-log! #t))
+  (set! tests (+ tests 1)))
 
 (define (test-results)
   (cond
@@ -2701,36 +2709,38 @@
   (define-values (arg expected)
     (parameterize ([default-language (reduction-relation-lang red)])
       (values (arg-thnk) (expected-thnk))))
-  (inc-tests)
-  (define visit-already-failed? #f)
+  (define test-failed? #f)
+  (define (fail) (inc-failures) (set! test-failed? #t))
   (define (visit t)
     (when pred
-      (unless visit-already-failed?
+      (unless test-failed?
         (unless (pred t)
-          (set! visit-already-failed? #t)
-          (inc-failures)
+          (set! test-failed? #t)
+          (fail)
           (print-failed srcinfo)
           (eprintf/value-at-end "found a term that failed #:pred" t)))))
   (let-values ([(got got-cycle?) (apply-red red arg #:visit visit)])
     (cond
       [(and got-cycle?
             (not cycles-ok?))
-       (inc-failures)
+       (fail)
        (print-failed srcinfo)
        (eprintf "found a cycle in the reduction graph\n")]
       [else
-       (unless visit-already-failed?
+       (unless test-failed?
          (let* ([⊆ (λ (s1 s2) (andmap (λ (x1) (memf (λ (x) (equiv? x1 x)) s2)) s1))]
                 [set-equal? (λ (s1 s2) (and (⊆ s1 s2) (⊆ s2 s1)))])
            (unless (set-equal? expected got)
-             (inc-failures)
+             (fail)
              (print-failed srcinfo)
              (for ([v2 (in-list expected)])
                (eprintf/value-at-end "expected" v2))
              (if (empty? got)
                  (eprintf "got nothing\n")
                  (for ([v1 (in-list got)])
-                   (eprintf/value-at-end "  actual" v1))))))])))
+                   (eprintf/value-at-end "  actual" v1))))))]))
+  (unless test-failed?
+    (inc-successes)))
 
 (define-syntax (test-->>∃ stx)
   (syntax-parse stx
@@ -2752,17 +2762,18 @@
                  start 
                  #:goal (if (procedure? goal) goal (λ (x) (equal? goal x)))
                  #:steps steps)])
-    (inc-tests)
-    (when (search-failure? result)
-      (print-failed srcinfo)
-      (inc-failures)
-      (begin
-        (if (procedure? goal)
-            (eprintf "no term satisfying ~a reachable from ~a" goal start)
-            (eprintf "term ~a not reachable from ~a" goal start))
-        (when (search-failure-cutoff? result)
-          (eprintf " (within ~a steps)" steps))
-        (newline (current-error-port))))))
+    (cond
+      [(search-failure? result)
+       (print-failed srcinfo)
+       (inc-failures)
+       (begin
+         (if (procedure? goal)
+             (eprintf "no term satisfying ~a reachable from ~a" goal start)
+             (eprintf "term ~a not reachable from ~a" goal start))
+         (when (search-failure-cutoff? result)
+           (eprintf " (within ~a steps)" steps))
+         (newline (current-error-port)))]
+      [else (inc-successes)])))
 
 (define-syntax (test-judgment-holds stx)
   (syntax-parse stx
@@ -2821,7 +2832,6 @@
         #`(judgment-holds #,orig-jf-stx)])]))
 
 (define (test-judgment-holds/proc thunk name lang pat srcinfo)
-  (inc-tests)
   (define results (thunk))
   (cond
     [(null? results)
@@ -2833,17 +2843,18 @@
      (define one-matched?
        (for/or ([result (in-list results)])
          (match-pattern? cpat result)))
-     (unless one-matched?
-       (inc-failures)
-       (print-failed srcinfo)
-       (eprintf "  judgment of ~a does not match expected output patterns, got:\n" name)
-       (for ([result (in-list results)])
-         (eprintf "  ")
-         (for ([ele (in-list result)]
-               [i (in-naturals)])
-           (unless (= i 0) (printf " "))
-           (eprintf "~s" ele))
-         (eprintf "\n")))]))
+     (cond [(not one-matched?)
+            (inc-failures)
+            (print-failed srcinfo)
+            (eprintf "  judgment of ~a does not match expected output patterns, got:\n" name)
+            (for ([result (in-list results)])
+              (eprintf "  ")
+              (for ([ele (in-list result)]
+                    [i (in-naturals)])
+                (unless (= i 0) (printf " "))
+                (eprintf "~s" ele))
+              (eprintf "\n"))]
+           [else (inc-successes)])]))
 
 (define-syntax (test-predicate stx)
   (syntax-case stx ()
@@ -2851,12 +2862,13 @@
      #`(test-predicate/proc p arg #,(get-srcloc stx))]))
 
 (define (test-predicate/proc pred arg srcinfo)
-  (inc-tests)
-  (unless (pred arg)
-    (inc-failures)
-    (print-failed srcinfo)
-    (eprintf/value-at-end (format "  ~v does not hold for" pred)
-                          arg)))
+  (cond
+    [(pred arg) (inc-successes)]
+    [else
+     (inc-failures)
+     (print-failed srcinfo)
+     (eprintf/value-at-end (format "  ~v does not hold for" pred)
+                           arg)]))
 
 ;; I'm not sure if these two functions should be here, but they need to have
 ;; access to `match-pattern` to work.
@@ -2897,12 +2909,13 @@
      #`(test-equal/proc e1 e2 #,(get-srcloc stx) ~equal?)]))
 
 (define (test-equal/proc v1 v2 srcinfo equal?)
-  (inc-tests)
-  (unless (equal? v1 v2)
-    (inc-failures)
-    (print-failed srcinfo)
-    (eprintf/value-at-end "  actual" v1)
-    (eprintf/value-at-end "expected" v2)))
+  (cond
+    [(equal? v1 v2) (inc-successes)]
+    [else
+     (inc-failures)
+     (print-failed srcinfo)
+     (eprintf/value-at-end "  actual" v1)
+     (eprintf/value-at-end "expected" v2)]))
 
 (define (eprintf/value-at-end str val)
   (define one-line-candidate
@@ -3019,3 +3032,5 @@
          coverage?)
 
 (provide do-test-match)
+
+(provide inform-rackunit?)
