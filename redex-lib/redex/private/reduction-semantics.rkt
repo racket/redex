@@ -1686,13 +1686,17 @@
       (letrec ([cache (make-hash)]
                [cache-entries 0]
                [not-in-cache (gensym)]
+               ;; if the metafunction is language-agnostic, we need to record the language, also
+               [make-cache-key (if (eqv? lang metafunction-leave-default-language-alone)
+                                   (λ (arg) (cons (default-language) arg))
+                                   (λ (arg) arg))]
                [cache-result (λ (arg res case)
                                (when (caching-enabled?)
                                  (unless (unbox (binding-forms-opened?))
                                    (when (>= cache-entries cache-size)
                                      (set! cache (make-hash))
                                      (set! cache-entries 0))
-                                   (hash-set! cache arg (cons res case))
+                                   (hash-set! cache (make-cache-key arg) (cons res case))
                                    (set! cache-entries (add1 cache-entries)))))]
                [log-coverage (λ (id)
                                (when id
@@ -1706,7 +1710,7 @@
                                   (relation-coverage))))]
                [metafunc
                 (λ (exp)
-                  (let ([cache-ref (hash-ref cache exp not-in-cache)])
+                  (let ([cache-ref (hash-ref cache (make-cache-key exp) not-in-cache)])
                     (cond
                      [(or (not (caching-enabled?)) (eq? cache-ref not-in-cache))
                       ;; if this is a language-agnostic metafunction, don't change `default-langauge`

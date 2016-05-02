@@ -12,6 +12,12 @@
   (define (all-distinct? . lst)
     (equal? lst (remove-duplicates lst)))
 
+  (define-language lc-without-binding
+    (x variable-not-otherwise-mentioned)
+    (expr x
+          (expr expr)
+          (lambda (x) expr)))
+
   (define-language lc
     (x variable-not-otherwise-mentioned)
     (expr x
@@ -19,6 +25,23 @@
           (lambda (x) expr))
     #:binding-forms
     (lambda (x) expr #:refers-to x))
+
+  (parameterize
+    ([default-language lc-without-binding])
+
+    ;; put the wrong behavior in the cache...
+    (check-equal? (term (substitute (x (lambda (x) x)) x y))
+                  (term (y (lambda (y) y)))))
+
+  (parameterize
+    ([default-language lc])
+
+    ;; make sure cache doesn't leak between languages
+    (check-match (term (substitute (x (lambda (x) x)) x y))
+                 `(y (lambda (,xx) ,xx))
+                 (all-distinct? 'x 'y xx)))
+
+
 
   (check-match
    (redex-let* lc
