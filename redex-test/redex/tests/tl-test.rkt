@@ -154,6 +154,31 @@
         "1 test failed (out of 1 total).\n"))
 
 (let ()
+  (define-judgment-form empty-language
+    #:mode (J I O)
+    
+    [-----------
+     (J natural 1)]
+    
+    [(J any_1 any_3)
+     --------------
+     (J (any_1 any_2) any_3)])
+  
+  (test
+   (capture-output
+    (test-judgment-holds (J (0 x) any)))
+   "");fails
+  
+  
+  (test
+   (capture-output
+    (test-judgment-holds (J (x 0) any)))
+   #rx"judgment of J does not hold")
+  
+  (test (capture-output (test-results))
+        "1 test failed (out of 2 total).\n"))
+
+(let ()
   (define red (reduction-relation empty-language (--> any (any))))
   (test (capture-output (test--> red (term (1 2 3)) (term ((1 2 3)))) (test-results))
         "One test passed.\n"))

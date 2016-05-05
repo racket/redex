@@ -2817,7 +2817,7 @@
                      (set! suffix (+ suffix 1))
                      (with-syntax ([(syncheck-expr side-conditions-rewritten (names ...) (names/ellipses ...))
                                     (rewrite-side-conditions/check-errs (judgment-form-lang a-judgment-form)
-                                                                        'test-judgment-holds #t stx)])
+                                                                        'test-judgment-holds #t arg)])
                        (define any-var (string->symbol (format "any_~a" (+ i suffix))))
                        (set! syncheck-exprs #`(begin syncheck-expr #,syncheck-exprs))
                        (set! pats (cons #'side-conditions-rewritten pats))
