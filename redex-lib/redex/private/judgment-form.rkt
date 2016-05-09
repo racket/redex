@@ -262,7 +262,7 @@
           (define-values (binding-constraints temporaries env+)
             (generate-binding-constraints output-names output-names/ellipses env orig-name))
           (define rest-body
-            (loop rest-clauses #`(list judgment-output #,to-not-be-in) env+))
+            (loop rest-clauses #`(list (term #,output-pattern) #,to-not-be-in) env+))
           (define call
             (let ([input (quasisyntax/loc premise (term #,input-template #:lang #,ct-lang))])
               (define (make-traced input)
