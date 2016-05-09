@@ -197,7 +197,7 @@ variables.
 If the symbol otherwise has an underscore, it is an error.
 }
 
-@item{The @pattern @tt{(@defpattech[name] _id @ttpattern)}
+@item{The @pattern @tt{(@defpattech[name] @racket[_id] @ttpattern)}
 matches @ttpattern and binds using it to the name @racket[_id]. 
 }
 
@@ -215,7 +215,7 @@ looking for a decomposition, it ignores any holes found in
 that @|ttpattern|.
 }
 
-@item{The @tt{(@defpattech[side-condition] @ttpattern _guard-expr)} @pattern
+@item{The @tt{(@defpattech[side-condition] @ttpattern @racket[_guard-expr])} @pattern
 matches what the embedded @ttpattern matches, and then @racket[_guard-expr]
 is evaluated. If @racket[_guard-expr] produces @racket[#f], the @pattern fails
 to match, otherwise the @pattern matches. Any
@@ -224,7 +224,7 @@ present via @tt{_} patterns) are bound using @racket[term-let] in
 @racket[_guard-expr]. 
 }
 
-@item{The @tt{(@defpattech[cross] _id)} @pattern is used for the compatible
+@item{The @tt{(@defpattech[cross] @racket[_id])} @pattern is used for the compatible
 closure functions. If the language contains a non-terminal with the
 same name as @racket[_id], the @pattern @racket[(cross _id)] matches the
 context that corresponds to the compatible closure of that
