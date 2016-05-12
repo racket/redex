@@ -279,7 +279,7 @@ that are equidistant from the ends of the sequence. For example,
 if matching the sequence @racket[(1 2 3 4 5)], there would be two
 matches, one for the pair @racket[1] & @racket[5] and another for
 the pair @racket[2] & @racket[4]. Your match should include the
-the bindings @racket[e_left] and @racket[e_right] that extract these
+bindings @racket[e_left] and @racket[e_right] that extract these
 pairs (one element of the pair bound to @racket[e_left] and the other
 to @racket[e_right]). Test your pattern with @racket[redex-match].
 
