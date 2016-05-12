@@ -156,7 +156,7 @@ to see if the @racket[e] non-terminal (from @racket[L])
 matches the object-language expression @racket[(λ (x) x)].
 
 To do this, first click the @onscreen{Run} button in DrRacket's
-toolbar and then enter the following expression after the prompt
+toolbar and then enter the following expression after the prompt.
 For the remainder of this tutorial, expressions prefixed with a
 @tt{>} are intended to be run in the interactions window (lower pane), 
 and expressions without the @tt{>} prefix belong in the definitions 
