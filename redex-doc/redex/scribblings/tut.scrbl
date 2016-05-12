@@ -368,7 +368,7 @@ has the type @racket[t_3].
 Similarly, the other clauses give the typing
 rules for all of the other forms in the language.
 
-Most of the rules use use @racket[types], or give base types to atomic
+Most of the rules use @racket[types], or give base types to atomic
 expressions, but the fifth rule is worth a special look. It says that
 if a variable type checks in some environment, then it also type
 checks in an extended environment, provided that the environment extension
