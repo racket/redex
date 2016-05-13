@@ -296,7 +296,9 @@ to @racket[e_right]). Test your pattern with @racket[redex-match].
 To support a type system for our language, we need 
 to define type environments, which we do by extending
 the language @racket[L] with a new non-terminal 
-@racket[Γ], that we use to represent environments.
+@racket[Γ], that we use to represent environments; and
+by letting the middle dot @tt{·}---not to be confused with a
+regular dot @tt{.}---represent the empty environment.
 
 @examples[#:no-result #:eval amb-eval
           (define-extended-language L+Γ L
