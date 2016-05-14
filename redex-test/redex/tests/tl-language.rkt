@@ -683,6 +683,24 @@
    1))
 
 (let ()
+  (test (redex-let empty-language ([(any_1 ..._1) (list 4 5 6)])
+                   (term (0 ..._1)))
+        '(0 0 0))
+  
+  (define-metafunction empty-language
+    [(f any_x) (any_x any_x)])
+  
+  (test (redex-let empty-language ([(any_1 ..._1) (list 4 5 6)])
+                   (term ((f 0) ..._1)))
+        (term ((0 0) (0 0) (0 0))))
+  
+  (test (redex-let empty-language ([(any_1 ..._1) (list 4 5 6)])
+                   (term ((f ("1" "2")) ..._1)))
+        (term ((("1" "2") ("1" "2"))
+               (("1" "2") ("1" "2"))
+               (("1" "2") ("1" "2"))))))
+
+(let ()
   (define-language A
     (e ::= 1))
   

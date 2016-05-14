@@ -11,6 +11,7 @@
                      "matcher.rkt")
          (only-in "fresh.rkt" variable-not-in)
          syntax/datum
+         racket/list
          "error.rkt"
          "lang-struct.rkt"
          "matcher.rkt")
@@ -130,11 +131,11 @@
     (make-free-identifier-mapping))
   
   (define (rewrite stx)
-    (let-values ([(rewritten _) (rewrite/max-depth stx 0 #f #f)])
+    (let-values ([(rewritten _1 _2) (rewrite/max-depth stx 0 #f #f)])
       rewritten))
   
   (define (rewrite-application fn args depth srcloc-stx)
-    (let-values ([(rewritten max-depth) (rewrite/max-depth args depth #t #t)])
+    (let-values ([(rewritten max-depth has-var?) (rewrite/max-depth args depth #t #t)])
       (let ([result-id (car (generate-temporaries '(f-results)))])
         (with-syntax ([fn fn])
           (let loop ([func (if (judgment-form-id? #'fn)
@@ -151,7 +152,7 @@
                     (set! outer-bindings 
                           (cons (syntax [res (func (quasidatum args))])
                                 outer-bindings))
-                    (values result-id (min depth max-depth)))
+                    (values result-id (min depth max-depth) has-var?))
                   (with-syntax ([dots (datum->syntax #'here '... arg-stx)])
                     (loop (syntax (begin (mf-map func)))
                           (syntax/loc args-stx (args dots))
@@ -212,7 +213,8 @@
                                   (syntax-local-introduce #'x)))
          (when new-id (record-disappeared-uses (list new-id)))
          (values stx-result
-                 (term-id-depth id)))]
+                 (term-id-depth id)
+                 #t))]
       [x
        (defined-term-id? #'x)
        (let ([ref (syntax-property
@@ -223,20 +225,20 @@
          (with-syntax ([v #`(begin
                               #,(defined-check ref "term" #:external #'x)
                               #,ref)])
-           (values #`(undatum v) 0)))]
+           (values #`(undatum v) 0 #f)))]
       [(unquote x)
-       (values (syntax (undatum x)) 0)]
+       (values (syntax (undatum x)) 0 #f)]
       [(unquote . x)
        (raise-syntax-error 'term "malformed unquote" arg-stx stx)]
       [(unquote-splicing x)
-       (values (syntax (undatum-splicing x)) 0)]
+       (values (syntax (undatum-splicing x)) 0 #f)]
       [(unquote-splicing . x)
        (raise-syntax-error 'term "malformed unquote splicing" arg-stx stx)]
       [(in-hole id body)
        (rewrite-application (syntax (λ (x) (apply plug x))) (syntax/loc stx (id body)) depth stx)]
       [(in-hole . x)
        (raise-syntax-error 'term "malformed in-hole" arg-stx stx)]
-      [hole (values (syntax (undatum the-hole)) 0)]
+      [hole (values (syntax (undatum the-hole)) 0 #f)]
       [x
        (and (identifier? (syntax x))
             (check-id (syntax->datum #'x) stx ellipsis-allowed? #f))
@@ -255,30 +257,55 @@
                                            "»"))
             stx)]
           [_ stx])
-        0)]
-      [() (values stx 0)]
+        0 #f)]
+      [() (values stx 0 #f)]
       [(x ... . y)
        (not (null? (syntax->list #'(x ...))))
-       (let-values ([(x-rewrite max-depth)
-                     (let i-loop ([xs (syntax->list (syntax (x ...)))])
-                       (cond
-                         [(null? xs) (rewrite/max-depth #'y depth #t #f)]
-                         [else
-                          (let ([new-depth (if (and (not (null? (cdr xs)))
-                                                    (identifier? (cadr xs))
-                                                    (free-identifier=? (quote-syntax ...)
-                                                                       (cadr xs)))
-                                               (+ depth 1)
-                                               depth)])
-                            (let-values ([(fst fst-max-depth)
-                                          (rewrite/max-depth (car xs) new-depth #t #f)]
-                                         [(rst rst-max-depth)
-                                          (i-loop (cdr xs))])
-                              (values (cons fst rst)
-                                      (max fst-max-depth rst-max-depth))))]))])
-         (values (datum->syntax stx x-rewrite stx stx) max-depth))]
+       (let ()
+         (define-values (x-rewrite max-depth has-var?)
+           (let i-loop ([xs (syntax->list (syntax (x ...)))])
+             (cond
+               [(null? xs) (rewrite/max-depth #'y depth #t #f)]
+               [else
+                (define ellipsis?
+                  (and (not (null? (cdr xs)))
+                       (identifier? (cadr xs))
+                       (free-identifier=? (quote-syntax ...)
+                                          (cadr xs))))
+                (define underscore-ellipsis?
+                  (and (not (null? (cdr xs)))
+                       (identifier? (cadr xs))
+                       (regexp-match? #rx"^[.][.][.]_"
+                                      (symbol->string (syntax-e (cadr xs))))))
+                (define either-ellipsis? (or ellipsis? underscore-ellipsis?))
+                (define new-depth (if either-ellipsis? (+ depth 1) depth))
+                (define-values (fst fst-max-depth fst-has-var?)
+                  (rewrite/max-depth (car xs) new-depth #t #f))
+                (define-values (rst rst-max-depth rst-has-var?)
+                  (if either-ellipsis?
+                      (i-loop (cddr xs))
+                      (i-loop (cdr xs))))
+                (define the-term
+                  (cond
+                    [(and underscore-ellipsis?
+                          (term-id? (syntax-local-value (cadr xs) (λ () #f))))
+                     (define id (syntax-local-value/record (cadr xs) (λ (x) #t)))
+                     (define stx-result (datum->syntax (term-id-id id)
+                                                       (syntax-e (term-id-id id))
+                                                       (cadr xs)))
+                     (cons #`(undatum-splicing (make-list (datum #,stx-result) (datum #,fst)))
+                           rst)]
+                    [either-ellipsis?
+                     (list* fst
+                            (datum->syntax (cadr xs) '... (cadr xs) (cadr xs))
+                            rst)]
+                    [else (cons fst rst)]))
+                (values the-term
+                        (max fst-max-depth rst-max-depth)
+                        (or fst-has-var? rst-has-var?))])))
+         (values (datum->syntax stx x-rewrite stx stx) max-depth has-var?))]
       
-      [_ (values stx 0)]))
+      [_ (values stx 0 #f)]))
 
   (define (check-id id stx ellipsis-allowed? term-id?)
     (define m (regexp-match #rx"^([^_]*)_" (symbol->string id)))
