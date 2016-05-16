@@ -1148,4 +1148,19 @@
       (test (regexp-match? #px"tl-reduction-relation.(?:.+):\\d+:\\d+" (caar (covered-cases c)))
             #t))))
 
+(let ()
+  (define-language x-lang
+    (x ::= variable))
+  
+  (define-judgment-form x-lang
+    #:mode (type I O)
+    [-------------
+     (type any any)])
+  
+  (reduction-relation
+   x-lang
+   (--> 1 2
+        (judgment-holds (type 1 1))
+        (fresh x))))
+
 (print-tests-passed 'tl-reduction-relation.rkt)
