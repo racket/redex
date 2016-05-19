@@ -1965,7 +1965,7 @@
                                  (append (loop (car stx))
                                          (loop (cdr stx)))]
                                 [else '()]))])
-               (check-for-cycles stx #'(name ...) #'((r-rhs ...) ...))
+               (check-for-cycles stx #'(name ...) #'((r-rhs ...) ...) nt-identifiers)
                (define nt->hole (make-hash))
                (for ([name (in-list all-names-stx-list)])
                  (hash-set! nt->hole (syntax-e name) 'unknown))

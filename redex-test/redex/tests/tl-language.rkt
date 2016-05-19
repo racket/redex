@@ -931,7 +931,7 @@
   (define-language L
     (E hole
        (in-hole L E))
-    (L hole))
+    (L (hole)))
   (test (get-nt-hole-map L) (make-hash '((L . 1) (E  . 1)))))
 
 (let ()
