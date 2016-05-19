@@ -2823,13 +2823,12 @@
                        (set! pats (cons #'side-conditions-rewritten pats))
                        (set! any-vars (cons any-var any-vars))
                        any-var)])))))
-        (define judgment-holds-expr #`(judgment-holds #,jf-stx (#,@any-vars)))
         #`(begin
             #,syncheck-exprs
-            (test-judgment-holds/proc (λ () (judgment-holds #,jf-stx (#,@any-vars)))
+            (test-judgment-holds/proc (λ () (judgment-holds #,jf-stx (#,@(reverse any-vars))))
                                       'jf
                                       #,(judgment-form-lang a-judgment-form)
-                                      `(list #,@pats)
+                                      `(list #,@(reverse pats))
                                       #,(get-srcloc stx)))]
        [else
         ;; this case should always result in a syntax error
@@ -2855,7 +2854,7 @@
               (eprintf "  ")
               (for ([ele (in-list result)]
                     [i (in-naturals)])
-                (unless (= i 0) (printf " "))
+                (unless (= i 0) (eprintf " "))
                 (eprintf "~s" ele))
               (eprintf "\n"))]
            [else (inc-successes)])]))

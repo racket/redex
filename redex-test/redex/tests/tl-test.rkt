@@ -179,6 +179,23 @@
         "1 test failed (out of 2 total).\n"))
 
 (let ()
+  (define-judgment-form empty-language
+    #:mode (broken-swap I I O O)
+    [-------
+     (broken-swap any_1 any_2 any_1 any_2)])
+
+  (test (capture-output
+         (test-judgment-holds
+          (broken-swap first second second first)))
+        #rx"got:\n *first second")
+
+  (test (capture-output (test-results))
+        "1 test failed (out of 1 total).\n"))
+
+
+
+
+(let ()
   (define red (reduction-relation empty-language (--> any (any))))
   (test (capture-output (test--> red (term (1 2 3)) (term ((1 2 3)))) (test-results))
         "One test passed.\n"))
