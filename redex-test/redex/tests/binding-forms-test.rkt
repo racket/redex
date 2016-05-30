@@ -439,7 +439,43 @@
        (+ ,aaa ,bbb ,c)))
    (a b c aa bb aaa bbb 'a 'b 'c))
 
-  ;; TODO: try a form with nested `#:...bind`
+  ;; nested ...bind test
+  (define-language lc-nested
+    (x ::= variable-not-otherwise-mentioned)
+    (e ::= (λ x ... e) () (e e ...))
+    #:binding-forms
+    (λ x #:...bind (clauses x (shadow clauses x)) any_body #:refers-to clauses))
+
+  (define-metafunction lc-nested
+    subst-all : e (x ...) (e ...) -> e
+    [(subst-all e () ()) e]
+    [(subst-all e (x x_r ...) (e_x e_r ...))
+     (subst-all (substitute e x e_x) (x_r ...) (e_r ...))])
+
+  (define lc-->
+    (reduction-relation lc-nested
+                        (--> ((λ x ..._0 e) e_a ..._0)
+                             (subst-all e (x ...) (e_a ...)))))
+  (check-equal?
+   (list (term (λ ())))
+   (apply-reduction-relation* lc--> (term (λ ()))))
+  (check-equal?
+   (list (term (λ x (λ x ()))))
+   (apply-reduction-relation* lc--> (term (λ x (λ x ())))))
+  (check-equal?
+   (list (term (λ (λ ()))))
+   (apply-reduction-relation* lc--> (term (λ (λ ())))))
+  (check-equal?
+   (list (term (λ x (λ ()))))
+   (apply-reduction-relation* lc--> (term (λ x (λ ())))))
+
+  (check-true
+   (redex-match?
+    lc-nested
+    ;; Indentation not vital. but helpful
+          (λ x_0 ... (λ x_2 ... ((λ x_1 ... e) ...)))
+    (term (λ x       (λ         ((λ         ())
+                                 (λ y       ())))))))
 
 
   (define-judgment-form lc
