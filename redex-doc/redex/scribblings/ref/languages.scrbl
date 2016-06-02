@@ -63,37 +63,6 @@ Non-terminals used in @racket[define-language] are not bound in
 @pattech[side-condition] patterns and duplicates are not constrained
 to be the same unless they have underscores in them.
 
-When @racket[maybe-binding-spec] is provided, it declares binding specifications
-for certain forms in the language. The language, @deftech{@racket[_lc]}, below does not
-declare any binding specifications.
-
-@examples[#:label #f #:eval redex-eval #:no-prompt #:no-result
-(define-language lc-no-bind
-  (e ::= x
-         number
-         (λ (x) e)
-         (e e))
-  (x ::= variable-not-otherwise-mentioned))]
-
-To understand the consequences of not specifying any binding forms, consider
-the behavior of substitution on terms of @deftech{@racket[_lc-no-bind]}.
-
-@margin-note{
-Passing the @racket[#:lang] argument to @racket[term]
-allows the @racket[substitute] metafunction to determine
-the language of its arguments.}
-
-@examples[#:label #f #:eval redex-eval
- (term (substitute (x (λ (x) (λ (y) x))) x y) #:lang lc-no-bind)]
-
-Because @tech{@racket[_lc]} does not specify any binding forms, @racket[substitute]
-naively replaces all instances of @racket[x] with @racket[y] in the term
-@racket[(x (λ (x) (λ (y) x)))].
-
-In order to have @racket[substitute] behave correctly when substituting over terms
-that contain bound variables, the language @tech{@racket[_lc]} must declare its
-binding specification.
-
 Typical languages provide a mechanism for the programmer to introduce new names
 and give them meaning. The language forms used for this (such as Racket's @racket[let]
 and @racket[lambda]) are called @tech{binding forms}.
@@ -102,6 +71,33 @@ Binding forms require special treatment from the language implementor. In Redex,
 consists of declaring the binding forms at the time of language definition. Explicitly declaring
 binding forms makes safely manipulating terms containing binding simpler and easier, as opposed to
 manually writing operations that respect the binding structure of the language.
+
+When @racket[maybe-binding-spec] is provided, it declares binding specifications
+for certain forms in the language. The language, @tech{@racket[_lc-lang]}, above does not
+declare any binding specifications.
+
+To understand the consequences of not specifying any binding forms, consider
+the behavior of substitution on terms of @tech{@racket[_lc-lang]}.
+
+@margin-note{
+Passing the @racket[#:lang] argument to @racket[term]
+allows the @racket[substitute] metafunction to determine
+the language of its arguments.}
+
+@examples[#:label #f #:eval redex-eval
+ (term (substitute (x (λ (x) (λ (y) x))) x (y y)) #:lang lc-lang)]
+
+Because @tech{@racket[_lc-lang]} does not specify any binding forms, @racket[substitute]
+naively replaces all instances of @racket[x] with @racket[(y y)] in the term
+@racket[(x (λ (x) (λ (y) x)))], note that even the @racket[x] that appears in what
+is normally a binding position has been replaced, resulting in an ill-formed lambda
+expression.
+
+In order to have @racket[substitute] behave correctly when substituting over terms
+that contain bound variables, the language @tech{@racket[_lc-lang]} must declare its
+binding specification. To better understand the use of binding forms in Redex, consider
+the following definition of the lambda calculus with binding forms.
+
 
 @examples[#:label #f #:eval redex-eval #:no-result
 (define-language lc-bind
@@ -122,8 +118,8 @@ of the lambda should refer to the argument. In a binding declaration, this is sp
     (term (substitute (x (λ (x) x)) x y) #:lang lc-bind)]
 
 In the example of @racket[#:refers-to] above, in a @racket[λ] term, the @racket[e] subterm has the name from
-the @racket[x] subterm in scope. The symbols inside a beta must be names bound by the
-@tech{binding pattern}.
+the @racket[x] subterm in scope. Each symbol mentioned in a beta must also appear in the binding pattern outside
+any beta; otherwise it wouldn't mean anything.
 
 It is often useful for a single subterm to refer to multiple sources of names, for example in Racket's @racket[let]
 form. This feature is easily expressible with @tech{binding forms} in Redex.
@@ -249,6 +245,27 @@ shows this behavior.
 The use of the @racket[#:exports] clause in the binding specification for @racket[_lc-bind+patterns]
 allows the use of nested binding patterns seen in the example. More precisely, each @racket[p] may itself
 be a pattern that mentions any number of bound variables.
+
+For completeness, consider the following version of @racket[_lc-lang] with contexts, which has
+been extended with binding forms.
+
+@examples[#:label #f #:eval redex-eval #:no-result
+(define-language lc-bind+hole
+  (e ::= (e e ...)
+         x
+         v)
+  (v ::= (λ (x ...) e))
+  (c ::= (v ... c e ...)
+         hole)
+  (x ::= variable-not-otherwise-mentioned)
+  #:binding-forms
+  (λ (x ...) e #:refers-to (shadow x ...)))]
+
+It is important to note in this example, that @racket[(λ (x) e)] is the only binding form.
+In general, terms that may contain holes should never be binding forms. In the above language,
+if the term @racket[((λ (x) (x x)) (λ (y) y))] were decomposed into
+@racket[(in-hole ((λ (x) (x hole)) (λ (y) y)) x)] then instances of @racket[x] must be considered
+free so that they maintain their relationship to one another.
 }
 
 @defidform[::=]{
