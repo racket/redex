@@ -492,11 +492,13 @@ to traverse the whole value at once, rather than one binding form at a time.
 
       [`(,(...bind/internal ...-name _ _) . ,body-rest)
 
-       (match-define (value-with-spec val ...-bspec) (rm-lookup ...-name red-match))
-
-       ;; (rename-references val σ) would also work
-       `(,@(unsplay (rename-references-spec val ...-bspec σ))
-         . ,(loop red-match body-rest σ))]
+       (match (rm-lookup ...-name red-match)
+         [(value-with-spec val ...-bspec)
+          ;; (rename-references val σ) would also work
+          `(,@(unsplay (rename-references-spec val ...-bspec σ))
+            . ,(loop red-match body-rest σ))]
+         ['()
+          (loop red-match body-rest σ)])]
 
       [`(,body-first . ,body-rest)
        `(,(loop red-match body-first σ) . ,(loop red-match body-rest σ))]
