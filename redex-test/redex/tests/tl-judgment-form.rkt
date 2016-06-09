@@ -320,6 +320,29 @@
   (test (judgment-holds (J2 4 any) any) '(4)))
 
 (let ()
+  (define-language thing-L
+    (thing ::= () (X thing)))
+  
+  (define-judgment-form thing-L
+    #:mode (J I O)
+    [(J () ())]
+    [(J thing_1 thing_2)
+     ---------------------------
+     (J (X thing_1) (X thing_2))])
+  
+  (define-extended-language thing-L2 thing-L
+    (thing ::= .... (Y thing)))
+  
+  (define-extended-judgment-form thing-L2 J
+    #:mode (J2 I O)
+    [(J2 thing_1 thing_2)
+     -------------------------
+     (J2 (Y thing_1) (Y thing_2))])
+  
+  (test (judgment-holds (J2 (X (Y (X (Y ())))) (X (Y (X (Y ()))))))
+        #t))
+
+(let ()
   (define-language L (N ::= z (s N) (t N)))
   
   (define-judgment-form L

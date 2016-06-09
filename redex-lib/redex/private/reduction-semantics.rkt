@@ -816,7 +816,7 @@
       (define-values (name computed-name sides/withs/freshs) (process-extras stx orig-name name-table extras))
       (define rt-lang-id (car (generate-temporaries (list lang))))
       (with-syntax ([(from-syncheck-expr side-conditions-rewritten (names ...) (names/ellipses ...)) (rw-sc from)])
-        (define body-code
+        (define-values (body-code compiled-pattern-identifiers patterns-to-compile)
           (bind-withs orig-name 
                       #'main-exp
                       rt-lang-id
@@ -839,15 +839,18 @@
                                           (syntax-column from))]
                       [name name]
                       [lang lang]
-                      [body-code body-code])
+                      [body-code body-code]
+                      [(compiled-pattern-identifier ...) compiled-pattern-identifiers]
+                      [(pattern-to-compile ...) patterns-to-compile])
           #`(build-rewrite-proc/leaf 
              `side-conditions-rewritten
              (λ (#,rt-lang-id)
-               (λ (main-exp bindings)
-                 #,(bind-pattern-names 'reduction-relation
-                                       #'(names/ellipses ...)
-                                       #'((lookup-binding bindings 'names) ...)
-                                       #'body-code)))
+               (let ([compiled-pattern-identifier (compile-pattern #,rt-lang-id pattern-to-compile #t)] ...)
+                 (λ (main-exp bindings)
+                   #,(bind-pattern-names 'reduction-relation
+                                         #'(names/ellipses ...)
+                                         #'((lookup-binding bindings 'names) ...)
+                                         #'body-code))))
              lhs-source
              name))))
     
@@ -1375,19 +1378,25 @@
                                          #t
                                          x))
                                  (syntax->list (syntax (lhs ...))))])
+               (define compiled-pattern-identifiers '())
+               (define patterns-to-compile '())
                (with-syntax ([(rhs/wheres ...)
                               (map (λ (sc/b rhs names names/ellipses)
-                                     (bind-withs
-                                      syn-error-name '()  
-                                      #'effective-lang lang-nts #'lang
-                                      sc/b 'flatten
-                                      (if (free-identifier=? #'lang #'metafunction-leave-default-language-alone)
-                                          #`(list (term #,rhs))
-                                          #`(list (term #,rhs #:lang lang)))
-                                      (syntax->list names) 
-                                      (syntax->list names/ellipses)
-                                      #t
-                                      #f))
+                                     (define-values (body-code _compiled-pattern-identifiers _patterns-to-compile)
+                                       (bind-withs
+                                        syn-error-name '()  
+                                        #'effective-lang lang-nts #'lang
+                                        sc/b 'flatten
+                                        (if (free-identifier=? #'lang #'metafunction-leave-default-language-alone)
+                                            #`(list (term #,rhs))
+                                            #`(list (term #,rhs #:lang lang)))
+                                        (syntax->list names) 
+                                        (syntax->list names/ellipses)
+                                        #t
+                                        #f))
+                                     (set! compiled-pattern-identifiers (append _compiled-pattern-identifiers compiled-pattern-identifiers))
+                                     (set! patterns-to-compile (append _patterns-to-compile patterns-to-compile))
+                                     body-code)
                                    (syntax->list #'((stuff ...) ...))
                                    (syntax->list #'(rhs ...))
                                    (syntax->list #'(lhs-names ...))
@@ -1425,32 +1434,36 @@
                                             codom-contract)))
                                      codom-contracts)]
                                [(rhs-fns ...)
-                                (map (λ (names names/ellipses rhs/where)
-                                       (with-syntax ([(names ...) names]
-                                                     [(names/ellipses ...) names/ellipses]
-                                                     [rhs/where rhs/where])
-                                         (syntax
-                                          (λ (name bindings)
-                                            (term-let-fn ((name name))
-                                                         (term-let ([names/ellipses (lookup-binding bindings 'names)] ...)
-                                                                   rhs/where))))))
-                                     (syntax->list #'(lhs-names ...))
-                                     (syntax->list #'(lhs-namess/ellipses ...))
-                                     (syntax->list (syntax (rhs/wheres ...))))]
+                                (for/list ([names (in-list (syntax->list #'(lhs-names ...)))]
+                                           [names/ellipses (in-list (syntax->list #'(lhs-namess/ellipses ...)))]
+                                           [rhs/where (in-list (syntax->list (syntax (rhs/wheres ...))))])
+                                  (with-syntax ([(names ...) names]
+                                                [(names/ellipses ...) names/ellipses]
+                                                [rhs/where rhs/where])
+                                    (syntax
+                                     (λ (name bindings)
+                                       (term-let-fn ((name name))
+                                                    (term-let ([names/ellipses (lookup-binding bindings 'names)] ...)
+                                                              rhs/where))))))]
                                [(gen-clause ...)
                                 (make-mf-clauses (syntax->list #'(lhs ...))
                                                  (syntax->list #'(rhs ...))
                                                  (syntax->list #'((stuff ...) ...))
-                                                 lang-nts syn-error-name #'name #'lang)])
+                                                 lang-nts syn-error-name #'name #'lang)]
+                               [(compiled-pattern-identifier ...) compiled-pattern-identifiers]
+                               [(pattern-to-compile ...) patterns-to-compile])
                    (syntax-property
                     (prune-syntax
                      #`(let ([sc `(side-conditions-rewritten ...)]
                              [dsc `dom-side-conditions-rewritten])
                          syncheck-expr ... dom-syncheck-expr codom-syncheck-expr ...
                          (let ([cases (list
-                                       (build-metafunc-case `side-conditions-rewritten
-                                                            (λ (effective-lang) rhs-fns)
-                                                            `clause-src) ...)]
+                                       (build-metafunc-case
+                                        `side-conditions-rewritten
+                                        (λ (effective-lang)
+                                          (let ([compiled-pattern-identifier (compile-pattern effective-lang pattern-to-compile #t)] ...)
+                                            rhs-fns))
+                                        `clause-src) ...)]
                                [parent-cases 
                                 #,(if prev-metafunction
                                       #`(metafunc-proc-cases #,(term-fn-get-id (syntax-local-value prev-metafunction)))

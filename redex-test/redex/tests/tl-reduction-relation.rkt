@@ -112,7 +112,7 @@
         (--> any
              1
              (where number_1 2)
-             (where (side-condition any (number? (term number_1))) dontcare)))
+             (where 2 number_1)))
        'dontcare)
       '(1))
 
@@ -1157,10 +1157,13 @@
     [-------------
      (type any any)])
   
-  (reduction-relation
-   x-lang
-   (--> 1 2
-        (judgment-holds (type 1 1))
-        (fresh x))))
+  (test (apply-reduction-relation
+         (reduction-relation
+          x-lang
+          (--> 1 2
+               (judgment-holds (type 1 1))
+               (fresh x)))
+         1)
+        '(2)))
 
 (print-tests-passed 'tl-reduction-relation.rkt)
