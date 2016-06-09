@@ -539,6 +539,7 @@
        (do-extended-judgment-form #'lang 'define-extended-judgment-form #'body #'original-id stx #f))]))
 
 (define-syntax (define-relation stx)
+  (not-expression-context stx)
   (syntax-case stx ()
     [(def-form-id lang . body)
      (begin
