@@ -18,17 +18,17 @@
   (n e q)
   (v (λ (x) e)))
 
-(define L1-vari (build-can-match-var-ht L1))
+(define L1-info (build-amb-info L1))
 
 
-(check-equal? L1-vari
+(check-equal? (amb-info-vari L1-info)
               (make-hash (list (cons 'E #f)
                                (cons 'n #t)
                                (cons 'v #f)
-                               (cons 'e (konsts (set 'λ)))
+                               (cons 'e (var-konsts (set 'λ)))
                                (cons 'x-or-w #t)
-                               (cons 'x (konsts (set 'λ)))
-                               (cons 'w (konsts (set 'ω)))
+                               (cons 'x (var-konsts (set 'λ)))
+                               (cons 'w (var-konsts (set 'ω)))
                                (cons 'y (prefixes (set ':)))
                                (cons 'abc-prefix (prefixes (set 'abc)))
                                (cons 'z (prefixes (set '!)))
@@ -37,7 +37,7 @@
 (check-equal? (overlapping-patterns?
                `(list (name e (nt e)) (name e (nt e)))
                `(list λ ((name x x)) (name e e))
-               L1-vari
+               L1-info
                L1)
               #f)
 (define L1-overlapping-productions-ht (build-overlapping-productions-table L1))
@@ -91,46 +91,47 @@
   (e (e e ...) (λ (x ...) e) x)
   (x variable-not-otherwise-mentioned))
 
-(define L2-vari (build-can-match-var-ht L2))
+(define L2-info (build-amb-info L2))
+(define L2-vari (amb-info-vari L2-info))
 
 (check-equal? L2-vari
-              (make-hash (list (cons 'e (konsts (set 'λ)))
-                               (cons 'x (konsts (set 'λ))))))
+              (make-hash (list (cons 'e (var-konsts (set 'λ)))
+                               (cons 'x (var-konsts (set 'λ))))))
 
 (check-equal? (overlapping-patterns?
                `(list (nt e))
                `(list λ)
-               L2-vari
+               L2-info
                L2)
               #f)
 
 (check-equal? (overlapping-patterns?
                `(list (nt e) any)
                `(list λ any)
-               L2-vari
+               L2-info
                L2)
               #f)
 
 (check-equal? (overlapping-patterns?
                `(list (nt e) (repeat (nt e) #f #f))
                `(list λ any any)
-               L2-vari
+               L2-info
                L2)
               #f)
      
-(check-equal? (overlapping-patterns? `variable `(nt w) L1-vari L1)
+(check-equal? (overlapping-patterns? `variable `(nt w) L1-info L1)
               #t)
-(check-equal? (overlapping-patterns? `(variable-prefix abq) `(nt abc-prefix) L1-vari L1)
+(check-equal? (overlapping-patterns? `(variable-prefix abq) `(nt abc-prefix) L1-info L1)
               #f)
-(check-equal? (overlapping-patterns? `(variable-prefix abc) `(nt abc-prefix) L1-vari L1)
+(check-equal? (overlapping-patterns? `(variable-prefix abc) `(nt abc-prefix) L1-info L1)
               #t)
-(check-equal? (overlapping-patterns? `(variable-prefix abcd) `(nt abc-prefix) L1-vari L1)
+(check-equal? (overlapping-patterns? `(variable-prefix abcd) `(nt abc-prefix) L1-info L1)
               #t)
-(check-equal? (overlapping-patterns? `(variable-prefix ab) `(nt abc-prefix) L1-vari L1)
+(check-equal? (overlapping-patterns? `(variable-prefix ab) `(nt abc-prefix) L1-info L1)
               #t)
-(check-equal? (overlapping-patterns? `(variable-except elephant) `(nt e) L1-vari L1)
+(check-equal? (overlapping-patterns? `(variable-except elephant) `(nt e) L1-info L1)
               #t)
-(check-equal? (overlapping-patterns? `variable-not-otherwise-mentioned `(nt e) L1-vari L1)
+(check-equal? (overlapping-patterns? `variable-not-otherwise-mentioned `(nt e) L1-info L1)
               #t)
               
 
@@ -239,3 +240,41 @@
                                (cons 'j #t)
                                (cons 'l #f)
                                (cons 'm #t))))
+
+(let ()
+  (define-language L
+    (e ::= 0)
+    (f ::= 1 2 3)
+    (g ::= e f)
+    (h ::= natural)
+    (i ::= real)
+    (j ::= i e)
+    (k ::= h g)
+    (l ::= integer g))
+
+  (check-equal? (build-can-match-num-ht L)
+                (make-hash `((l . integer)
+                             (f . #s(num-konsts ,(set 1 2 3)))
+                             (k . natural)
+                             (i . real)
+                             (e . #s(num-konsts ,(set 0)))
+                             (g . #s(num-konsts ,(set 0 1 2 3)))
+                             (h . natural)
+                             (j . real)))))
+
+
+(let ()
+  (define-language L
+    (x ::= variable-not-otherwise-mentioned)
+    (y ::= x natural))
+  
+  (define a (build-ambiguity-cache L))
+  (check-equal? (ambiguous-pattern? `(nt y) a) #f))
+
+(let ()
+  (define-language L
+    (x ::= 1 2 3 y)
+    (y ::= 4 5 6))
+  
+  (define a (build-ambiguity-cache L))
+  (check-equal? (ambiguous-pattern? `(nt x) a) #f))
