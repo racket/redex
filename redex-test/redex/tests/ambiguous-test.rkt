@@ -5,6 +5,9 @@
          (only-in redex/reduction-semantics define-language ::= in-hole hole)
          redex/private/ambiguous)
 
+(define num-bot (num-konsts (set)))
+
+
 (define-language L1
   (E (E e) hole) ;; cbn
   (e (e e) (λ (x) e) x)
@@ -20,23 +23,24 @@
 
 (define L1-info (build-amb-info L1))
 
-
-(check-equal? (amb-info-vari L1-info)
-              (make-hash (list (cons 'E #f)
-                               (cons 'n #t)
-                               (cons 'v #f)
-                               (cons 'e (var-konsts (set 'λ)))
-                               (cons 'x-or-w #t)
-                               (cons 'x (var-konsts (set 'λ)))
-                               (cons 'w (var-konsts (set 'ω)))
-                               (cons 'y (prefixes (set ':)))
-                               (cons 'abc-prefix (prefixes (set 'abc)))
-                               (cons 'z (prefixes (set '!)))
-                               (cons 'q (prefixes (set ': '!))))))
+(check-equal? L1-info
+              (make-hash
+               (list
+                (cons 'E (lp 'bot num-bot 'bot 'bot (list-lp (set 2) #f) #t))
+                (cons 'n (lp 'variable num-bot 'bot 'bot (list-lp (set 2 3) #f) #f))
+                (cons 'v (lp 'bot num-bot 'bot 'bot (list-lp (set 3) #f) #f))
+                (cons 'e (lp (var-konsts (set 'λ)) num-bot 'bot 'bot (list-lp (set 2 3) #f) #f))
+                (cons 'x-or-w (lp 'variable num-bot 'bot 'bot 'bot #f))
+                (cons 'x (lp (var-konsts (set 'λ)) num-bot 'bot 'bot 'bot #f))
+                (cons 'w (lp (var-konsts (set 'ω)) num-bot 'bot 'bot 'bot #f))
+                (cons 'y (lp (prefixes (set ':)) num-bot 'bot 'bot 'bot #f))
+                (cons 'abc-prefix (lp (prefixes (set 'abc)) num-bot 'bot 'bot 'bot #f))
+                (cons 'z (lp (prefixes (set '!)) num-bot 'bot 'bot 'bot #f))
+                (cons 'q (lp (prefixes (set ': '!)) num-bot 'bot 'bot 'bot #f)))))
 
 (check-equal? (overlapping-patterns?
                `(list (name e (nt e)) (name e (nt e)))
-               `(list λ ((name x x)) (name e e))
+               `(list λ (list (name x (nt x))) (name e (nt e)))
                L1-info
                L1)
               #f)
@@ -92,11 +96,11 @@
   (x variable-not-otherwise-mentioned))
 
 (define L2-info (build-amb-info L2))
-(define L2-vari (amb-info-vari L2-info))
 
-(check-equal? L2-vari
-              (make-hash (list (cons 'e (var-konsts (set 'λ)))
-                               (cons 'x (var-konsts (set 'λ))))))
+(check-equal? L2-info
+              (make-hash
+               (list (cons 'e (lp (var-konsts (set 'λ)) num-bot 'bot 'bot (list-lp (set) 1) #f))
+                     (cons 'x (lp (var-konsts (set 'λ)) num-bot 'bot 'bot 'bot #f)))))
 
 (check-equal? (overlapping-patterns?
                `(list (nt e))
@@ -252,15 +256,17 @@
     (k ::= h g)
     (l ::= integer g))
 
-  (check-equal? (build-can-match-num-ht L)
-                (make-hash `((l . integer)
-                             (f . #s(num-konsts ,(set 1 2 3)))
-                             (k . natural)
-                             (i . real)
-                             (e . #s(num-konsts ,(set 0)))
-                             (g . #s(num-konsts ,(set 0 1 2 3)))
-                             (h . natural)
-                             (j . real)))))
+  (check-equal? (build-amb-info L)
+                (make-hash
+                 (list
+                  (cons 'l (lp 'bot `integer 'bot 'bot 'bot #f))
+                  (cons 'f (lp 'bot `#s(num-konsts ,(set 1 2 3)) 'bot 'bot 'bot #f))
+                  (cons 'k (lp 'bot `natural 'bot 'bot 'bot #f))
+                  (cons 'i (lp 'bot `real 'bot 'bot 'bot #f))
+                  (cons 'e (lp 'bot `#s(num-konsts ,(set 0)) 'bot 'bot 'bot #f))
+                  (cons 'g (lp 'bot `#s(num-konsts ,(set 0 1 2 3)) 'bot 'bot 'bot #f))
+                  (cons 'h (lp 'bot `natural 'bot 'bot 'bot #f))
+                  (cons 'j (lp 'bot `real 'bot 'bot 'bot #f))))))
 
 
 (let ()
@@ -278,3 +284,12 @@
   
   (define a (build-ambiguity-cache L))
   (check-equal? (ambiguous-pattern? `(nt x) a) #f))
+
+(let ()
+  (define-language L
+    (x ::= 1 2 3)
+    (y ::= 4 5 6)
+    (z ::= x y))
+  
+  (define a (build-ambiguity-cache L))
+  (check-equal? (ambiguous-pattern? `(nt z) a) #f))

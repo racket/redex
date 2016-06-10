@@ -17,15 +17,18 @@
   [ambiguous-pattern? (-> any/c hash? boolean?)]))
 
 ;; provided only for the test suite
-(provide build-can-match-num-ht
-         build-can-match-var-ht
-         overlapping-patterns? 
+(provide overlapping-patterns? 
          build-overlapping-productions-table
          var-konsts
          prefixes
          build-ambiguous-ht
          build-amb-info
-         (struct-out amb-info))
+         (struct-out lp)
+         (struct-out list-lp)
+         (struct-out num-konsts)
+         (struct-out var-konsts)
+         (struct-out prefixes))
+
 
 (define (build-ambiguity-cache clang)
   (define overlapping-productions-ht (build-overlapping-productions-table clang))
@@ -72,8 +75,9 @@
   ╠═══════════════════╣                                                ╚══════════════╬═════╬═════════╣            ║               ║                   ║             ║                  ║            ╠═══════════════════╬═════════════╣
   ║     `hole         ║                                                               ║ #t  ║   #t    ║            ║               ║                   ║             ║                  ║            ║         #t        ║    #t       ║
   ╠═══════════════════╣                                                               ╚═════╬═════════╣            ║               ╠═══════════════════╣             ║                  ║            ╠═══════════════════╬═════════════╣
-  ║  `(nt ,t-id)      ║                                                                     ║   #t    ║            ║               ║         #t        ║             ║                  ║            ║(nt-can-be-list?   ║(nmatches?   ║
-  ║                   ║                                                                     ║         ║            ║               ║                   ║             ║                  ║            ║ t-id clang)       ║ t-id u info)║
+  ║  `(nt ,t-id)      ║                                                                     ║(nt-nt   ║            ║               ║         #t        ║             ║                  ║            ║(nt-can-be-list?   ║(nmatches?   ║
+  ║                   ║                                                                     ║ t-id id ║            ║               ║                   ║             ║                  ║            ║ t-id clang)       ║ t-id u info)║
+  ║                   ║                                                                     ║ info)   ║            ║               ║                   ║             ║                  ║            ║                   ║             ║
   ╠═══════════════════╣                                                                     ╚═════════╬════════════╣               ╠═══════════════════╩═════════════╩══════════════════╩════════════╩═══════════════════╩═════════════╣
   ║`(name ,t-name     ║                                                                               ║ (r u2 t2)  ║               ║                                             (r u t2)                                              ║
   ║       ,t2)        ║                                                                               ║            ║               ║                                                                                                   ║
@@ -101,38 +105,53 @@
   ║ (? not-pair?)     ║                                                                                                                                                                                                  ║(equal? t u) ║
   ╚═══════════════════╩══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╩═════════════╝)
 
+(define (nt-nt nt1 nt2 info)
+  (match* ((hash-ref info nt1) (hash-ref info nt2))
+    [((lp sym1 num1 bool1 str1 list1 hole?1)
+      (lp sym2 num2 bool2 str2 list2 hole?2))
+     (not (and (disjoint-sym sym1 sym2)
+               (disjoint-num num1 num2)
+               (disjoint-bool bool1 bool2)
+               (disjoint-list list1 list2)
+               (disjoint-hole hole?1 hole?2)))]
+    [(_ _) #t]))
+ 
 (define (n-nt n-pat nt info)
-  (define numi (amb-info-numi info))
-  (define nt-info (hash-ref numi nt))
-  (not (equal? nt-info (num-konsts (set)))))
+  (match (hash-ref info nt)
+    [`any #t]
+    [`bot #f]
+    [(lp sym num bool str list hole?)
+     (not (equal? num (num-konsts (set))))]))
   
 (define (v-nt v-pat nt info)
-  (define vari (amb-info-vari info))
-  (define nt-info (hash-ref vari nt))
-  (cond
-    [(equal? nt-info #t) #t]
-    [(equal? nt-info #f) #f]
-    [(var-konsts? nt-info) #t]
-    [(prefixes? nt-info)
-     (match v-pat
-       [`(variable-prefix ,prefix)
-        (define prefixes-as-lists-of-chars
-          (for/list ([s (in-set (prefixes-prefixes nt-info))])
-            (string->list (symbol->string s))))
-        (let loop ([prefixes prefixes-as-lists-of-chars]
-                   [prefix (string->list (symbol->string prefix))])
-          (cond
-            [(ormap null? prefixes) #t]
-            [(null? prefix) #t]
-            [else
-             (define new-prefixes
-               (for/list ([a-prefix (in-list prefixes)]
-                          #:when (equal? (car a-prefix) (car prefix)))
-                 (cdr a-prefix)))
+  (match (hash-ref info nt)
+    [`any #t]
+    [`bot #f]
+    [(lp sym num bool str list hole?)
+     (match sym
+       [`symbol #t]
+       [`bot #f]
+       [(var-konsts _) #t]
+       [(prefixes the-prefixes-set)
+        (match v-pat
+          [`(variable-prefix ,prefix)
+           (define prefixes-as-lists-of-chars
+             (for/list ([s (in-set the-prefixes-set)])
+               (string->list (symbol->string s))))
+           (let loop ([prefixes prefixes-as-lists-of-chars]
+                      [prefix (string->list (symbol->string prefix))])
              (cond
-               [(null? new-prefixes) #f]
-               [else (loop new-prefixes (cdr prefix))])]))]
-       [_ #t])]))
+               [(ormap null? prefixes) #t]
+               [(null? prefix) #t]
+               [else
+                (define new-prefixes
+                  (for/list ([a-prefix (in-list prefixes)]
+                             #:when (equal? (car a-prefix) (car prefix)))
+                    (cdr a-prefix)))
+                (cond
+                  [(null? new-prefixes) #f]
+                  [else (loop new-prefixes (cdr prefix))])]))]
+          [_ #t])])]))
 
 ;; returns #f when the nt definitely does NOT match a list
 ;; returns #t when the nt might match a list
@@ -255,32 +274,27 @@
 ;; match the non-terminal
 ;; return #t when the non-terminal might match the constant
 (define (nmatches? nt v info)
-  (cond
-    [(symbol? v)
-     (define vari (amb-info-vari info))
-     (define nt-info (hash-ref vari nt))
+  (match (hash-ref info nt)
+    [`any #t]
+    [`bot #f]
+    [(lp sym num bool str list hole?)
      (cond
-       [(equal? nt-info #t) #t]
-       [(equal? nt-info #f) #f]
-       [(var-konsts? nt-info)
-        (not (set-member? (var-konsts-syms nt-info) v))]
-       [(prefixes? nt-info)
-        (for/or ([prefix (in-set (prefixes-prefixes nt-info))])
-          (regexp-match? (format "^~a" (regexp-quote (symbol->string prefix)))
-                         (symbol->string v)))])]
-    [(exact-nonnegative-integer? v)
-     (define numi (amb-info-numi info))
-     (define nt-info (hash-ref numi nt))
-     (cond
-       [(num-konsts? nt-info)
-        (set-member? (num-konsts-nums nt-info) v)]
-       [else #t])]
-    [else #t]))
-
-(struct amb-info (vari numi))
-(define (build-amb-info clang)
-  (amb-info (build-can-match-var-ht clang)
-            (build-can-match-num-ht clang)))
+       [(symbol? v)
+        (cond
+          [(equal? sym #t) #t]
+          [(equal? sym #f) #f]
+          [(var-konsts? sym)
+           (not (set-member? (var-konsts-syms sym) v))]
+          [(prefixes? sym)
+           (for/or ([prefix (in-set (prefixes-prefixes sym))])
+             (regexp-match? (format "^~a" (regexp-quote (symbol->string prefix)))
+                            (symbol->string v)))])]
+       [(exact-nonnegative-integer? v)
+        (cond
+          [(num-konsts? num)
+           (set-member? (num-konsts-nums num) v)]
+          [else #t])]
+       [else #t])]))
 
 (define (build-overlapping-productions-table clang)
   (define overlapping-nt-table (make-hash))
@@ -300,21 +314,51 @@
     (hash-set! overlapping-nt-table (nt-name nt) has-overlap?))
   overlapping-nt-table)
   
+;; a point in the overall lattice
+(struct lp (sym num bool str list hole) #:prefab)
+
+;; fixed-sizes : (setof natural)
+;; at-least-size : (or/c natural #f)
+(struct list-lp (fixed-sizes at-least-size) #:prefab)
+
+;; nums : (set/c exact-nonnegative-integer?)
+(struct num-konsts (nums) #:prefab)
+
+;; used for the variable portion of the lattice (see below)
 (struct var-konsts (syms) #:prefab)
 (struct prefixes (prefixes) #:prefab)
-(define (build-can-match-var-ht clang)
+
+
+(define (build-amb-info clang)
   #|
 
 
-lattice:
+main-lattice:
+  this is a cross product-like
+  lattice. As long as we dont encounter
+  any "any"s, then we can move the pieces
+  independently.
+ 
 
-      #t   -- all variables
+       any
+        |
+  (lp <variable-lattice>
+      <number-lattice>
+      <boolean-lattice>
+      <string-lattice>
+      boolean?) --- hole or not
+        |
+       bot
+
+variable-lattice:
+
+   variable   -- all variables
      /  \
     /    \
  konsts  prefixes
     \    /
      \  /
-      #f  -- no variables
+      bot  -- no variables
 
 The middle piece of the lattice describes two different
 states. If it is a konsts, then the non-terminal can match
@@ -324,61 +368,9 @@ of the prefixes.
 
 konsts and prefixes must not have empty sets in them.
 
-|#
-  (define nothing #f)
-  (build-nt-property 
-   (compiled-lang-lang clang)
-   (lambda (pattern ht)
-     (let loop ([pattern pattern])
-       (match-a-pattern pattern
-         [`any #t]
-         [`number nothing]
-         [`string nothing]
-         [`natural nothing]
-         [`integer nothing]
-         [`real nothing]
-         [`boolean nothing]
-         [`variable #t] 
-         [`(variable-except ,vars ...) (var-konsts (apply set vars))]
-         [`(variable-prefix ,var) (prefixes (set var))]
-         [`variable-not-otherwise-mentioned 
-          (var-konsts (apply set (compiled-lang-literals clang)))]
-         [`hole #f]
-         [`(nt ,id) (hash-ref ht id)]
-         [`(name ,name ,pat) (loop pat)]
-         [`(mismatch-name ,name ,pat) (loop pat)]
-         [`(in-hole ,context ,contractum) (loop contractum)]
-         [`(hide-hole ,pat) (loop pat)]
-         [`(side-condition ,pat ,condition ,expr) (loop pat)]
-         [`(cross ,nt) #t]
-         [`(list ,pats ...) nothing]
-         [(? (compose not pair?))
-          (cond
-            [(symbol? pattern)
-             ;; it can match only that one symbol,
-             ;; but our nearest approximation is top
-             #t]
-            [else nothing])])))
-   nothing
-   (λ (x y) 
-     (match* (x y)
-       [((var-konsts k1) (var-konsts k2))
-        (define i (set-intersect k1 k2))
-        (if (set-empty? i)
-            #t
-            (var-konsts i))]
-       [((prefixes p1) (prefixes p2))
-        (prefixes (set-union p1 p2))]
-       [(#f x) x]
-       [(x #f) x]
-       [(_ _) #t]))))
-
-(struct num-konsts (nums) #:prefab)
-(define (build-can-match-num-ht clang)
-  #|
 
 
-lattice:
+number-lattice:
 
    number
      |
@@ -388,69 +380,234 @@ lattice:
      |
    natural
      |
-   (konsts (set/c nat))
+   (num-konsts (set/c nat))
 
-The middle piece of the lattice describes two different
-states. If it is a konsts, then the non-terminal can match
-any symbol except the ones listed. If it is a prefixes,
-then the non-terminal can match any variable with one
-of the prefixes.
 
-konsts and prefixes must not have empty sets in them.
+boolean lattice:
+
+    bool
+    /  \
+   #f   #t
+    \  /
+     bot
+
+
+string lattice:
+
+        string
+        / | \
+.... sets of constant strings ....
+        \ | /
+         bot
+
+list lattice:
+
+       list
+        |
+    (list-lp ...)
+        |
+       bot
 
 |#
-  (define nothing (num-konsts (set)))
+
+  (define (join x y)
+    (cond
+      [(or (equal? x 'any) (equal? y 'any)) 'any]
+      [(equal? x 'bot) y]
+      [(equal? y 'bot) x]
+      [else
+       (lp (join-sym (lp-sym x) (lp-sym y))
+           (join-num (lp-num x) (lp-num y))
+           (join-bool (lp-bool x) (lp-bool y))
+           (join-string (lp-str x) (lp-str y))
+           (join-list (lp-list x) (lp-list y))
+           (or (lp-hole x) (lp-hole y)))]))
+
+  (define (join-list x y)
+    (cond
+      [(equal? x 'bot) y]
+      [(equal? y 'bot) x]
+      [(or (equal? x 'string) (equal? y 'string)) 'string]
+      [else
+       (match-define (list-lp x-fixed-sizes x-at-least-size) x)
+       (match-define (list-lp y-fixed-sizes y-at-least-size) y)
+       (define at-least-size
+         (cond
+           [(and x-at-least-size y-at-least-size)
+            (min x-at-least-size y-at-least-size)]
+           [else
+            (or x-at-least-size y-at-least-size)]))
+       (define fixed-sizes
+         (if at-least-size
+             (for/set ([ele (in-set (set-union x-fixed-sizes y-fixed-sizes))]
+                       #:when (< ele at-least-size))
+               ele)
+             (set-union x-fixed-sizes y-fixed-sizes)))
+       (list-lp fixed-sizes at-least-size)]))
+  
+  (define (join-sym x y)
+    (match* (x y)
+      [((var-konsts k1) (var-konsts k2))
+       (define i (set-intersect k1 k2))
+       (if (set-empty? i)
+           'variable
+           (var-konsts i))]
+      [((prefixes p1) (prefixes p2))
+       (prefixes (set-union p1 p2))]
+      [('bot x) x]
+      [(x 'bot) x]
+      [(_ _)    'variable]))
+  
+  (define (join-num x y)
+    (define (both k1 k2) (num-konsts (set-union k1 k2)))
+    #2dmatch
+    ╔═════════════════╦═════════════════╦══════════╦══════════╦═══════╦═════════╗
+    ║         x       ║ (num-konsts k1) ║ `natural ║ `integer ║ `real ║ `number ║
+    ║   y             ║                 ║          ║          ║       ║         ║
+    ╠═════════════════╬═════════════════╬══════════╬══════════╬═══════╬═════════╣
+    ║ (num-konsts k2) ║  (both k1 k2)   ║          ║          ║       ║         ║
+    ╠═════════════════╬═════════════════╝          ║          ║       ║         ║
+    ║ `natural        ║                   `natural ║          ║       ║         ║
+    ╠═════════════════╬════════════════════════════╝          ║       ║         ║
+    ║ `integer        ║                              `integer ║       ║         ║
+    ╠═════════════════╬═══════════════════════════════════════╝       ║         ║
+    ║ `real           ║                                        `real  ║         ║
+    ╠═════════════════╬═══════════════════════════════════════════════╝         ║
+    ║ `number         ║                                                 `number ║
+    ╚═════════════════╩═════════════════════════════════════════════════════════╝)
+
+  (define (join-bool x y)
+    #2dmatch
+    ╔═════════════╦═══════╦═══════╦═══════╦═══════╗
+    ║         x   ║ 'bot  ║  #t   ║  #f   ║ 'bool ║
+    ║   y         ║       ║       ║       ║       ║
+    ╠═════════════╬═══════╬═══════╬═══════╬═══════╣
+    ║ 'bot        ║ 'bot  ║  #t   ║  #f   ║       ║
+    ╠═════════════╬═══════╬═══════╬═══════╣       ║
+    ║ #t          ║  #t   ║  #t   ║ 'bool ║       ║
+    ╠═════════════╬═══════╬═══════╬═══════╣       ║
+    ║ #f          ║  #f   ║ 'bool ║  #f   ║       ║
+    ╠═════════════╬═══════╩═══════╩═══════╝       ║ 
+    ║ 'bool       ║                         'bool ║
+    ╚═════════════╩═══════════════════════════════╝)
+
+  (define (join-string x y)
+    (match* (x y)
+      [('string y) 'string]
+      [(x 'string) 'string]
+      [('bot y) y]
+      [(x 'bot) x]
+      [(s1 s2) (set-union s1 s2)]))
+
+  (define num-bot (num-konsts (set)))
+
   (build-nt-property 
    (compiled-lang-lang clang)
    (lambda (pattern ht)
      (let loop ([pattern pattern])
        (match-a-pattern pattern
-         [`any `number]
-         [`number `number]
-         [`string nothing]
-         [`natural `natural]
-         [`integer `integer]
-         [`real `real]
-         [`boolean nothing]
-         [`variable nothing]
-         [`(variable-except ,vars ...) nothing]
-         [`(variable-prefix ,var) nothing]
-         [`variable-not-otherwise-mentioned nothing]
-         [`hole nothing]
+         [`any `any]
+         [`number (lp 'bot `number 'bot 'bot 'bot #f)]
+         [`string (lp 'bot num-bot 'bot `string 'bot #f)]
+         [`natural (lp 'bot `natural 'bot 'bot 'bot #f)]
+         [`integer (lp 'bot `integer 'bot 'bot 'bot #f)]
+         [`real (lp 'bot `real 'bot 'bot 'bot #f)]
+         [`boolean (lp 'bot num-bot `bool 'bot 'bot #f)]
+         [`variable (lp 'bot num-bot 'bot 'bot 'bot #f)]
+         [`(variable-except ,vars ...) (lp (var-konsts (apply set vars)) num-bot 'bot 'bot 'bot #f)]
+         [`(variable-prefix ,var) (lp (prefixes (set var)) num-bot 'bot 'bot 'bot #f)]
+         [`variable-not-otherwise-mentioned
+          (lp (var-konsts (apply set (compiled-lang-literals clang)))
+              num-bot 'bot 'bot 'bot #f)]
+         [`hole (lp 'bot num-bot 'bot 'bot 'bot #t)]
          [`(nt ,id) (hash-ref ht id)]
          [`(name ,name ,pat) (loop pat)]
          [`(mismatch-name ,name ,pat) (loop pat)]
-         [`(in-hole ,context ,contractum) (loop contractum)]
+         [`(in-hole ,context ,contractum) (join (loop context) (loop contractum))]
          [`(hide-hole ,pat) (loop pat)]
          [`(side-condition ,pat ,condition ,expr) (loop pat)]
-         [`(cross ,nt) `number]
-         [`(list ,pats ...) nothing]
+         [`(cross ,nt) `any]
+         [`(list ,pats ...)
+          (let loop ([pats pats]
+                     [non-repeat 0]
+                     [repeat? #f])
+            (cond
+              [(null? pats)
+               (lp 'bot num-bot 'bot 'bot
+                   (list-lp (set non-repeat)
+                            (if repeat?
+                                non-repeat
+                                #f))
+                   #f)]
+              [else
+               (match (car pats)
+                 [`(repeat . ,whatever)
+                  (loop (cdr pats) non-repeat #t)]
+                 [_
+                  (loop (cdr pats) (+ non-repeat 1) repeat?)])]))]
          [(? (compose not pair?))
           (cond
             [(exact-nonnegative-integer? pattern)
-             (num-konsts (set pattern))]
+             (lp 'bot (num-konsts (set pattern)) 'bot 'bot 'bot #f)]
             [(number? pattern)
-             `number]
-            [else nothing])])))
-   nothing
-   (λ (x y)
-     (define (both k1 k2) (num-konsts (set-union k1 k2)))
-       #2dmatch
-     ╔═════════════════╦═════════════════╦══════════╦══════════╦═══════╦═════════╗
-     ║         x       ║ (num-konsts k1) ║ `natural ║ `integer ║ `real ║ `number ║
-     ║   y             ║                 ║          ║          ║       ║         ║
-     ╠═════════════════╬═════════════════╬══════════╬══════════╬═══════╬═════════╣
-     ║ (num-konsts k2) ║  (both k1 k2)   ║          ║          ║       ║         ║
-     ╠═════════════════╬═════════════════╝          ║          ║       ║         ║
-     ║ `natural        ║                   `natural ║          ║       ║         ║
-     ╠═════════════════╬════════════════════════════╝          ║       ║         ║
-     ║ `integer        ║                              `integer ║       ║         ║
-     ╠═════════════════╬═══════════════════════════════════════╝       ║         ║
-     ║ `real           ║                                        `real  ║         ║
-     ╠═════════════════╬═══════════════════════════════════════════════╝         ║
-     ║ `number         ║                                                 `number ║
-     ╚═════════════════╩═════════════════════════════════════════════════════════╝)))
+             (lp 'bot 'number 'bot 'bot 'bot #f)]
+            [(string? pattern)
+             (lp 'bot num-bot 'bot (set pattern) 'bot #f)]
+            [(boolean? pattern)
+             (lp 'bot num-bot pattern 'bot 'bot #f)]
+            [else 'any])])))
+   'bot
+   join))
 
+(define (disjoint-sym sym1 sym2)
+  (match* (sym1 sym2)
+    [('bot _) #t]
+    [(_ 'bot) #t]
+    ;; simplification of the the real knowledge
+    [(_ _) #f]))
+(define (disjoint-num num1 num2)
+  (match* (num1 num2)
+    [('bot _) #t]
+    [(_ 'bot) #t]
+    [((num-konsts s1) (num-konsts s2))
+     (disjoint-set? s1 s2)]
+    [(_ _) #f]))
+(define (disjoint-bool bool1 bool2)
+  (match* (bool1 bool2)
+    [('bot _) #t]
+    [(_ 'bot) #t]
+    [(#f #t) #t]
+    [(#t #f) #t]
+    [(_ _) #f]))
+
+(define (disjoint-list list1 list2)
+  #2dmatch
+  ╔════════════════════╦══════╦══════════════════╦══════════════════════╦═══════╗
+  ║              list2 ║ 'bot ║ (list-lp fs1 #f) ║ (list-lp fs1 n1)     ║ 'list ║
+  ║ list1              ║      ║                  ║                      ║       ║
+  ╠════════════════════╬══════╩══════════════════╩══════════════════════╩═══════╣
+  ║ 'bot               ║  #t                                                    ║
+  ╠════════════════════╣      ╔══════════════════╦══════════════════════╦═══════╣
+  ║ (list-lp fs2 #f)   ║      ║ (disjoint-set?   ║ (and                 ║       ║
+  ║                    ║      ║  fs1 fs2)        ║  (disjoint-set?      ║       ║
+  ║                    ║      ║                  ║   fs1 fs2)           ║       ║
+  ║                    ║      ║                  ║  (bigger-than-all?   ║       ║
+  ║                    ║      ║                  ║   n1 fs2))           ║       ║
+  ╠════════════════════╣      ╠══════════════════╬══════════════════════╣       ║
+  ║ (list-lp fs2 n2)   ║      ║ (disjoint-list   ║  #f                  ║       ║
+  ║                    ║      ║  list2 list1)    ║                      ║       ║
+  ║                    ║      ║                  ║                      ║       ║
+  ╠════════════════════╣      ╠══════════════════╩══════════════════════╝       ║
+  ║ 'list              ║      ║                                            #f   ║
+  ╚════════════════════╩══════╩═════════════════════════════════════════════════╝)
+
+(define (disjoint-set? s1 s2)
+  (set-empty? (set-intersect s1 s2)))
+(define (bigger-than-all? n1 fs2)
+  (for/and ([e (in-set fs2)])
+    (< e n1)))
+    
+(define (disjoint-hole hole?1 hole?2) (not (and hole?1 hole?2)))
 
 (define (ambiguous-pattern? pattern non-terminal-ambiguous-ht)
   (let loop ([pattern pattern])
