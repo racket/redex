@@ -54,7 +54,7 @@ the rhs-expressions is implicitly wrapped in @|tttterm|.
 
 The contract, if present, is matched against every input to
 the metafunction and, if the match fails, an exception is raised.
-If a metavariable is repeated in a contact, it does not require
+If a metavariable is repeated in a contract, it does not require
 the terms to be equal, unless there is an underscore subscript
 (i.e., the binding works like it does in @racket[define-language],
 not how it works in the patterns in the left-hand sides of the metafunction
