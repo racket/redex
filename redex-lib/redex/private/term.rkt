@@ -24,8 +24,8 @@
                      currently-expanding-term-fn
                      judgment-form-id?))
 
-(define-syntax (hole stx) (raise-syntax-error 'hole "used outside of term"))
-(define-syntax (in-hole stx) (raise-syntax-error 'in-hole "used outside of term"))
+(define-syntax (hole stx) (raise-syntax-error 'hole "used outside of term" stx))
+(define-syntax (in-hole stx) (raise-syntax-error 'in-hole "used outside of term" stx))
 
 (define (with-syntax* stx)
   (syntax-case stx ()
