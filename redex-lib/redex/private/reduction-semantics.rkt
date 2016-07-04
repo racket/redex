@@ -1804,22 +1804,27 @@
                [ot (current-trace-print-args)]
                [otr (current-trace-print-results)]
                [traced-metafunc (lambda (exp)
-                                  (if (or (eq? (current-traced-metafunctions) 'all)
-                                          (memq name (current-traced-metafunctions)))
-                                      (parameterize ([current-trace-print-args
-                                                      (λ (name args kws kw-args level)
-                                                        (if (or (not (caching-enabled?))
-                                                                (eq? not-in-cache (hash-ref cache exp not-in-cache)))
-                                                            (display " ")
-                                                            (display "c"))
-                                                        (ot name (car args) kws kw-args level))]
-                                                     [current-trace-print-results
-                                                      (λ (name results level)
-                                                        (display " ")
-                                                        (otr name results level))]
-                                                     [print-as-expression #f])
-                                        (trace-call name metafunc exp))
-                                      (metafunc exp)))])
+                                  (cond
+                                    [(or (eq? (current-traced-metafunctions) 'all)
+                                         (memq name (current-traced-metafunctions)))
+                                     (define (metafunc/untrace exp)
+                                       (parameterize ([current-trace-print-args ot]
+                                                      [current-trace-print-results otr])
+                                         (metafunc exp)))
+                                     (parameterize ([current-trace-print-args
+                                                     (λ (name args kws kw-args level)
+                                                       (if (or (not (caching-enabled?))
+                                                               (eq? not-in-cache (hash-ref cache exp not-in-cache)))
+                                                           (display " ")
+                                                           (display "c"))
+                                                       (ot name (car args) kws kw-args level))]
+                                                    [current-trace-print-results
+                                                     (λ (name results level)
+                                                       (display " ")
+                                                       (otr name results level))]
+                                                    [print-as-expression #f])
+                                       (trace-call name metafunc/untrace exp))]
+                                    [else (metafunc exp)]))])
         traced-metafunc))
      (if dom-compiled-pattern
          (λ (exp) (and (match-pattern dom-compiled-pattern exp) #t))

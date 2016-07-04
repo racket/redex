@@ -1,6 +1,7 @@
 #lang racket
 (require "private/test-util.rkt"
-         redex/reduction-semantics)
+         redex/reduction-semantics
+         racket/trace)
 
 (module test racket/base)
 (reset-count)
@@ -484,9 +485,18 @@
                    [current-traced-metafunctions '(g)]
                    [print-as-expression #f])
       (term (g (1))))
-    (test (get-output-string sp) " >(g (1))\n > (g 1)\n < 1\nc> (g 1)\n < 1\n <(1 1)\n"))
-  
-  )
+    (test (get-output-string sp) " >(g (1))\n > (g 1)\n < 1\nc> (g 1)\n < 1\n <(1 1)\n")))
+
+(let ()
+  (define-metafunction empty-language
+    [(f any) ,(g (term any))])
+  (define (g x) x)
+  (trace g)
+  (define sp (open-output-string))
+  (parameterize ([current-traced-metafunctions '(f)]
+                 [current-output-port sp])
+    (term (f 1)))
+  (test (get-output-string sp) " >(f 1)\n> (g 1)\n< 1\n <1\n"))
 
 (let ()
   (define-language var-lang [(x y z w) variable])
@@ -740,7 +750,6 @@
   (test (term (f a b c)) (term three))
   (test (term (f a b)) (term two))
   (test (term (f a)) (term something-else)))
-
 
 (let ()
   (define-language lc-lang
