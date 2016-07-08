@@ -2413,7 +2413,7 @@
            ;; language could have been a non-terminal already in another one
            (for* ([normalized-orig-lang (in-list normalized-orig-langs)]
                   [(alias real) (in-hash (list-ref normalized-orig-lang 5))])
-             (unless (hash-ref nts alias #f) (hash-set! alias (uf-new #f)))
+             (unless (hash-ref nts alias #f) (hash-set! nts alias (uf-new #f)))
              (define real-set (hash-ref nts real))
              (define real-info (uf-find real-set))
              (define alias-set (hash-ref nts alias))
