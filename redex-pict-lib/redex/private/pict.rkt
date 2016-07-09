@@ -590,8 +590,9 @@
 (define (pict-info->all-nonterminals pict-info)
   (cond
     [(vector? pict-info)
-     (append (pict-info->all-nonterminals (vector-ref pict-info 0))
-             (map caar (vector-ref pict-info 1)))]
+     (apply append
+            (pict-info->all-nonterminals (vector-ref pict-info 0))
+            (map car (vector-ref pict-info 1)))]
     [else
      (for*/list ([nt+rhs (in-list pict-info)]
                  [nt (in-list (car nt+rhs))])

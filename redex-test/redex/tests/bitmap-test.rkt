@@ -352,9 +352,11 @@
 
 ;; holes
 (let ()
-  (define-language L
+  (define-language base-empty-language)
+  (define-extended-language L base-empty-language
     (n (hole x) ; a "named hole" at one time
-       hole))
+       hole)
+    (P Q ::= stuff))
   (btest (render-language L) "holes.png"))
 
 (let ()
