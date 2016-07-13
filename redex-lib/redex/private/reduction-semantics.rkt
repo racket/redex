@@ -1653,7 +1653,7 @@
    (λ (stuffs)
      (for-each
       (λ (stuff)
-        (syntax-case stuff (where side-condition where/hidden side-condition/hidden judgment-holds)
+        (syntax-case stuff (where side-condition where/hidden where/error side-condition/hidden judgment-holds)
           [(side-condition tl-side-conds ...) 
            (void)]
           [(side-condition/hidden tl-side-conds ...) 
@@ -1662,6 +1662,8 @@
            (void)]
           [(where/hidden x e)
            (void)]
+          [(where/error x e)
+           (void)]
           [(where . args)
            (raise-syntax-error 'define-metafunction 
                                "malformed where clause"
@@ -1669,6 +1671,10 @@
           [(where/hidden . args)
            (raise-syntax-error 'define-metafunction 
                                "malformed where/hidden clause"
+                               stuff)]
+          [(where/error . args)
+           (raise-syntax-error 'define-metafunction
+                               "malformed where/error clause"
                                stuff)]
           [(judgment-holds (form-name . _))
            (unless (judgment-form-id? #'form-name)
@@ -2890,16 +2896,6 @@
      (print-failed srcinfo)
      (eprintf/value-at-end (format "  ~v does not hold for" pred)
                            arg)]))
-
-;; I'm not sure if these two functions should be here, but they need to have
-;; access to `match-pattern` to work.
-(define (alpha-equivalent? lang lhs rhs)
-  (unless (compiled-lang? lang)
-    (raise-argument-error 'alpha-equivalent?
-                          "compiled-lang?"
-                          0
-                          lang lhs rhs))
-  (α-equal? (compiled-lang-binding-table lang) match-pattern lhs rhs))
 
 ;; special empty language that signals to `build-metafunction` that this metafunction 
 ;; is language-agnostic

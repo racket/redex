@@ -17,7 +17,7 @@
 @declare-exporting[redex/reduction-semantics redex]
 
 @defform/subs[#:literals (--> fresh side-condition side-condition/hidden
-                          where where/hidden judgment-holds with)
+                          where where/hidden where/error bind bind/hidden judgment-holds with)
               (reduction-relation language domain base-arrow
                                   reduction-case ...
                                   shortcuts)
@@ -28,9 +28,12 @@
                            (fresh fresh-clause ...)
                            (side-condition racket-expression)
                            (where @#,ttpattern @#,tttterm)
+                           (where/hidden @#,ttpattern @#,tttterm)
+                           (where/error @#,ttpattern @#,tttterm)
+                           (bind @#,ttpattern @#,tttterm)
+                           (bind/hidden @#,ttpattern @#,tttterm)
                            (judgment-holds (judgment-form-id pat/term ...))
-                           (side-condition/hidden racket-expression)
-                           (where/hidden @#,ttpattern @#,tttterm)]
+                           (side-condition/hidden racket-expression)]
                [shortcuts (code:line)
                           (code:line with shortcut ...)]
                [shortcut [(old-arrow-name @#,ttpattern @#,tttterm)
@@ -121,10 +124,17 @@ rendered when typesetting via @racketmodname[redex/pict].
 Each @deftech{@racket[where] clause} acts as a side condition requiring a
 successful pattern match, and it can bind pattern variables in the
 side-conditions (and @racket[where] clauses) that follow and in the
-metafunction result. The bindings are the same as bindings in a
-@racket[term-let] expression. A @as-index{@racket[where/hidden] clause} is the
+metafunction result.
+
+A @as-index{@racket[where/hidden] clause} is the
 same as a @racket[where] clause, but the clause is not
 rendered when typesetting via @racketmodname[redex/pict].
+
+The @as-index{@racket[where/error] clause} clause is like @racket[where],
+except that a failure to match is an error and, if multiple matches are
+possible, the right-hand side must produce the same result for each of
+the different matches (in the sense of @racket[alpha-equivalent?]
+using the language that this reduction relation is defined with).
 
 Each @racket[judgment-holds] clause acts like a @racket[where] clause, where
 the left-hand side pattern incorporates each of the patterns used in the 

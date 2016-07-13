@@ -687,6 +687,15 @@
           "")
         #rx"returned different results"))
 
+(let ()
+  (define-metafunction empty-language
+    [(f any)
+     any
+     (where/error (any_2) any)])
+  (test (with-handlers ([exn:fail? exn-message])
+          (term (f 1)))
+        #rx"where/error"))
+
 ;; errors for not-yet-defined metafunctions
 (test (let ([on (current-namespace)])
         (parameterize ([current-namespace (make-base-namespace)])

@@ -1166,4 +1166,18 @@
          1)
         '(2)))
 
+(let ()
+  (define red
+    (reduction-relation
+     empty-language
+     (--> any any_2
+          (where/error (any_2) any))))
+
+  (test (apply-reduction-relation red (term (1)))
+        (list 1))
+  (test (with-handlers ([exn:fail? exn-message])
+          (apply-reduction-relation red (term 1)))
+        #rx"where/error"))
+
+
 (print-tests-passed 'tl-reduction-relation.rkt)

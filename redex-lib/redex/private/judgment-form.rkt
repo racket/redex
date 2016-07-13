@@ -17,7 +17,7 @@
                   unsupported-pat-err-name
                   unsupported-pat-err)
          (only-in "lang-struct.rkt" mtch-bindings default-language)
-         (only-in "binding-forms.rkt" binding-forms-opened?))
+         (only-in "binding-forms.rkt" binding-forms-opened? α-equal?))
 
 (require
  (for-syntax "rewrite-side-conditions.rkt"
@@ -149,6 +149,14 @@
       [w/ellipses names/ellipses])
      (hash-set extended (syntax-e name) w/ellipses))))
 
+(define (alpha-equivalent? lang lhs rhs)
+  (unless (compiled-lang? lang)
+    (raise-argument-error 'alpha-equivalent?
+                          "compiled-lang?"
+                          0
+                          lang lhs rhs))
+  (α-equal? (compiled-lang-binding-table lang) match-pattern lhs rhs))
+
 ;; the withs, freshs, and side-conditions come in backwards order
 ;; rt-lang is an identifier that will be bound to a (runtime) language,
 ;;   not necc bound via define-language. 
@@ -169,7 +177,7 @@
                            names w/ellipses))])
        (syntax-case stx (fresh judgment-holds)
          [() body]
-         [((-where x e) y ...)
+         [((-where pat-stx e) y ...)
           (where-keyword? #'-where)
           (let ()
             (with-syntax ([(syncheck-exp side-conditions-rewritten (names ...) (names/ellipses ...))
@@ -177,7 +185,7 @@
                             ct-lang
                             orig-name
                             #t
-                            #'x)]
+                            #'pat-stx)]
                           [lang-stx rt-lang])
               (define-values (binding-constraints temporaries env+)
                 (generate-binding-constraints (syntax->list #'(names ...))
@@ -190,22 +198,35 @@
                 (define rest-body (loop #'(y ...) #`(list x ... #,to-not-be-in) env+))
                 (set! patterns-to-compile (cons #'`side-conditions-rewritten patterns-to-compile))
                 (set! compiled-pattern-identifiers (cons #'pat-id compiled-pattern-identifiers))
+                (define proc-stx
+                  #`(λ (bindings)
+                      (let ([x (lookup-binding bindings 'names)] ...)
+                        (and binding-constraints ...
+                             #,(bind-pattern-names orig-name
+                                                   #'(names/ellipses ...)
+                                                   #'(x ...)
+                                                   rest-body)))))
                 #`(begin
                     syncheck-exp
-                    (#,(case where-mode
-                         [(flatten)
-                          #'combine-where-results/flatten]
-                         [(predicate)
-                          #'combine-where-results/predicate]
-                         [else (error 'unknown-where-mode "~s" where-mode)])
-                     (match-pattern pat-id (term e #:lang #,ct-lang))
-                     (λ (bindings)
-                       (let ([x (lookup-binding bindings 'names)] ...)
-                         (and binding-constraints ...
-                              #,(bind-pattern-names orig-name
-                                                    #'(names/ellipses ...)
-                                                    #'(x ...)
-                                                    rest-body)))))))))]
+                    #,(if (where/error? #'-where)
+                          (quasisyntax/loc #'pat-stx
+                            (combine-where/error-results
+                             pat-id
+                             (term e #:lang #,ct-lang)
+                             '#,orig-name #,rt-lang
+                             #,proc-stx))
+                          #`(#,(case where-mode
+                                 [(flatten)
+                                  #'combine-where-results/flatten]
+                                 [(predicate)
+                                  #'combine-where-results/predicate]
+                                 [else (error 'unknown-where-mode "~s" where-mode)])
+                             pat-id
+                             (term e #:lang #,ct-lang)
+                             #,@(if (where/error? #'-where)
+                                    (list #`'orig-name "file.rkt" 12345 12 rt-lang)
+                                    (list))
+                             #,proc-stx))))))]
          [((-side-condition s ...) y ...)
           (side-condition-keyword? #'-side-condition)
           (if side-condition-unquoted?
@@ -328,15 +349,27 @@
               outputs))
         outputs)))
 
-(define (combine-where-results/flatten mtchs result)
+(define (combine-where-results/flatten pat term result)
+  (define mtchs (match-pattern pat term))
   (and mtchs
-       (for/fold ([r '()]) ([m mtchs])
+       (for/fold ([r '()]) ([m (in-list mtchs)])
          (let ([s (result (mtch-bindings m))])
            (if s (append s r) r)))))
+(define (combine-where/error-results pat term who lang result)
+  (define mtchs (match-pattern pat term))
+  (unless mtchs (error who "where/error did not match"))
+  (define fst (result (mtch-bindings (car mtchs))))
+  (for ([m (in-list (cdr mtchs))])
+    (define nxt (result (mtch-bindings m)))
+    (unless (alpha-equivalent? lang fst nxt)
+      (error who
+             "where/error matched multiple ways, but did not return alpha-equivalent? results")))
+  fst)
 
-(define (combine-where-results/predicate mtchs result)
+(define (combine-where-results/predicate pat term result)
+  (define mtchs (match-pattern pat term))
   (and mtchs 
-       (for/or ([mtch mtchs])
+       (for/or ([mtch (in-list mtchs)])
          (result (mtch-bindings mtch)))))
 
 (define (repeated-premise-outputs inputs premise)
@@ -345,7 +378,8 @@
       (let ([output (premise (car inputs))])
         (if (null? output)
             '()
-            (for*/list ([o output] [os (repeated-premise-outputs (cdr inputs) premise)])
+            (for*/list ([o (in-list output)]
+                        [os (in-list (repeated-premise-outputs (cdr inputs) premise))])
               (cons o os))))))
 
 (define (IO-judgment-form? jf)
@@ -1277,7 +1311,7 @@
                (syntax-case next (or)
                  [or (to-lw/proc lst)]
                  [else
-                  (syntax-case lst (unquote side-condition where or)
+                  (syntax-case lst (unquote side-condition or)
                     [(form-name . _)
                      (judgment-form-id? #'form-name)
                      #`(make-metafunc-extra-side-cond #,(to-lw/proc lst))]
@@ -1297,7 +1331,8 @@
                                              (syntax->list #'pat)))])
                        #`(make-metafunc-extra-fresh
                           (list ids ...)))]
-                    [(where pat exp)
+                    [(-where pat exp)
+                     (where-keyword? #'-where)
                      #`(make-metafunc-extra-where
                         #,(to-lw/proc #'pat) #,(to-lw/proc #'exp))]
                     [(side-condition x)
@@ -1598,7 +1633,11 @@
 (define-for-syntax (where-keyword? id)
   (and (identifier? id)
        (or (free-identifier=? id #'where)
-           (free-identifier=? id #'where/hidden))))
+           (free-identifier=? id #'where/hidden)
+           (where/error? id))))
+(define-for-syntax (where/error? id)
+  (and (identifier? id)
+       (free-identifier=? id #'where/error)))
 (define-for-syntax (side-condition-keyword? id)
   (and (identifier? id)
        (or (free-identifier=? id #'side-condition)
@@ -1775,6 +1814,7 @@
          judgment-form?
          call-judgment-form
          include-jf-rulename
+         alpha-equivalent?
          (struct-out derivation-subs-acc)
          (struct-out runtime-judgment-form)
          (struct-out derivation)

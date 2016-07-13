@@ -18,8 +18,8 @@
 @declare-exporting[redex/reduction-semantics redex]
 
 @defform/subs[#:literals (: -> 
-                          where side-condition 
-                          side-condition/hidden where/hidden 
+                          where where/error  where/hidden
+                          side-condition side-condition/hidden
                           judgment-holds)
              (define-metafunction language
                metafunction-contract
@@ -41,6 +41,7 @@
                                    (side-condition/hidden racket-expression)
                                    (where pat @#,tttterm)
                                    (where/hidden pat @#,tttterm)
+                                   (where/error pat @#,tttterm)
                                    (judgment-holds 
                                     (judgment-form-id pat/term ...))
                                    (clause-name name)
@@ -70,7 +71,7 @@ evaluated (if present), with any variables from the input or output
 contract bound.
 
 The @racket[side-condition], @racket[hidden-side-condition],
-@racket[where], and @racket[where/hidden] clauses behave as
+@racket[where], @racket[where/hidden], and @racket[where/error] clauses behave as
 in the @racket[reduction-relation] form.
 
 The resulting metafunction raises an exception recognized by @racket[exn:fail:redex?] if
@@ -85,7 +86,8 @@ not typeset.
 
 The @racket[where] and @racket[where/hidden] extra are like
 @racket[side-condition] and @racket[side-condition/hidden],
-except the match guards the clause.
+except the match guards the clause. The @racket[where/error]
+extra is like @racket[where], except that the pattern must match.
 
 The @racket[judgment-holds] clause is like @racket[side-condition]
 and @racket[where], except the given judgment must hold for the
@@ -194,7 +196,7 @@ legitimate inputs according to @racket[metafunction-name]'s contract,
 and @racket[#f] otherwise.
 }
 
-@defform/subs[#:literals (I O where where/hidden side-condition side-condition/hidden etc.)
+@defform/subs[#:literals (I O where where/hidden where/error side-condition side-condition/hidden etc.)
              (define-judgment-form language
                mode-spec
                contract-spec
@@ -219,6 +221,7 @@ and @racket[#f] otherwise.
               [premise (code:line (judgment-form-id pat/term ...) maybe-ellipsis)
                        (where @#,ttpattern @#,tttterm)
                        (where/hidden @#,ttpattern @#,tttterm)
+                       (where/error @#,ttpattern @#,tttterm)
                        (side-condition @#,tttterm)
                        (side-condition/hidden @#,tttterm)]
               [rule-name (code:line)
@@ -290,7 +293,7 @@ to compute all pairs with a given sum.
               (sumr (s n_1) n_2 (s n_3))])
            (judgment-holds (sumr n_1 n_2 (s (s z))) (n_1 n_2))]
 
-A rule's @racket[where] and @racket[where/hidden] premises behave as in 
+A rule's @racket[where], @racket[where/hidden], and @racket[where/error] premises behave as in 
 @racket[reduction-relation] and @racket[define-metafunction].
 @examples[
 #:eval redex-eval

@@ -669,6 +669,27 @@
   (test (regexp-match? #rx"foo: judgment form expects 2 inputs, got 1" msg)
         #t))
 
+(let ()
+  (define-judgment-form empty-language
+    #:mode (J I O)
+    [(where/error (any_1) any)
+     ------------------
+     (J any any_1)])
+
+  (test (with-handlers ([exn:fail? exn-message])
+          (judgment-holds (J 1 any) any))
+        #rx"where/error")
+  (test (judgment-holds (J (1) any) any) (list 1)))
+
+(let ()
+  (define-judgment-form empty-language
+    #:mode (J I O)
+    [(where/hidden (any_1) any)
+     ------------------
+     (J any any_1)])
+
+  (test (judgment-holds (J (1) any) any) (list 1)))
+
 (parameterize ([current-namespace (make-base-namespace)])
   (eval '(require errortrace))
   (eval '(require redex/reduction-semantics))

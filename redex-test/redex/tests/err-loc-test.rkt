@@ -162,7 +162,8 @@
            [(inv-fail s a)]))
   (exec-runtime-error-tests "run-err-tests/judgment-form-contracts.rktd")
   (exec-runtime-error-tests "run-err-tests/judgment-form-undefined.rktd")
-  (exec-runtime-error-tests "run-err-tests/judgment-form-ellipses.rktd"))
+  (exec-runtime-error-tests "run-err-tests/judgment-form-ellipses.rktd")
+  (exec-runtime-error-tests "run-err-tests/judgment-form-where-error.rktd"))
 
 (parameterize ([current-namespace (make-base-namespace)])
   (eval '(require (for-syntax racket/base)))
