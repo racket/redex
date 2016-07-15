@@ -402,7 +402,7 @@
                          (let ([cache-value (hash-ref cache input not-in-cache)])
                            (not (eq? cache-value not-in-cache)))))
   (define p-a-e (print-as-expression))
-  (define (form-proc/cache recur input derivation-init)
+  (define (form-proc/cache recur input derivation-init pair-of-boxed-caches)
     (parameterize ([default-language ct-lang]
                    [print-as-expression p-a-e]
                    [binding-forms-opened? (if (caching-enabled?) (box #f) #f)])
@@ -411,13 +411,13 @@
          (define candidate (hash-ref cache input not-in-cache))
          (cond
            [(equal? candidate not-in-cache)
-            (define computed-ans (form-proc recur input derivation-init))
+            (define computed-ans (form-proc recur input derivation-init pair-of-boxed-caches))
             (unless (unbox (binding-forms-opened?))
               (hash-set! cache input computed-ans))
             computed-ans]
            [else
             candidate])]
-        [else (form-proc recur input derivation-init)])))
+        [else (form-proc recur input derivation-init pair-of-boxed-caches)])))
   (define dwoos
     (if (or (eq? 'all traced) (memq form-name traced))
         (let ([outputs #f])
@@ -425,7 +425,7 @@
             (for/fold ([s '()]) ([m mode])
               (case m [(I) s] [(O) (cons '_ s)])))
           (define (wrapped . _)
-            (set! outputs (form-proc/cache form-proc/cache input derivation-init))
+            (set! outputs (form-proc/cache form-proc/cache input derivation-init pair-of-boxed-caches))
             (for/list ([output (in-list outputs)])
               (cons form-name (assemble mode input (derivation-with-output-only-output output)))))
           (define otr (current-trace-print-results))
@@ -445,7 +445,7 @@
                               result-tracer)])
             (apply trace-call form-name wrapped (assemble mode input spacers)))
           outputs)
-        (form-proc/cache form-proc/cache input derivation-init)))
+        (form-proc/cache form-proc/cache input derivation-init pair-of-boxed-caches)))
   
   (define without-exact-duplicates-vec (apply vector (remove-duplicates dwoos)))
   (define ht (make-α-hash (compiled-lang-binding-table ct-lang) match-pattern))
@@ -1052,7 +1052,8 @@
                (parameterize ([judgment-form-pending-expansion
                                (cons name
                                      (struct-copy judgment-form (lookup-judgment-form-id name)
-                                                  [proc #'recur]))])
+                                                  [proc #'recur]
+                                                  [cache #'recur-cache]))])
                  (bind-withs syn-error-name '() lang nts lang
                              (syntax->list #'prems) 
                              'flatten #`(list (derivation-with-output-only (term (#,@output-pats) #:lang #,lang)
@@ -1114,12 +1115,12 @@
               #`(λ (lang)
                   (let (clause-proc-binding ... ...)
                     (let ([prev (orig-mk lang)])
-                      (λ (recur input init-jf-derivation-id)
-                        (append (prev recur input init-jf-derivation-id)
+                      (λ (recur input init-jf-derivation-id recur-cache)
+                        (append (prev recur input init-jf-derivation-id recur-cache)
                                 clause-proc-body-backwards ...))))))
             #`(λ (lang)
                 (let (clause-proc-binding ... ...)
-                  (λ (recur input init-jf-derivation-id)
+                  (λ (recur input init-jf-derivation-id recur-cache)
                     (append clause-proc-body-backwards ...)))))))))
 
 (define (combine-judgment-rhses compiled-lhs input rhs check-output)

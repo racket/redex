@@ -343,6 +343,46 @@
         #t))
 
 (let ()
+  (define-language esterel
+    (p ::= (par p p) (loop p) (emit S))
+    (S ::= a b))
+
+  (define-judgment-form esterel
+    #:mode (→ I O)
+    [(→ p S)
+     ------------
+     (→ (loop p) S)]
+    [------------
+     (→ (emit S) S)])
+
+  (define-extended-judgment-form esterel →
+    #:mode (non-det-> I O)
+    [(non-det-> p_1 S)
+     ---------------------------
+     (non-det-> (par p_1 p_2) S)]
+
+    [(non-det-> p_2 S)
+     ---------------------------
+     (non-det-> (par p_1 p_2) S)])
+
+  (define-extended-judgment-form esterel →
+    #:mode (det-> I O)
+    [(det-> p_1 S)
+     -----------------------
+     (det-> (par p_1 p_2) S)])
+
+  (define prog
+    (term
+     (loop
+      (par (emit a)
+           (emit b)))))
+
+  ;; not calling this first also makes the test pass
+  (test (judgment-holds (non-det-> ,prog S) S) '(a b))
+
+  (test (judgment-holds (det-> ,prog S) S) '(a)))
+
+(let ()
   (define-language L (N ::= z (s N) (t N)))
   
   (define-judgment-form L
