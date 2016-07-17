@@ -1,3 +1,9 @@
+v6.6
+
+  * added test-judgment-holds
+
+  * bug fixes and performance improvements
+
 v6.5
 
   * bug fixes
