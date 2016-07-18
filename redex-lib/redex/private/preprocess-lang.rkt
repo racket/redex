@@ -371,7 +371,7 @@
     
 ;; can-enumerate? : any/c hash[sym -o> any[boolean]] (promise hash[sym -o> any[boolean]])
 (define (can-enumerate? pat can-enumerate-ht cross-can-enumerate-ht)
-  (let loop ([pat pat])
+  (let loop ([pat pat] [inside-ellipsis? #f])
     (match-a-pattern
      pat
      [`any #t]
@@ -389,10 +389,10 @@
      [`(nt ,id) 
       (or (not can-enumerate-ht)
           (and (hash-ref can-enumerate-ht id) #t))]
-     [`(name ,n ,pat) (loop pat)]
-     [`(mismatch-name ,n ,pat) (loop pat)]
-     [`(in-hole ,p1 ,p2) (and (loop p1) (loop p2))]
-     [`(hide-hole ,p) (loop p)]
+     [`(name ,n ,pat) (loop pat inside-ellipsis?)]
+     [`(mismatch-name ,n ,pat) (and (not inside-ellipsis?) (loop pat inside-ellipsis?))]
+     [`(in-hole ,p1 ,p2) (and (loop p1 inside-ellipsis?) (loop p2 inside-ellipsis?))]
+     [`(hide-hole ,p) (loop p inside-ellipsis?)]
      [`(side-condition ,p ,g ,e) #f]
      [`(cross ,id) 
       (or (not cross-can-enumerate-ht) 
@@ -401,6 +401,6 @@
      [`(list ,sub-pats ...)
       (for/and ([sub-pat (in-list sub-pats)])
         (match sub-pat
-          [`(repeat ,pat ,_ ,_) (loop pat)]
-          [else (loop sub-pat)]))]
+          [`(repeat ,pat ,_ ,_) (loop pat #t)]
+          [else (loop sub-pat inside-ellipsis?)]))]
      [(? (compose not pair?)) #t])))

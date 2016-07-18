@@ -916,7 +916,9 @@
                (regexp-match #rx"^[A-Z]" (symbol->string (term variable_1))))))
   
   ;; just make sure no errors
-  (redex-check L cap-x #t #:attempts 10))
+  (redex-check L cap-x #t #:attempts 10)
+  (void (redex-check L (any_!_1 any_!_1 ...) #t #:attempts 10 #:print? #f))
+  (void (redex-check L (any_!_1 ... any_!_1 ...) #t #:attempts 10 #:print? #f)))
 
 (let ()
   ;; just make sure no errors
