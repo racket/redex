@@ -90,7 +90,7 @@ the language of its arguments.}
 
 This call is intended to replace all free occurrences of @racket[x] with @racket[(y y)]
 in the first argument to @racket[substitute]. But, 
-because @racket[_lc-lang] of the missing binding forms declaration, @racket[substitute]
+because @racket[_lc-lang] is missing a binding forms declaration, @racket[substitute]
 replaces all instances of @racket[x] with @racket[(y y)] in the term
 @racket[(x (λ (x) (λ (y) x)))]. Note that even the @racket[x] that appears in what
 is normally a binding position has been replaced, resulting in an ill-formed lambda
