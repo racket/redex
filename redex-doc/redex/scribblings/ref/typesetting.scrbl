@@ -643,16 +643,17 @@ It's default value is @racket[default-white-square-bracket]. See also
   This parameter's value influences the @racket['left/right] styles only.
 }
 
-@defparam[metafunction-cases 
+@defparam[metafunction-cases
           cases
-          (or/c #f (and/c (listof (or/c exact-nonnegative-integer? 
-                                        string?))
+          (or/c #f (and/c (listof (or/c symbol?
+                                        string?
+                                        exact-nonnegative-integer?))
                           pair?))]{
 
 Controls which cases in a metafunction are rendered. If it is @racket[#f]
 (the default), then all of the cases appear. If it is a list, then only 
 the selected cases appear. The numbers indicate the cases counting from
-@racket[0] and the strings indicate cases named with @racket[clause-name].
+@racket[0] and the strings and symbols indicate cases named with @racket[clause-name].
 
 This parameter also controls how which clauses in judgment forms are rendered, but
 only in the case that @racket[judgment-form-cases] is @racket[#f] (and in that
@@ -662,13 +663,13 @@ case, only the numbers are used).
 @defparam[judgment-form-cases 
           cases
           (or/c #f
-                (and/c (listof (or/c exact-nonnegative-integer?
-                                     string?))
-                       pair?))]{
+                (non-empty-listof (or/c symbol?
+                                        string?
+                                        exact-nonnegative-integer?)))]{
    Controls which clauses in a judgment form are rendered. If it is 
    @racket[#f] (the default), then all of them are rendered. If
    it is a list, then only the selected clauses appear (numbers
-   count from @racket[0], and strings correspond to the labels
+   count from @racket[0], and strings and symbols correspond to the labels
    in a judgment form).
 }
 

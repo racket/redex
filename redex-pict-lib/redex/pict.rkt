@@ -105,9 +105,10 @@
   (parameter/c reduction-rule-style/c)]
  [arrow-space (parameter/c natural-number/c)]
  [label-space (parameter/c natural-number/c)]
- [metafunction-cases (parameter/c (or/c #f (listof (or/c exact-nonnegative-integer? string?))))]
- [judgment-form-cases (parameter/c (or/c #f (and/c (listof (or/c exact-nonnegative-integer? string?))
-                                                   pair?)))]
+ [metafunction-cases
+  (parameter/c (or/c #f (listof (or/c exact-nonnegative-integer? symbol? string?))))]
+ [judgment-form-cases
+  (parameter/c (or/c #f (non-empty-listof (or/c exact-nonnegative-integer? symbol? string?))))]
  [metafunction-pict-style 
   (parameter/c (symbols 'left-right
                         'left-right/vertical-side-conditions

@@ -949,7 +949,10 @@
     [mf-cases
      (define i 0)
      (define sorted-cases (remove-duplicates (sort (filter number? mf-cases) <)))
-     (define named-cases (apply set (filter string? mf-cases)))
+     (define named-cases (for/set ([case (in-list mf-cases)]
+                                   #:when (or (symbol? case)
+                                              (string? case)))
+                           (if (symbol? case) (symbol->string case) case)))
      (for/list ([eqns (in-list eqns)]
                 [contract (in-list contracts)]
                 [case-labels (in-list case-labelss)])
@@ -977,9 +980,17 @@
 (define judgment-form-cases (make-parameter #f))
 (define (select-jf-cases eqns conclusions eqn-names)
   (define cases
-    (or (judgment-form-cases)
-        (and (metafunction-cases)
-             (filter number? (metafunction-cases)))))
+    (cond
+      [(judgment-form-cases)
+       (for/set ([jf-case (in-list (judgment-form-cases))])
+         (if (symbol? jf-case)
+             (symbol->string jf-case)
+             jf-case))]
+      [(metafunction-cases)
+       (for/set ([case (in-list metafunction-cases)]
+                 #:when (number? case))
+         case)]
+      [else #f]))
   (cond
     [cases
      (define-values (rev-eqns rev-concs rev-eqn-names)
@@ -990,8 +1001,8 @@
                   [conc (in-list conclusions)]
                   [eqn-name (in-list eqn-names)]
                   [i (in-naturals)])
-         (if (or (member i cases)
-                 (member eqn-name cases))
+         (if (or (set-member? cases i)
+                 (set-member? cases eqn-name))
              (values (cons eqn eqns)
                      (cons conc concs)
                      (cons eqn-name eqn-names))

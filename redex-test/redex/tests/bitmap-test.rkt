@@ -163,7 +163,7 @@
 ;; in this test, the metafunction has 3 clauses 
 ;; with a side-condition on the first clause
 ;; a 'where' in the second clause, and an underscore
-(btest (parameterize ([metafunction-cases '("first-one" 1)])
+(btest (parameterize ([metafunction-cases '(first-one 1)])
          (render-metafunction T))
        "metafunction-T.png")
 
