@@ -987,7 +987,7 @@
              (symbol->string jf-case)
              jf-case))]
       [(metafunction-cases)
-       (for/set ([case (in-list metafunction-cases)]
+       (for/set ([case (in-list (metafunction-cases))]
                  #:when (number? case))
          case)]
       [else #f]))
