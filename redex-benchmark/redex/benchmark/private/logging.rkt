@@ -17,7 +17,8 @@
          bmark-log-directory
          read-logfile
          make-event-filter
-         datum-selector)
+         datum-selector
+         (struct-out bmark-log-data))
 
 (struct bmark-log-data (data))
 (struct bmark-log-end ())

@@ -12,4 +12,5 @@
          bmark-log-directory
          benchmark-logging-to
          bmark-log
-         (struct-out run-results))
+         (struct-out run-results)
+         (struct-out bmark-log-data))
