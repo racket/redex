@@ -258,7 +258,7 @@
            (recur p)]
           [_
            (unless (groundable? p)
-             (error resolve-no-nts/pat 
+             (error 'mresolve-no-nts/pat 
                     "non-groundable pat at internal pattern position: ~s" p))
            p])))
 
