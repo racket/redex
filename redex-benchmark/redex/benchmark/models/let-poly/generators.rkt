@@ -32,6 +32,15 @@
   (define (generate [index 0])
     (generate-term stlc M #:i-th index)))
 
+(module+ typed-mod
+  (provide generate get-generator type)
+  (define type 'search)
+  (define (get-generator) generate)
+  (define (generate)
+    (match (generate-term poly-stlc #:satisfying (typeof M σ) 3)
+      [`(typeof ,M ,σ) M]
+      [#f #f])))
+
 (module+ check-mod
   (require (only-in redex/examples/stlc-tests-lib consistent-with?))
   (provide check)
