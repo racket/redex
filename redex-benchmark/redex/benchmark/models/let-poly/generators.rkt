@@ -34,10 +34,11 @@
 
 (module+ typed-mod
   (provide generate get-generator type)
+  (require racket/match)
   (define type 'search)
   (define (get-generator) generate)
   (define (generate)
-    (match (generate-term poly-stlc #:satisfying (typeof M σ) 3)
+    (match (generate-term stlc #:satisfying (typeof M σ) 3)
       [`(typeof ,M ,σ) M]
       [#f #f])))
 
