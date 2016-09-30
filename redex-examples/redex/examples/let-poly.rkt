@@ -87,48 +87,48 @@ bring that type back, recurring on the continuation.
   #:contract (tc-down Γ M κ σ)
   
   [(tc-up (const-type0 c0) κ σ_ans)
-   ------------------------------
+   -------------------------------- "const0"
    (tc-down Γ c0 κ σ_ans)]
   
   [(where x ,(variable-not-in (term (Γ κ)) 'γ))
    (tc-up (const-type1 x c1) κ σ_ans)
-   ------------------------------
+   -------------------------------------------- "const1"
    (tc-down Γ c1 κ σ_ans)]
   
   [(where τ (lookup-Γ Γ x))
    (tc-up τ κ σ_ans)
-   ---------------------------
+   ------------------------ "var"
    (tc-down Γ x κ σ_ans)]
   
   [(where y ,(variable-not-in (term (x Γ M κ)) 'α2-))
    (tc-down (x y Γ) M (λ y κ) σ_ans)
-   ------------------------------------------------
+   -------------------------------------------------- "λ"
    (tc-down Γ (λ x M) κ σ_ans)]
-  
+
   [(tc-down Γ M_1 (1 Γ M_2 κ) σ_2)
-   --------------------------
+   ------------------------------- "app"
    (tc-down Γ (M_1 M_2) κ σ_2)]
   
   [(where N_2 (subst N x v))
    (where y ,(variable-not-in (term N_2) 'l))
    (tc-down Γ ((λ y N_2) v) κ σ_2)
-   ------------------------------------------
+   ------------------------------------------ "let poly"
    (tc-down Γ (let ([x v]) N) κ σ_2)]
   
   [(where #t (not-v? M))
    (tc-down Γ ((λ x N) M) κ σ_2)
-   ---------------------------------
+   --------------------------------- "let mono"
    (tc-down Γ (let ([x M]) N) κ σ_2)])
 
 (define-judgment-form stlc
   #:mode (tc-up I I O)
   #:contract (tc-up τ κ σ)
   
-  [---------------------
+  [--------------------- "done"
    (tc-up σ_ans · σ_ans)]
-  
+
   [(tc-down Γ M (2 τ κ) σ_ans)
-   ---------------------------
+   --------------------------- "app l"
    (tc-up τ (1 Γ M κ) σ_ans)]
   
   [(where x ,(variable-not-in (term (τ_1 τ_2 κ)) 'α1-))
@@ -136,11 +136,11 @@ bring that type back, recurring on the continuation.
    (tc-up (apply-subst-τ G x)
           (apply-subst-κ G κ)
           σ_ans)
-   ---------------------------------------------------
+   --------------------------------------------------- "app r"
    (tc-up τ_1 (2 τ_2 κ) σ_ans)]
   
   [(tc-up (τ_1 → τ_2) κ σ_ans)
-   ---------------------------
+   --------------------------- "λ"
    (tc-up τ_2 (λ τ_1 κ) σ_ans)])
 
 (define-metafunction stlc
@@ -185,8 +185,11 @@ rules from the paper, building up the result substitution in G_r.
   [(uh · Gx) Gx]
   
   ;; orient
-  [(uh (τ x G) Gx) (uh (x τ G) Gx) (where #t (not-var? τ))]
-  
+  [(uh (int      x G) Gx) (uh (x int G) Gx)]
+  [(uh ((σ → τ)  x G) Gx) (uh (x (σ → τ) G) Gx)]
+  [(uh ((list τ) x G) Gx) (uh (x (list τ) G) Gx)]
+  [(uh ((ref τ)  x G) Gx) (uh (x (ref τ) G) Gx)]
+
   ;; trivial (other cases are covered by decomposition rule)
   [(uh (x x G) Gx) (uh G Gx)]
   
@@ -197,12 +200,41 @@ rules from the paper, building up the result substitution in G_r.
   [(uh (int         int         G) Gx) (uh G                     Gx)]
   
   ;; symbol clash
-  [(uh (τ σ G) Gx) ⊥ (where #t (not-var? τ)) (where #t (not-var? σ))]
-  
-  ;; occurs check
+  [(uh (int (σ → τ) G) Gx) ⊥]
+  [(uh (int (list τ) G) Gx) ⊥]
+  [(uh (int (ref τ) G) Gx) ⊥]
+
+  [(uh ((σ → τ) int G) Gx) ⊥]
+  [(uh ((σ → τ) (list τ) G) Gx) ⊥]
+  [(uh ((σ → τ) (ref τ) G) Gx) ⊥]
+
+  [(uh ((list τ) int G) Gx) ⊥]
+  [(uh ((list τ) (σ → τ) G) Gx) ⊥]
+  [(uh ((list τ) (ref τ) G) Gx) ⊥]
+
+  [(uh ((ref τ) int G) Gx) ⊥]
+  [(uh ((ref τ) (σ → τ) G) Gx) ⊥]
+  [(uh ((ref τ) (list τ) G) Gx) ⊥]
+
+  ;; occurs check for one x
+  [(uh (x x G) Gx) ⊥]
+
+  ;; variable elimination for x & some no-variable cases
+  [(uh (x y G) Gx)
+   (uh (eliminate-G x y G) (x y (eliminate-G x y Gx)))]
+  [(uh (x int G) Gx)
+   (uh (eliminate-G x int G) (x int (eliminate-G x int Gx)))]
+  [(uh (x (list int) G) Gx)
+   (uh (eliminate-G x (list int) G) (x (list int) (eliminate-G x (list int) Gx)))]
+  [(uh (x (ref int) G) Gx)
+   (uh (eliminate-G x (ref int) G) (x (ref int) (eliminate-G x (ref int) Gx)))]
+  [(uh (x (int → int) G) Gx)
+   (uh (eliminate-G x (int → int) G) (x (int → int) (eliminate-G x (int → int) Gx)))]
+
+  ;; general occurs check
   [(uh (x τ G) Gx) ⊥ (where #t (in-vars-τ? x τ))]
   
-  ;; variable elimination
+  ;; general variable elimination
   [(uh (x τ G) Gx)
    (uh (eliminate-G x τ G) (x τ (eliminate-G x τ Gx)))])
 
@@ -225,11 +257,6 @@ rules from the paper, building up the result substitution in G_r.
   ∨ : boolean boolean -> boolean
   [(∨ #f #f) #f]
   [(∨ boolean_1 boolean_2) #t])
-
-(define-metafunction stlc
-  not-var? : τ -> boolean
-  [(not-var? x) #f]
-  [(not-var? τ) #t])
 
 (define-metafunction stlc
   in-vars-τ? : x τ -> boolean
