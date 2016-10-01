@@ -35,16 +35,16 @@
           [(lvar id)
            ;; careful! term-e has terms, eqs has pats!
            (hash-ref term-e p
-              (λ () (recur (hash-ref eqs p))))]
+                     (λ () (recur (hash-ref eqs p))))]
           [`(name ,id ,(bound))
            (hash-ref term-e (lvar id)
-              (λ () (recur (hash-ref eqs (lvar id)))))]
+                     (λ () (recur (hash-ref eqs (lvar id)))))]
           [`(list ,ps ...)
-           `(,@(for/list ([p ps]) (recur p)))]
+           `(,@(for/list ([p (in-list ps)]) (recur p)))]
           [`(cstr (,nts ...) ,p)
            (recur p)]
-         [`(variable-not-in ,not-in-p ,sym)
-          (recur not-in-p)]
+          [`(variable-not-in ,not-in-p ,sym)
+           (recur not-in-p)]
           [`(nt ,_)
            (okk (ok))]
           [(? predef-pat? _)
@@ -66,30 +66,30 @@
          (match pat
            [`(nt ,p-nt)
             (define all-nts (cons p-nt nts))
-            (for/not-failed ([nt-pat all-nts])
+            (for/not-failed ([nt-pat (in-list all-nts)])
                             (define term (recur `(nt ,nt-pat)))
-                            (and/fail (for/and ([nt (remove nt-pat all-nts)])
+                            (and/fail (for/and ([nt (in-list (remove nt-pat all-nts))])
                                         ((get-matcher nt) term))
                                       term))]
            [`any
-            (for/not-failed ([nt-pat nts])
+            (for/not-failed ([nt-pat (in-list nts)])
                             (define term (recur `(nt ,nt-pat)))
-                            (and/fail (for/and ([nt (remove nt-pat nts)])
+                            (and/fail (for/and ([nt (in-list (remove nt-pat nts))])
                                         ((get-matcher nt) term))
                                       term))]
            [_
             (define term (recur pat))
-            (and/fail (for/and ([nt nts])
+            (and/fail (for/and ([nt (in-list nts)])
                         ((get-matcher nt) term))
                       term)])]
         [`(name ,var ,pat)
          (error 'make-term "can't instantiate a term with an unbound variable: ~s" p)]
         [`(list ,ps ...)
-         (call/ec (λ (fail)
-                    (for/list ([p ps])
-                      (let ([res (recur p)])
-                        (unless (not-failed? res) (fail (unif-fail)))
-                        res))))]
+         (let/ec fail
+           (for/list ([p (in-list ps)])
+             (define res (recur p))
+             (unless (not-failed? res) (fail (unif-fail)))
+             res))]
         [`(variable-not-in ,not-in-p ,sym)
          (variable-not-in (recur not-in-p) sym)]
         [_
@@ -101,7 +101,7 @@
        [`(cstr (,nts ...) ,p)
         (define grook (ground-or-ok p))
         (or (ok? grook)
-            (for/and ([nt nts])
+            (for/and ([nt (in-list nts)])
               ((get-matcher nt) grook)))]
        [_ #t]))
    (check-dqs (remove-empty-dqs (env-dqs full-env)) term-e lang eqs)
@@ -109,7 +109,7 @@
 
 (define-syntax-rule (for/not-failed ((x xs)) b ...)
   (for/fold ([res (unif-fail)])
-    ([x xs])
+            ([x xs])
     #:break (not-failed? res)
     b ...))
 
@@ -118,7 +118,7 @@
     p))   
 
 (define (check-dqs dqs term-e lang eqs)
-  (for/and ([dq dqs])
+  (for/and ([dq (in-list dqs)])
     (define te (hash-copy term-e))
     (check-dq dq te lang eqs)))
 
@@ -148,7 +148,7 @@
          [`(cstr  (,nts ...) ,pat)
           (recur pat)]
          [`(list ,ps ...)
-          (for/list ([p ps]) (recur p))]
+          (for/list ([p (in-list ps)]) (recur p))]
          [`(nt ,_)
           (fail (not-ground))]
          [`(,stuff ...) ;; here it's a fully instanatiated list
@@ -179,8 +179,8 @@
         #t]
        [(`(,l-ts ...) `(,r-ts ...))
         (and (= (length l-ts) (length r-ts))
-             (for/and ([lt l-ts]
-                       [rt r-ts])
+             (for/and ([lt (in-list l-ts)]
+                       [rt (in-list r-ts)])
                (recur lt rt)))]
        [(_ _)
         (equal? l r)]))
