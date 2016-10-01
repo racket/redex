@@ -11,18 +11,18 @@
   ([(where N_2 (subst N x v))
     (where y ,(variable-not-in (term N_2) 'l))
     (tc-down Γ ((λ y N_2) v) κ σ_2)
-    ------------------------------------------
+    ------------------------------------------ "let poly"
     (tc-down Γ (let ([x v]) N) κ σ_2)]
-   
+  
    [(where #t (not-v? M))
     (tc-down Γ ((λ x N) M) κ σ_2)
-    ---------------------------------
+    --------------------------------- "let mono"
     (tc-down Γ (let ([x M]) N) κ σ_2)])
   ==>
   ([(where N_2 (subst N x M))
     (where y ,(variable-not-in (term N_2) 'l))
     (tc-down Γ ((λ y N_2) M) κ σ_2)
-    ------------------------------------------
+    ------------------------------------------ "let"
     (tc-down Γ (let ([x M]) N) κ σ_2)])
   #:context (define-judgment-form)
   #:once-only)
