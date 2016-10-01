@@ -2,8 +2,7 @@
 
 (require redex/private/matcher
          redex/private/lang-struct
-         (for-syntax syntax/parse setup/path-to-relative)
-         setup/path-to-relative
+         (for-syntax syntax/parse redex/private/keyword-macros)
          racket/runtime-path)
 (provide test tests reset-count
          print-tests-passed
@@ -22,7 +21,7 @@
     [(_ expected got)
      (with-syntax ([line (syntax-line stx)]
                    [fn (if (path? (syntax-source (syntax got)))
-                           (path->relative-string/library (syntax-source (syntax got)))
+                           (path->presentable-string (syntax-source (syntax got)))
                            "<unknown file>")])
        (syntax/loc stx (test/proc (λ () expected) got line fn)))]))
 

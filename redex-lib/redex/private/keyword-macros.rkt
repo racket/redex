@@ -5,6 +5,12 @@
          setup/path-to-relative
          (for-template racket/base racket/contract))
 
+(provide src-loc-stx
+         apply-contract
+         client-name
+         parse-kw-args
+         path->presentable-string)
+
 (define (parse-kw-args formals actuals source form-name)
   (let loop ([current (for/hash ([arg formals]) (values (car arg) #f))]
              [rest actuals])
@@ -37,7 +43,7 @@
              (syntax rest))]
       [else (raise-syntax-error #f "bad keyword argument syntax" source rest)])))
 
-;; note: depents on current-directory (or current-load-relative-directory)
+;; note: depends on current-directory (or current-load-relative-directory)
 (define (client-name stx form)
   (define mpi/path/sym (syntax-source-module stx))
   (define pth/sym (if (module-path-index? mpi/path/sym)
@@ -45,12 +51,12 @@
                        (module-path-index-resolve mpi/path/sym))
                       mpi/path/sym))
   (if (path? pth/sym)
-      (path->relative-string/library pth/sym)
+      (path->presentable-string pth/sym)
       (format "~s" pth/sym)))
 
 (define (src-loc-stx stx)
   #`#(#,(and (path? (syntax-source stx))
-             (path->relative-string/library (syntax-source stx)))
+             (path->presentable-string (syntax-source stx)))
       #,(syntax-line stx) 
       #,(syntax-column stx) 
       #,(syntax-position stx)
@@ -61,7 +67,22 @@
               #,(client-name expr form) '#,form
               #,desc #,(src-loc-stx expr)))
 
-(provide src-loc-stx
-         apply-contract
-         client-name
-         parse-kw-args)
+
+(define (get-srcloc stx)
+  #`(list 
+     '#,(and (path? (syntax-source stx))
+             (path->presentable-string (syntax-source stx)))
+     '#,(syntax-line stx)
+     '#,(syntax-column stx)
+     '#,(syntax-position stx)))
+
+(define (get-srcloc/string stx)
+  (format "~a:~a:~a"
+          (and (path? (syntax-source stx))
+               (path->presentable-string (syntax-source stx)))
+          (syntax-line stx)
+          (syntax-column stx)))
+
+(define cache (make-hash))
+(define (path->presentable-string path)
+  (path->relative-string/library path #:cache cache))

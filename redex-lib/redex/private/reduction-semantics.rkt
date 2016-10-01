@@ -25,7 +25,7 @@
          (rename-in racket/match (match match:)))
 
 (require (for-syntax syntax/name
-                     setup/path-to-relative
+                     "keyword-macros.rkt"
                      "cycle-check.rkt"
                      "loc-wrapper-ct.rkt"
                      "rewrite-side-conditions.rkt"
@@ -834,7 +834,7 @@
                       #f))
         (with-syntax ([lhs-source (format "~a:~a:~a"
                                           (and (path? (syntax-source from))
-                                               (path->relative-string/library (syntax-source from)))
+                                               (path->presentable-string (syntax-source from)))
                                           (syntax-line from)
                                           (syntax-column from))]
                       [name name]
@@ -1405,7 +1405,7 @@
                                 (map (λ (lhs)
                                        (format "~a:~a:~a"
                                                (and (path? (syntax-source lhs))
-                                                    (path->relative-string/library (syntax-source lhs)))
+                                                    (path->presentable-string (syntax-source lhs)))
                                                (syntax-line lhs)
                                                (syntax-column lhs)))
                                      (syntax->list #'(original-names ...)))]
@@ -2678,7 +2678,7 @@
 (define-for-syntax (get-srcloc stx)
   #`(list 
      '#,(and (path? (syntax-source stx))
-             (path->relative-string/library (syntax-source stx)))
+             (path->presentable-string (syntax-source stx)))
      '#,(syntax-line stx)
      '#,(syntax-column stx)
      '#,(syntax-position stx)))

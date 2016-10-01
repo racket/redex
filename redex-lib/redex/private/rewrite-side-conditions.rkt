@@ -3,7 +3,7 @@
   (require "underscore-allowed.rkt"
            "term.rkt"
            "term-fn.rkt"
-           setup/path-to-relative
+           "keyword-macros.rkt"
            racket/match
            "match-a-pattern.rkt"
            (for-template
@@ -160,7 +160,7 @@
                               (define col (syntax-column stx))
                               (format "~a:~a" 
                                       (if (path? src)
-                                          (path->relative-string/library src)
+                                          (path->presentable-string src)
                                           "?")
                                       (if (and line col)
                                           (format "~a:~a" line col)
