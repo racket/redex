@@ -14,7 +14,19 @@
          empty-reduction-relation
          make-rewrite-proc rewrite-proc? rewrite-proc-name 
          rewrite-proc-side-conditions-rewritten rewrite-proc-lhs-src rewrite-proc-id
-         (struct-out rule-pict-info))
+         (struct-out rule-pict-info)
+
+         metafunc-proc-clause-names
+         metafunc-proc-pict-info
+         metafunc-proc-lang
+         metafunc-proc-multi-arg?
+         metafunc-proc-name
+         metafunc-proc-in-dom?
+         metafunc-proc-dom-pat
+         metafunc-proc-cases
+         metafunc-proc-gen-clauses
+         metafunc-proc?
+         make-metafunc-proc)
 
 (define-struct rule-pict-info (arrow
                                lhs rhs
@@ -90,3 +102,20 @@
             (specialized exp exp checked-rewrite acc)))
         combined-rules)
    domain))
+
+
+(define-values (struct:metafunc-proc
+                make-metafunc-proc
+                metafunc-proc?
+                metafunc-proc-ref
+                metafunc-proc-set!)
+  (make-struct-type 'metafunc-proc #f 10 0 #f null (current-inspector) 0))
+(define metafunc-proc-clause-names (make-struct-field-accessor metafunc-proc-ref 1))
+(define metafunc-proc-pict-info (make-struct-field-accessor metafunc-proc-ref 2))
+(define metafunc-proc-lang (make-struct-field-accessor metafunc-proc-ref 3))
+(define metafunc-proc-multi-arg? (make-struct-field-accessor metafunc-proc-ref 4))
+(define metafunc-proc-name (make-struct-field-accessor metafunc-proc-ref 5))
+(define metafunc-proc-in-dom? (make-struct-field-accessor metafunc-proc-ref 6))
+(define metafunc-proc-dom-pat (make-struct-field-accessor metafunc-proc-ref 7))
+(define metafunc-proc-cases (make-struct-field-accessor metafunc-proc-ref 8))
+(define metafunc-proc-gen-clauses (make-struct-field-accessor metafunc-proc-ref 9))

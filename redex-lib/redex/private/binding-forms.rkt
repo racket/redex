@@ -1,5 +1,8 @@
-#lang racket
-
+#lang racket/base
+(require racket/dict
+         racket/bool
+         racket/match
+         racket/list)
 
 #|
 
@@ -140,7 +143,7 @@ to traverse the whole value at once, rather than one binding form at a time.
   (cond
    ;; short-circuit on some easy cases:
    [(eq? redex-val-lhs redex-val-rhs) #t]
-   [(and (symbol? redex-val-lhs) (symbol? redex-val-rhs)) (symbol=? redex-val-lhs redex-val-rhs)]
+   [(and (symbol? redex-val-lhs) (symbol? redex-val-rhs)) (equal? redex-val-lhs redex-val-rhs)]
    [(or (xor (symbol? redex-val-lhs)
              (symbol? redex-val-rhs))
         (xor (list? redex-val-lhs)

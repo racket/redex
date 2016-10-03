@@ -7,7 +7,7 @@
          "error.rkt"
          "struct.rkt"
          "match-a-pattern.rkt"
-         (for-syntax "reduction-semantics.rkt")
+         "reduction-semantics.rkt"
          racket/list
          racket/dict
          racket/contract

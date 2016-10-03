@@ -1,7 +1,6 @@
 #lang racket/base
 
   (require "underscore-allowed.rkt"
-           "term.rkt"
            "term-fn.rkt"
            "keyword-macros.rkt"
            racket/match

@@ -8,7 +8,6 @@
          "loc-wrapper.rkt"
          "error.rkt"
          "judgment-form.rkt"
-         "term-fn.rkt"
          "search.rkt"
          "lang-struct.rkt"
          (only-in "binding-forms.rkt"

@@ -6,13 +6,10 @@
          "reduction-semantics.rkt"
          "lang-struct.rkt"
          "struct.rkt"
-         "term.rkt"
          "matcher.rkt"
          "judgment-form.rkt"
          "search.rkt"
-         "term-fn.rkt"
          "pat-unify.rkt"
-         "keyword-macros.rkt"
          racket/contract
          racket/match
          racket/pretty

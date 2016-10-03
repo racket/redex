@@ -7,12 +7,11 @@
          "search.rkt"
          "lang-struct.rkt"
          "binding-forms.rkt"
+         "struct.rkt"
          racket/trace
          racket/list
          racket/stxparam
          racket/dict
-         "term-fn.rkt"
-         "rewrite-side-conditions.rkt"
          (only-in "pat-unify.rkt"
                   unsupported-pat-err-name
                   unsupported-pat-err)
@@ -21,7 +20,6 @@
 
 (require
  (for-syntax "rewrite-side-conditions.rkt"
-             "term.rkt"
              "term-fn.rkt"
              "loc-wrapper-ct.rkt"
              racket/stxparam-exptime
@@ -31,9 +29,6 @@
              racket/list
              syntax/parse
              syntax/stx))
-
-(require
- (for-template "term.rkt"))
 
 (struct derivation (term name subs) 
   #:transparent
@@ -1812,7 +1807,6 @@
          build-derivations
          generate-lws
          IO-judgment-form?
-         judgment-form?
          call-judgment-form
          include-jf-rulename
          alpha-equivalent?

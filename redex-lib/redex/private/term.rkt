@@ -7,8 +7,7 @@
                      racket/syntax
                      racket/match
                      (only-in racket/list flatten)
-                     "keyword-macros.rkt"
-                     "matcher.rkt")
+                     "keyword-macros.rkt")
          (only-in "fresh.rkt" variable-not-in)
          syntax/datum
          racket/list
