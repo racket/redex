@@ -1,6 +1,14 @@
-#lang racket
+#lang racket/base
+(require (for-syntax racket/base))
 
-(provide (all-defined-out))
+(provide shadow nothing
+         (struct-out import/internal)
+         (struct-out .../internal)
+         (struct-out ...bind/internal)
+         (struct-out shadow/internal)
+         (struct-out bspec)
+         (struct-out value-with-spec)
+         (struct-out bf-table-entry))
 
 ;; When this error occurs, it seems to come from 'wrap-modbeg.rkt'. That seems bad
 (define-syntax (shadow stx) (raise-syntax-error #f "used outside of binding specification" stx))
@@ -33,3 +41,5 @@
 ;; so no matching is required.
 ;; (Used by `#:...bind` for the layers of binding objects it creates).
 (struct value-with-spec (match spec) #:transparent)
+
+(struct bf-table-entry (compiled-pat bspec pat))

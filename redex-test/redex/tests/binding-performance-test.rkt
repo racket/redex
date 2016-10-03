@@ -27,7 +27,7 @@
 
 (module micro-tests racket
  (require redex)
- (require redex/private/binding-forms-compiler)
+ (require (for-syntax redex/private/binding-forms-compiler))
  (require redex/private/binding-forms-definitions)
  (require (submod ".." perf-test-tools))
 

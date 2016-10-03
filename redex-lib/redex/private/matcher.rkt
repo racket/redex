@@ -53,7 +53,7 @@ See match-a-pattern.rkt for more details
          "enum.rkt"
          "binding-forms.rkt"
          "ambiguous.rkt"
-         (only-in "binding-forms-definitions.rkt" bspec?))
+         (only-in "binding-forms-definitions.rkt" bspec? bf-table-entry))
 
 (define-struct compiled-pattern (cp binds-names? skip-dup-check? lang-α-equal?) #:transparent)
 
@@ -115,8 +115,10 @@ See match-a-pattern.rkt for more details
                                     `() ;; internal patterns don't need freshening
                                     #f)]
          [binders (map (match-lambda
-                        [`(,rewritten-pattern ,bspec)
-                         `(,(compile-pattern clang rewritten-pattern #t) ,bspec)])
+                         [`(,rewritten-pattern ,bspec)
+                          (bf-table-entry (compile-pattern clang rewritten-pattern #t)
+                                          bspec
+                                          rewritten-pattern)])
                        binding-info)]
          [non-list-nt-table (build-non-list-nt-label lang)]
          [list-nt-table (build-list-nt-label lang)]
@@ -730,7 +732,7 @@ See match-a-pattern.rkt for more details
   (define binding-forms (compiled-lang-binding-table clang))
 
   (define lang-α-equal?
-    (λ (lhs rhs) (α-equal? (compiled-lang-binding-table clang) match-pattern lhs rhs)))
+    (λ (lhs rhs) (α-equal? binding-forms match-pattern lhs rhs)))
 
   ;; Note that `bind-names?` means that identical names must match identical values, and
   ;; binding forms specify alpha-equivalence behavior in the user-defined language.
@@ -760,12 +762,12 @@ See match-a-pattern.rkt for more details
            (cond
             [(or (not bind-names?)
                  (not (pattern-might-destructure? pattern))
-                 (empty? (compiled-lang-binding-table clang)))
+                 (empty? binding-forms))
              compiled-pattern-without-freshening]
             [(equal? (procedure-arity compiled-pattern-without-freshening) 3)
              (lambda (exp hole-info nesting-depth)
                      (compiled-pattern-without-freshening
-                      (freshen (compiled-lang-binding-table clang) match-pattern exp)
+                      (freshen binding-forms match-pattern exp)
                       hole-info nesting-depth))]
             ;; only returns a boolean, no need to freshen
             [else compiled-pattern-without-freshening]))
@@ -2049,7 +2051,7 @@ See match-a-pattern.rkt for more details
  (cache-size (and/c integer? positive?))
  
  (compile-language (-> any/c (listof nt?)
-                       any/c #;(listof (list/c compiled-pattern? bspec?))
+                       (listof (list/c (not/c compiled-pattern?) bspec?))
                        (listof symbol?)
                        compiled-lang?)))
 (provide compiled-pattern? 

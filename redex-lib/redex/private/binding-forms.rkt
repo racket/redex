@@ -91,14 +91,14 @@ to traverse the whole value at once, rather than one binding form at a time.
 ;; == parameters ==
 
 ;; The binding forms in the current language
-(define bf-table (make-parameter "binding-forms table not defined"))
+;; (listof bf-table-entry?)
+(define current-bf-table (make-parameter "binding-forms table not defined"))
 ;; Necessary to avoid a circular import
 (define pattern-matcher (make-parameter "pattern matcher not defined"))
 ;; Sometimes we want fresh names, sometimes we want canonical names
 (define name-generator (make-parameter "name generator not defined"))
 ;; For α-equivalence testing, we walk the whole term at once.
 (define all-the-way-down? (make-parameter "all-the-way-downness not defined"))
-
 
 ;; For the outside interface: indicate whether any binding forms were opened.
 ;; (This is intended to be used to disable caching)
@@ -114,7 +114,7 @@ to traverse the whole value at once, rather than one binding form at a time.
 ;; freshen : (listof (list compiled-pattern bspec))
 ;; (compiled-pattern redex-val -> (union #f mtch)) redex-val -> redex-val bool
 (define (freshen language-bf-table match-pattern redex-val)
-  (parameterize ([bf-table language-bf-table]
+  (parameterize ([current-bf-table language-bf-table]
                  [pattern-matcher match-pattern]
                  [name-generator generate-readable-fresh-name]
                  [all-the-way-down? #f])
@@ -153,7 +153,7 @@ to traverse the whole value at once, rather than one binding form at a time.
 ;; Perform a capture-avoiding substitution
 (define (safe-subst language-bf-table match-pattern redex-val redex-val-old-var redex-val-new-val)
   (parameterize
-   ([bf-table language-bf-table]
+   ([current-bf-table language-bf-table]
     [pattern-matcher match-pattern]
     [name-generator generate-readable-fresh-name]
     [all-the-way-down? #t])
@@ -171,7 +171,7 @@ to traverse the whole value at once, rather than one binding form at a time.
   (define current-name-id 0)
 
   (parameterize
-   ([bf-table language-bf-table]
+   ([current-bf-table language-bf-table]
     [pattern-matcher match-pattern]
     [all-the-way-down? #t]
     [name-generator (λ (orig)
@@ -214,9 +214,9 @@ to traverse the whole value at once, rather than one binding form at a time.
 (define (dispatch redex-val fn nospec-fn)
   (match redex-val
     [(? list?)
-     (let loop ((bf-table (bf-table)))
+     (let loop ((bf-table (current-bf-table)))
        (match bf-table
-         [`((,compiled-pat ,bspec) . ,rest)
+         [(cons (bf-table-entry compiled-pat bspec pat) rest)
           (define match-res ((pattern-matcher) compiled-pat redex-val))
           (match match-res
             [#f (loop rest)]
@@ -535,7 +535,7 @@ to traverse the whole value at once, rather than one binding form at a time.
 
 
   ;; subterms have no binding structure this way:
-  (parameterize ([bf-table `()]
+  (parameterize ([current-bf-table `()]
                  [pattern-matcher #f])
 
 
@@ -719,7 +719,7 @@ to traverse the whole value at once, rather than one binding form at a time.
     (equal? lst (remove-duplicates lst)))
 
   ;; subterms have no binding structure this way:
-  (parameterize ([bf-table `()]
+  (parameterize ([current-bf-table `()]
                  [pattern-matcher #f]
                  [name-generator gensym]
                  [all-the-way-down? #f])

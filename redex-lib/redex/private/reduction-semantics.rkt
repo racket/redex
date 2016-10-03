@@ -11,11 +11,10 @@
          "term-fn.rkt"
          "search.rkt"
          "lang-struct.rkt"
-         "binding-forms-compiler.rkt"
          (only-in "binding-forms.rkt"
                   α-equal? safe-subst binding-forms-opened?)
          (only-in "binding-forms-definitions.rkt"
-                  shadow nothing)
+                  shadow nothing bf-table-entry-pat bf-table-entry-bspec)
          racket/trace
          racket/contract
          racket/list
@@ -31,8 +30,7 @@
                      "rewrite-side-conditions.rkt"
                      "term-fn.rkt"
                      "underscore-allowed.rkt"
-                     (only-in "binding-forms-compiler.rkt" compile-binding-forms)
-                     (only-in "matcher.rkt" prefix-nts)
+                     "binding-forms-compiler.rkt"
                      syntax/boundmap
                      syntax/id-table
                      racket/base
@@ -2057,8 +2055,7 @@
                        (hash #,@(apply append (for/list ([(k v) (in-hash nt-identifiers)])
                                                 (with-syntax ([k k] [v v])
                                                   (list #''k #'#'v)))))
-                       '#,nt->hole
-                       binding-table)))
+                       '#,nt->hole)))
                    #,errortrace-safe-language-def)))))))]))
 
 (define-for-syntax (nt-hole-lub l r)
@@ -2129,7 +2126,6 @@
        (define aliases (hash-copy (language-id-nt-aliases #'orig-lang 'define-extended-language)))
 
        (define old-names (language-id-nts #'orig-lang 'define-extended-language))
-       (define old-binding-table (language-id-binding-table #'orig-lang 'define-extended-language))
        (define non-terms (parse-non-terminals nt-defs stx))
        
        ;; namess : (listof (listof identifier?))
@@ -2204,11 +2200,9 @@
        (define nt-identifiers (build-nt-identifiers-table #'name all-nts-from-input))
 
        (with-syntax* ([((names rhs ...) ...) non-terms]
-                      [binding-table
-                       #`(append
-                          #,(compile-binding-forms bf-defs unaliased-all-names
-                                                   #'form-name aliases nt-identifiers)
-                          `#,old-binding-table)]
+                      [new-bindings-table
+                       (compile-binding-forms bf-defs unaliased-all-names
+                                              #'form-name aliases nt-identifiers)]
                       [(define-language-name) (generate-temporaries #'(name))]
                       [uses
                        (record-nts-disappeared-bindings #'orig-lang
@@ -2252,7 +2246,7 @@
                   (begin r-syncheck-expr ... ... orig-lang)
                   (list (make-nt 'primary-name
                                  (list (make-rhs `r-rhs) ...)) ...)
-                  binding-table
+                  new-bindings-table
                   (list (list '(all-names ...) rhs/lw ...) ...)
                   '(alias-names ...))))))
          
@@ -2280,8 +2274,7 @@
                  (hash #,@(apply append (for/list ([(k v) (in-hash nt-identifiers)])
                                           (with-syntax ([k k] [v v])
                                             (list #''k #'#'v)))))
-                 '#,nt->hole
-                 binding-table)))))))]))
+                 '#,nt->hole)))))))]))
 
 (define extend-nt-ellipses '(....))
 
@@ -2289,14 +2282,14 @@
 ;;    -> compiled-lang
 ;; note: the nts that come here are an abuse of the `nt' struct; they have
 ;; lists of symbols in the nt-name field.
-(define (do-extend-language old-lang new-nts binding-table new-pict-infos alias-names)
+(define (do-extend-language old-lang new-nts new-bindings-table new-pict-infos alias-names)
   (unless (compiled-lang? old-lang)
     (error 'define-extended-language "expected a language as first argument, got ~e" old-lang))
   
   (let ([old-nts (compiled-lang-lang old-lang)]
         [old-ht (make-hasheq)]
         [new-ht (make-hasheq)])
-    
+
     (for ([nt (in-list old-nts)])
       (hash-set! old-ht (nt-name nt) nt)
       (hash-set! new-ht (nt-name nt) nt))
@@ -2318,7 +2311,10 @@
     (compile-language (vector (compiled-lang-pict-builder old-lang)
                               new-pict-infos)
                       (hash-map new-ht (λ (x y) y))
-                      binding-table
+                      (append (for/list ([bf-table-entry (in-list (compiled-lang-binding-table old-lang))])
+                                (list (bf-table-entry-pat bf-table-entry)
+                                      (bf-table-entry-bspec bf-table-entry)))
+                                new-bindings-table)
                       alias-names)))
 
 (define-syntax (define-union-language stx)
@@ -2450,32 +2446,15 @@
            ;; make the hash be immutable
            (for/hash ([(k v) (in-hash aliases)])
              (values k v))))
-
-       (define binding-table-val
-         #`(append
-            #,@(map
-                (match-lambda
-                 [`(,prefix ,lang ,_ ,_ ,_ ,_)
-                  #` ` #,(map
-                          (if prefix
-                              (match-lambda
-                               [`(,pat ,bspec)
-                                `(,(prefix-nts prefix pat aliases) ,bspec)])
-                              (λ (x) x))
-
-                          (language-id-binding-table lang 'define-union-language))])
-                normalized-orig-langs)))
        
        (define nt-identifiers (build-nt-identifiers-table #'name '()))
        
        (with-syntax ([(all-names ...) (sort (hash-map names-table (λ (x y) x)) string<=? #:key symbol->string)]
                      [((prefix old-lang _1 _2 _3 _4) ...) normalized-orig-langs]
-                     [(define-language-name) (generate-temporaries #'(name))]
-                     [binding-table binding-table-val])
+                     [(define-language-name) (generate-temporaries #'(name))])
          #`(begin
              (define define-language-name (union-language
                                            (list (list 'prefix old-lang) ...)
-                                           binding-table
                                            '#,aliases))
              (define-syntax name
                (make-set!-transformer
@@ -2492,10 +2471,9 @@
                  (hash #,@(apply append (for/list ([(k v) (in-hash nt-identifiers)])
                                           (with-syntax ([k k] [v v])
                                             (list #''k #'#'v)))))
-                 '#,nt->hole
-                 binding-table))))))]))
+                 '#,nt->hole))))))]))
 
-(define (union-language old-langs/prefixes binding-table aliases)
+(define (union-language old-langs/prefixes aliases)
   (define (add-prefix prefix sym)
     (if prefix
         (string->symbol
@@ -2530,6 +2508,14 @@
                  (set-union (hash-ref names-table name)
                             (hash-ref names-table aliased-to)))
       (hash-remove! names-table name)))
+
+  (define binding-table
+    (for*/list ([old-lang/prefix (in-list old-langs/prefixes)]
+                [bf-table-entry (in-list (compiled-lang-binding-table (list-ref old-lang/prefix 1)))])
+      (define prefix (list-ref old-lang/prefix 0))
+      (define pat (bf-table-entry-pat bf-table-entry))
+      (define bspec (bf-table-entry-bspec bf-table-entry))
+      (list (prefix-nts prefix pat aliases) bspec)))
 
   (compile-language #f
                     (hash-map names-table (λ (name set) (make-nt name (set->list set))))

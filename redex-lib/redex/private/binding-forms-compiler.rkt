@@ -1,15 +1,13 @@
-#lang racket
+#lang racket/base
 
-(provide (for-syntax compile-binding-forms))
+(provide compile-binding-forms)
 
-
-(begin-for-syntax
- (require racket)
-
- (require "error.rkt")
- (require "binding-forms-definitions.rkt")
- (require (for-template "binding-forms-definitions.rkt"))
- (require "rewrite-side-conditions.rkt")
+ (require racket/match
+          racket/list
+          "error.rkt"
+          "binding-forms-definitions.rkt"
+          "rewrite-side-conditions.rkt"
+          (for-template racket/base "binding-forms-definitions.rkt"))
 
 
  ;; Intended for use in "reduction-semantics.rkt".
@@ -92,7 +90,7 @@
    lst
    (match-lambda*
     [`((,id-a ,depth-a) (,id-b ,depth-b))
-     (if (symbol=? id-a id-b)
+     (if (equal? id-a id-b)
          (if (= depth-a depth-b)
              #t
              (raise-syntax-error
@@ -267,9 +265,9 @@
 
    (define nonexistent-names (append 
                               (remove* pattern-names import-names
-                                       (lambda (lhs rhs) (symbol=? (first lhs) (first rhs))))
+                                       (lambda (lhs rhs) (equal? (first lhs) (first rhs))))
                               (remove* pattern-names export-names
-                                       (lambda (lhs rhs) (symbol=? (first lhs) (first rhs))))))
+                                       (lambda (lhs rhs) (equal? (first lhs) (first rhs))))))
 
    (define (check-referrents names-and-depths)
      (unless (empty? names-and-depths)
@@ -363,4 +361,3 @@
       #`((ieie i e ie expr_1 #:refers-to (shadow ie i) expr_2 #:refers-to (shadow i ie))
          #:exports (shadow e ie))))
    )
- )
