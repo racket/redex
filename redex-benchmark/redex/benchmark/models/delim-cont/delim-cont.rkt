@@ -741,7 +741,8 @@
   [(marks hole v v_1) v_1]
   [(marks (wcm w_1 E) v_1 v)
    (marks E v_1 (cons v_2 v))
-   (where (in-hole W ((v_1 v_2) w_2)) w_1)]
+   (where (in-hole W ((v_1 v_2) w_2)) w_1)
+   (side-condition/hidden (term (not-in-W v_1 W)))]
   [(marks (wcm w E) v v_1)
    (marks E v v_1)
    (where (in-hole W ·) w)
@@ -926,3 +927,11 @@
 (define (type-check e Σ)
   (judgment-holds (tc · ,Σ ,e t)))
 
+
+(module+ test
+  (require rackunit)
+  (check-equal? (term (marks (wcm ((keyf #f) ((keyf #t) ·))
+                                  hole)
+                             keyf
+                             (null Bool)))
+                (term (cons #f (null Bool)))))
