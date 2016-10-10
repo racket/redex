@@ -293,3 +293,12 @@
   
   (define a (build-ambiguity-cache L))
   (check-equal? (ambiguous-pattern? `(nt z) a) #f))
+
+
+(let ()
+  (define-language Λc
+    (e (x x)
+       (x x))
+    (x variable-not-otherwise-mentioned))
+  (define a (build-ambiguity-cache Λc))
+  (check-true (ambiguous-pattern? `(nt e) a)))

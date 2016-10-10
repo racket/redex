@@ -513,7 +513,7 @@ list lattice:
          [`integer (lp 'bot `integer 'bot 'bot 'bot #f)]
          [`real (lp 'bot `real 'bot 'bot 'bot #f)]
          [`boolean (lp 'bot num-bot `bool 'bot 'bot #f)]
-         [`variable (lp 'bot num-bot 'bot 'bot 'bot #f)]
+         [`variable (lp 'variable num-bot 'bot 'bot 'bot #f)]
          [`(variable-except ,vars ...) (lp (var-konsts (apply set vars)) num-bot 'bot 'bot 'bot #f)]
          [`(variable-prefix ,var) (lp (prefixes (set var)) num-bot 'bot 'bot 'bot #f)]
          [`variable-not-otherwise-mentioned
