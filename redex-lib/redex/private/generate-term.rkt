@@ -305,7 +305,10 @@
 
 (define (default-generator lang pat)
   (define ad-hoc-generator ((compile lang 'redex-check) pat))
-  (define enum (pat-enumerator (compiled-lang-enum-table lang) pat))
+  (define enum (pat-enumerator (compiled-lang-enum-table lang)
+                               pat
+                               (compiled-lang-ambiguity-cache lang)
+                               any/c))
   (define compiled-pat (compile-pattern lang pat #f))
   (cond
     [enum
@@ -353,7 +356,7 @@
 
 (define (ith-generator lang pat enum-bound enum-p-value)
   (define enum-lang (compiled-lang-enum-table lang))
-  (define enum (pat-enumerator enum-lang pat))
+  (define enum (pat-enumerator enum-lang pat (compiled-lang-ambiguity-cache lang) any/c))
   (unless enum (error 'redex-check "cannot enumerate the pattern ~s" pat))
   (cond
     [enum-bound
@@ -376,7 +379,7 @@
 
 (define (in-order-generator lang pat)
   (define enum-lang (compiled-lang-enum-table lang))
-  (define enum (pat-enumerator enum-lang pat))
+  (define enum (pat-enumerator enum-lang pat (compiled-lang-ambiguity-cache lang) any/c))
   (unless enum (error 'redex-check "cannot enumerate the pattern ~s" pat))
   (λ (_size _attempt _retries)
     (values (enum-ith enum (if (finite-enum? enum)
@@ -712,7 +715,7 @@
 
 (define (generate-ith/proc lang pat)
   (define enum-lang (compiled-lang-enum-table lang))
-  (define enum (pat-enumerator enum-lang pat))
+  (define enum (pat-enumerator enum-lang pat (compiled-lang-ambiguity-cache lang) any/c))
   (unless enum (error 'generate-term "cannot enumerate ~s" pat))
   (define the-size (and (finite-enum? enum) (enum-count enum)))
   (λ (i)

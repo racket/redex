@@ -11,6 +11,7 @@
                "pict-lib"
                "redex-gui-lib"
                "redex-examples"
+               "data-enumerate-lib"
                "data-lib"))
 (define build-deps '("racket-index"
                      "scheme-lib"))

@@ -16,15 +16,22 @@
          "lang-struct.rkt"
          "match-a-pattern.rkt"
          "preprocess-pat.rkt"
-         "preprocess-lang.rkt")
+         "preprocess-lang.rkt"
+         "ambiguous.rkt")
 
 (provide 
  enum-count
  finite-enum?
  (contract-out
-  [lang-enumerators (-> (listof nt?) (promise/c (listof nt?)) lang-enum?)]
+  [lang-enumerators (-> (listof nt?)
+                        (hash/c symbol? (listof any/c)) ;; any/c is compiled-pattern
+                        (promise/c (listof nt?))
+                        procedure? ;; this works around a circularity at the module level
+                        lang-enum?)]
   [pat-enumerator (-> lang-enum?
                       any/c ;; pattern
+                      hash?      ;; ambiguity-cache
+                      flat-contract?
                       (or/c #f enum?))]
   [enum-ith (-> enum? exact-nonnegative-integer? any/c)]
   [lang-enum? (-> any/c boolean?)]
@@ -33,7 +40,7 @@
 ;; nt-enums : hash[sym -o> (or/c #f enum)]
 ;; cc-enums : promise/c (hash[sym -o> (or/c #f enum)])
 ;; unused-var/e : enum
-(struct lang-enum (nt-enums delayed-cc-enums unused-var/e))
+(struct lang-enum (nt-enums delayed-cc-enums unused-var/e unparse-term+pat-nt-ht))
 (struct production (n term) #:transparent)
 (struct repeat (n terms) #:transparent)
 (struct name-ref (name) #:transparent)
@@ -45,23 +52,8 @@
 ;; Top level exports
 (define (enum-ith e x) (from-nat e x))
 
-(define (lang-enumerators lang cc-lang)
-  (define (make-lang-table! ht lang)
-    (define-values (fin-lang rec-lang cant-enumerate-table) (sep-lang lang))
-    (define (enumerate-lang! cur-lang enum-f)
-      (for ([nt (in-list cur-lang)])
-        (hash-set! ht
-                   (nt-name nt)
-                   (if (hash-ref cant-enumerate-table (nt-name nt))
-                       #f
-                       (enum-f (nt-rhs nt) ht)))))
-    (enumerate-lang! fin-lang
-                     (λ (rhs enums)
-                        (enumerate-rhss rhs l-enum)))
-    (enumerate-lang! rec-lang
-                     (λ (rhs enums)
-                       (delay/e (enumerate-rhss rhs l-enum)
-                                #:count +inf.f))))
+(define (lang-enumerators lang orig-clang-all-ht cc-lang call-nt-proc/bool)
+  (define clang-all-ht (hash-copy orig-clang-all-ht))
   (define nt-enums (make-hash))
   (define cc-enums (make-hash))
   (define unused-var/e
@@ -70,18 +62,91 @@
            (used-vars lang)))
   
   (define filled-cc-enums
-    (delay (begin
-             (make-lang-table! cc-enums (force cc-lang))
+    (delay (let-values ([(fin-cc-lang rec-cc-lang cant-enumerate-cc-table)
+                         (sep-lang (force cc-lang) #f)])
+             (make-lang-table! l-enum cc-enums fin-cc-lang rec-cc-lang cant-enumerate-cc-table)
              cc-enums)))
+
+  (define-values (fin-lang rec-lang cant-enumerate-table) (sep-lang lang clang-all-ht))
+  (define unparse-term+pat-nt-ht
+    (build-nt-unparse-term+pat (append fin-lang rec-lang)
+                               ;; recombine the productions to make sure they are in
+                               ;; the same order as they are in the forwards enumeration
+                               clang-all-ht
+                               call-nt-proc/bool))
   (define l-enum
-    (lang-enum nt-enums filled-cc-enums unused-var/e))
-  (make-lang-table! nt-enums lang)
+    (lang-enum nt-enums filled-cc-enums unused-var/e unparse-term+pat-nt-ht))
+  (make-lang-table! l-enum nt-enums fin-lang rec-lang cant-enumerate-table)
   l-enum)
 
-(define (pat-enumerator l-enum pat)
+(define (make-lang-table! l-enum ht fin-lang rec-lang cant-enumerate-table)
+  (define (enumerate-lang! cur-lang enum-f)
+    (for ([nt (in-list cur-lang)])
+      (hash-set! ht
+                 (nt-name nt)
+                 (if (hash-ref cant-enumerate-table (nt-name nt))
+                     #f
+                     (enum-f (nt-rhs nt) ht)))))
+  (enumerate-lang! fin-lang
+                   (λ (rhs enums)
+                     (enumerate-rhss rhs l-enum)))
+  (define rec-lang-base-i (length fin-lang))
+  (enumerate-lang! rec-lang
+                   (λ (rhs enums)
+                     (delay/e (enumerate-rhss rhs l-enum)
+                              #:count +inf.f))))
+
+(define (build-nt-unparse-term+pat lang clang-all-ht call-nt-proc/bool)
+  
+  (define init-unparse-term+pat (make-hash))
+  (define unparse-term+pat-nt-ht (make-hash))
+  (for ([nt (in-list lang)])
+    (define name (nt-name nt))
+    (hash-set! unparse-term+pat-nt-ht name
+               (λ (term)
+                 (error 'lang-enumerators "knot for ~s not tied" nt)))
+    (hash-set! init-unparse-term+pat
+               name
+               (λ (term)
+                 ((hash-ref unparse-term+pat-nt-ht name) term))))
+
+  (define empty-t-env (t-env #hash() #hash() #hash()))
+  (for ([nt (in-list lang)])
+    (define name (nt-name nt))
+    (define prod-procs
+      (for/list ([rhs (in-list (nt-rhs nt))])
+        (unparse-term+pat (rhs-pattern rhs) init-unparse-term+pat)))
+    (cond
+      [(andmap values prod-procs)
+       (define (unparse-nt-term+pat term)
+         (let/ec k
+           (for ([rhs (in-list (hash-ref clang-all-ht name))]
+                 [prod-proc (in-list prod-procs)]
+                 [i (in-naturals)])
+             (when (call-nt-proc/bool (compiled-pattern-cp rhs)
+                                      term
+                                      ;; is it okay to use equal? here
+                                      ;; and not the language's α-equal function?
+                                      equal?)
+               (k (production i (ann-pat empty-t-env (prod-proc term))))))
+           (error 'unparse-term+pat "ack: failure ~s ~s" nt term)))
+       (hash-set! unparse-term+pat-nt-ht name unparse-nt-term+pat)]
+      [else (hash-set! unparse-term+pat-nt-ht name #f)]))
+
+  unparse-term+pat-nt-ht)
+
+(define (pat-enumerator l-enum pat the-ambiguity-cache pat-matches/c)
   (cond
     [(can-enumerate? pat (lang-enum-nt-enums l-enum) (lang-enum-delayed-cc-enums l-enum))
-     (pam/e to-term (pat/e pat l-enum) #:contract any/c)]
+     (define unparser (and (not (ambiguous-pattern? pat the-ambiguity-cache))
+                           (unparse-term+pat pat (lang-enum-unparse-term+pat-nt-ht l-enum))))
+     (define raw-enumerator (pat/e pat l-enum))
+     (cond
+       [unparser
+        (define (from-term term) (ann-pat (t-env #hash() #hash() #hash()) (unparser term)))
+        (map/e to-term from-term raw-enumerator #:contract pat-matches/c)]
+       [else
+        (pam/e to-term raw-enumerator #:contract pat-matches/c)])]
     [else #f]))
 
 (define (enumerate-rhss rhss l-enum)
@@ -89,9 +154,8 @@
     (map/e (λ (x) (production i x))
            production-term
            e
-           #:contract 
-           (and/c production?
-                  (λ (p) (= i (production-n p))))))
+           #:contract
+           (struct/c production i any/c)))
   (apply or/e
          (for/list ([i (in-naturals)]
                     [production (in-list rhss)])
@@ -140,19 +204,27 @@
      [`(mismatch-name ,n ,tag)
       (single/e (misname-ref n tag))]
      [`(in-hole ,p1 ,p2)
+      (define p1/e (loop p1))
+      (define p2/e (loop p2))
       (map/e (λ (l) (apply decomp l))
              (λ (d)
                (match d
                  [(decomp ctx term)
                   (list ctx term)]))
-             (list/e (loop p1)
-                     (loop p2))
-             #:contract any/c)]
+             (list/e p1/e p2/e)
+             #:contract
+             (struct/c decomp
+                       (enum-contract p1/e)
+                       (enum-contract p2/e)))]
      [`(hide-hole ,p)
+      (define p/e (loop p))
       (map/e hide-hole
              hide-hole-term
-             (loop p)
-             #:contract any/c)]
+             p/e
+             #:contract 
+             (struct/c hide-hole
+                       (enum-contract p/e)))]
+                                  
      [`(side-condition ,p ,g ,e)
       (unsupported pat)]
      [`(cross ,s)
@@ -162,14 +234,14 @@
        (for/list ([sub-pat (in-list sub-pats)])
          (match sub-pat
            [`(repeat ,pat #f #f)
+            (define pats/e (listof/e (loop pat)))
             (map/e
-             (λ (ts)
-                (repeat (length ts)
-                        ts))
-             (λ (rep)
-                (repeat-terms rep))
-             (listof/e (loop pat))
-             #:contract any/c)]
+             (λ (ts) (repeat (length ts) ts))
+             (λ (rep) (repeat-terms rep))
+             pats/e
+             #:contract (struct/c repeat
+                                  exact-nonnegative-integer?
+                                  (enum-contract pats/e)))]
            [`(repeat ,tag ,n #f)
             (single/e (nrep-ref n tag))]
            [`(repeat ,pat ,n ,m)
@@ -332,3 +404,70 @@
    (or/e (cons base/e (negate pair?))
          (cons (cons/e any/e any/e) pair?))
    #:count +inf.0))
+
+
+;; this function turns a term back into a parsed
+;; term to be used with an enumerator produced by pat-refs/e
+;; also: the pat should be unambiguous ...?
+;; (if so, we can invert; if not, we can maybe just get the first one?)
+;; PRE: term matches pat.
+(define (unparse-term+pat pat unparse-nt-hash)
+  (define names-encountered (make-hash))
+  (let/ec k
+    (define (fail) (k #f))
+    (let loop ([pat pat])
+      (match-a-pattern
+       pat
+       [`any values]
+       [`number values]
+       [`string values]
+       [`natural values]
+       [`integer values]
+       [`real values]
+       [`boolean values]
+       [`variable values]
+       [`(variable-except ,s ...) values]
+       [`(variable-prefix ,s) values]
+       [`variable-not-otherwise-mentioned values]
+       [`hole values]
+       [`(nt ,id) (or (hash-ref unparse-nt-hash id) (fail))]
+       [`(name ,n ,pat)
+        (when (hash-ref names-encountered n #f) (fail))
+        (hash-set! names-encountered n #t)
+        (loop pat)]
+       [`(mismatch-name ,n ,tag) (fail)]
+       [`(in-hole ,p1 ,p2) (fail)]
+       [`(hide-hole ,p) (fail)]
+       [`(side-condition ,p ,g ,e) (fail)]
+       [`(cross ,s) (fail)]
+       [`(list ,sub-pats ...)
+        (define repeat-count 0)
+        (define to-terms
+          ;; (listof (cons/c boolean?[repeat] term-parser))
+          (for/list ([sub-pat (in-list sub-pats)])
+            (match sub-pat
+              [`(repeat ,pat #f #f)
+               (cond
+                 [(zero? repeat-count)
+                  (set! repeat-count 1)
+                  (cons #t (loop pat))]
+                 [else
+                  (fail)])]
+              [`(repeat ,pat ,_1 ,_2) (fail)]
+              [pat (cons #f (loop pat))])))
+        (λ (term)
+          (define times-to-repeat (- (length term) (- (length sub-pats) 1)))
+          (for/list ([bool+to-term (in-list to-terms)])
+            (match bool+to-term
+              [(cons #t to-term) ;; repeat
+               (repeat
+                times-to-repeat
+                (for/list ([i (in-range times-to-repeat)])
+                  (define this-term (car term))
+                  (set! term (cdr term))
+                  (to-term this-term)))]
+              [(cons #f to-term) ;; not a repeat
+               (define this-term (car term))
+               (set! term (cdr term))
+               (to-term this-term)])))]
+       [(? (compose not pair?)) values]))))

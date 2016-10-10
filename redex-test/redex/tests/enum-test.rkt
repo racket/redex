@@ -1,7 +1,8 @@
 #lang racket/base
 (require rackunit
          redex/reduction-semantics
-         (for-syntax racket/base))
+         (for-syntax racket/base)
+         data/enumerate/lib)
 
 (module test racket/base)
 
@@ -9,14 +10,15 @@
   (syntax-case stx ()
     [(_ l p)
      (with-syntax ([line (syntax-line stx)])
-       #'(test-begin
+       #`(test-begin
           (for ([i (in-range 200)])
-            (check-not-exn
-             (λ ()
-                (define term
-                  (generate-term l p #:i-th i))
-                (unless (redex-match l p term)
-                  (error 'bad-term (format "line ~a: i=~a" line i))))))))]))
+            #,(syntax/loc stx
+                (check-not-exn
+                 (λ ()
+                   (define term
+                     (generate-term l p #:i-th i))
+                   (unless (redex-match l p term)
+                     (error 'bad-term (format "line ~a: i=~a" line i)))))))))]))
 
 ;; base types
 (define-language Base
@@ -185,3 +187,18 @@
 (try-it CrossLang (cross x))
 (try-it CrossLang (in-hole (cross x) e))
 (try-it CrossLang (in-hole (cross e) x))
+
+(let ()
+  (define-language ambiguous
+    (e ::= (x f) x)
+    (f ::= e e)
+    (x ::= variable))
+  (check-false (two-way-enum? (redex-enum ambiguous e)))
+  (check-true (two-way-enum? (redex-enum Λc e))))
+
+(let ([e/e (redex-enum Λc e)])
+  (for ([i (in-range 1000)])
+    (define t (from-nat e/e i))
+    (define i2 (to-nat e/e t))
+    (unless (= i i2)
+      (error 'bad-index "~s -> ~s -> ~s" i t i2))))

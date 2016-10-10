@@ -15,6 +15,7 @@
 (provide
  (contract-out
   [sep-lang (-> (listof nt?)
+                (or/c #f (hash/c symbol? (listof any/c)))
                 (values (listof nt?)
                         (listof nt?)
                         (hash/c symbol? boolean?)))]
@@ -25,10 +26,12 @@
                       (promise/c (hash/c symbol? any/c))
                       boolean?)]))
 
-;; sep-lang : lang -> lang lang
+;; sep-lang : lang hash[sym -o> (listof any)] -> lang lang
+;; EFFECT: sorts the lists in clang-all-ht to match the order
+;;         in which the productions in the result are sorted
 ;; topologically sorts non-terminals by dependency
 ;; sorts rhs's so that recursive ones go last
-(define (sep-lang lang)
+(define (sep-lang lang clang-all-ht/f)
   (define (filter-edges edges lang)
     (for/fold ([filtered (hash)])
               ([nt (in-list lang)])
@@ -47,7 +50,8 @@
   ;; rhs sort
   (define sorted-right
     (sort-productions cyclic
-                   cyclic-nts))
+                      cyclic-nts
+                      clang-all-ht/f))
   
   (values sorted-left
           sorted-right
@@ -186,30 +190,41 @@
          lang))
 
 
-;; sort-productions : lang, (hash[symbol] -o> (setof symbol)) -> lang
-(define (sort-productions cyclic nts)
+;; sort-productions : lang,
+;;                    (hash[symbol] -o> (setof symbol))
+;;                    (or/c #f (hash[symbol -o> (list/c any)])) -> lang
+(define (sort-productions cyclic nts clang-all-ht/f)
   (define table (terminal-distance-table cyclic nts))
-  (define resp
-    (for/list ([cur-nt (in-list cyclic)])
-     (match cur-nt
-       [(nt name productions)
-        (define (max-terminal-distance pat)
-          (define referenced-nts (directly-used-nts pat))
-          (define maximum
-            (for/max ([cur-name (in-set referenced-nts)])
-              (if (symbol=? cur-name name)
-                  +inf.0
-                  (hash-ref table cur-name 0))))
-          (if (and (negative? maximum)
-                   (infinite? maximum))
-              0
-              maximum))
-        (nt name
-            (sort productions
-                  <
-                  #:key (compose max-terminal-distance rhs-pattern)
-                  #:cache-keys? #t))])))
-  resp)
+  (for/list ([cur-nt (in-list cyclic)])
+    (match cur-nt
+      [(nt name productions)
+       (define (max-terminal-distance pat)
+         (define referenced-nts (directly-used-nts pat))
+         (define maximum
+           (for/max ([cur-name (in-set referenced-nts)])
+             (if (symbol=? cur-name name)
+                 +inf.0
+                 (hash-ref table cur-name 0))))
+         (if (and (negative? maximum)
+                  (infinite? maximum))
+             0
+             maximum))
+       (define production-vec (apply vector productions))
+       (define permutation
+         (sort (build-list (vector-length production-vec) values)
+               <
+               #:key (compose max-terminal-distance
+                              rhs-pattern
+                              (λ (i) (vector-ref production-vec i)))
+               #:cache-keys? #t))
+       (when clang-all-ht/f
+         (define clang-all-ht-nt-vec (apply vector (hash-ref clang-all-ht/f name)))
+         (hash-set! clang-all-ht/f name
+                    (for/list ([i (in-list permutation)])
+                      (vector-ref clang-all-ht-nt-vec i))))
+       (nt name
+           (for/list ([i (in-list permutation)])
+             (vector-ref production-vec i)))])))
 
 ;; terminal-distance-table : lang (hash[symbol] -o> symbol)
 ;;                         -> (hash[symbol] -o> (U natural +inf)

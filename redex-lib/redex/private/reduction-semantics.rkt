@@ -10,6 +10,7 @@
          "judgment-form.rkt"
          "search.rkt"
          "lang-struct.rkt"
+         "enum.rkt"
          (only-in "binding-forms.rkt"
                   α-equal? safe-subst binding-forms-opened?)
          (only-in "binding-forms-definitions.rkt"
@@ -2959,6 +2960,31 @@
                 (format "::~a" pos)]
                [else #f]))))
 
+(define-syntax (redex-enum stx)
+  (syntax-case stx ()
+    [(form-name lang pat)
+     (unless (identifier? #'lang)
+       (raise-syntax-error 'redex-enum
+                           "expected an identifier in the language position"
+                           stx #'lang))
+     (with-syntax ([(syncheck-expr side-conditions-rewritten (names ...) (names/ellipses ...))
+                    (rewrite-side-conditions/check-errs #'lang 'redex-enum #t #'pat)])
+       #'(begin
+           syncheck-expr
+           (redex-enum/proc lang
+                            `side-conditions-rewritten
+                            'pat 'lang)))]))
+(define (redex-enum/proc lang pat orig-pat-syntax lang-name)
+  (define compiled (compile-pattern lang pat #t))
+  (define (matches? x)
+    (match-pattern? compiled x))
+  (pat-enumerator (compiled-lang-enum-table lang)
+                  pat
+                  (compiled-lang-ambiguity-cache lang)
+                  (flat-named-contract
+                   (format "term matching `~s` in the language ~s" orig-pat-syntax lang-name)
+                   matches?)))
+
 (provide (rename-out [-reduction-relation reduction-relation])
          ::=
          reduction-relation->rule-names
@@ -3001,6 +3027,7 @@
          term-match/single
          redex-let 
          redex-let*
+         redex-enum
          make-bindings bindings-table bindings?
          match? match-bindings
          make-bind bind? bind-name bind-exp

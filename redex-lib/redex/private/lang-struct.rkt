@@ -4,6 +4,7 @@
          (struct-out rhs)
          (struct-out bind)
          (struct-out mismatch-bind)
+         (struct-out compiled-pattern)
          mtch
          mtch?
          make-mtch
@@ -98,6 +99,7 @@
 ;;                       hash[sym -o> compiled-pattern]
 ;;                       hash[sym -o> compiled-pattern]
 ;;                       hash[sym -o> compiled-pattern]
+;;                       hash[sym -o> compiled-pattern]
 ;;                       hash[sym -o> boolean]
 ;;                       hash[sexp[pattern] -o> (cons compiled-pattern boolean)]
 ;;                       hash[sexp[pattern] -o> (cons compiled-pattern boolean)]
@@ -108,7 +110,7 @@
 ;;                       (listof (list compiled-pattern bspec))
 ;;                       (hash/c symbol? enum?)) ;; see enum.rkt
 
-(define-struct compiled-lang (lang delayed-cclang ht list-ht raw-across-ht raw-across-list-ht
+(define-struct compiled-lang (lang delayed-cclang ht list-ht all-ht raw-across-ht raw-across-list-ht
                                    has-hole-or-hide-hole-ht cache binding-forms-absent-cache
                                    bind-names-cache pict-builder
                                    literals aliases collapsible-nts
@@ -123,3 +125,5 @@
   (compiled-lang-raw-across-list-ht x))
 
 (define default-language (make-parameter #f))
+
+(define-struct compiled-pattern (cp binds-names? skip-dup-check? lang-α-equal?) #:transparent)

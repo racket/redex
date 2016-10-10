@@ -5,12 +5,13 @@
                      racket/pretty
                      racket/contract
                      mrlib/graph
+                     data/enumerate
                      (except-in 2htdp/image make-pen text)
                      (only-in pict pict? text dc-for-text-size text-style/c
                               vc-append hbl-append vl-append)
                      redex))
 
-@(define redex-eval (make-base-eval '(require redex/reduction-semantics)))
+@(define redex-eval (make-base-eval '(require redex/reduction-semantics data/enumerate)))
 
 @title{Testing}
 
@@ -469,6 +470,34 @@ repeating as necessary. The optional keyword argument @racket[retries-expr]
 @racket[generate-term] is unable to produce a satisfying term after 
 @racket[retries-expr] attempts, it raises an exception recognized by
 @racket[exn:fail:redex:generation-failure?].
+}
+
+@defform[(redex-enum language @#,ttpattern)]{
+
+ Constructs an
+ @tech[#:doc '(lib "data/scribblings/data.scrbl")]{
+  enumeration} that produces terms that match the given
+ pattern, or @racket[#f] if it cannot build an
+ enumeration (which happens if the given pattern contains
+ side-conditions).
+
+ It constructs a @tech[#:doc '(lib "data/scribblings/data.scrbl")]{two-way enumeration}
+ only in some cases. The pattern must be unambiguous and there are other technical
+ shortcomings of the implementation as well that cause the result
+ to be a @tech[#:doc '(lib "data/scribblings/data.scrbl")]{one-way enumeration} in
+ some situations.
+
+ @examples[#:eval redex-eval
+           (define-language L
+             (e ::= (e e) x (λ (x) e))
+             (x ::= variable-not-otherwise-mentioned))
+           (eval:check (from-nat (redex-enum L e) 3886654839907963757723234276487685940)
+                       '(λ (f) (f (f (f x)))))
+           (from-nat (redex-enum L e) 3886654839907963757723234276487685942)
+           (from-nat (redex-enum L e) 3886654839907963757723234276487685945)
+           (to-nat (redex-enum L e)
+                   (term (λ (f) ((λ (x) (f (x x)))
+                                 (λ (x) (f (x x)))))))]
 }
 
 @defform/subs[(redex-check template property-expr kw-arg ...)

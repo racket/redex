@@ -939,9 +939,12 @@
      (map rhs-pattern this-rhs)]))
        
 (define empty-lang
-  (compiled-lang
-   #f #f #f #f #f #f #f #f #f #f #f '() '() (hash)
-   (make-hash) '() (lang-enumerators '() (delay '()))))
+  (let ([pat-unify.rkt::die
+         (λ args
+           (error 'pat-unify.rkt "this shouldn't be called, but it was ~s" args))])
+    (compiled-lang
+     #f #f #f #f #f #f #f #f #f #f #f #f '() '() (hash) (make-hash) '()
+     (lang-enumerators '() (make-hash) (delay '()) pat-unify.rkt::die))))
 
 (define unique-name-nums (make-parameter 0))
 

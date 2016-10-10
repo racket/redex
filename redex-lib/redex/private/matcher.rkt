@@ -55,8 +55,6 @@ See match-a-pattern.rkt for more details
          "ambiguous.rkt"
          (only-in "binding-forms-definitions.rkt" bspec? bf-table-entry))
 
-(define-struct compiled-pattern (cp binds-names? skip-dup-check? lang-α-equal?) #:transparent)
-
 (define caching-enabled? (make-parameter #t))
 
 ;; var = (make-var sym sexp)
@@ -95,15 +93,17 @@ See match-a-pattern.rkt for more details
 (define (compile-language pict-info lang binding-info aliases)
   (let* ([clang-ht (make-hasheq)]
          [clang-list-ht (make-hasheq)]
+         [clang-all-ht (make-hasheq)]
          [across-ht (make-hasheq)]
          [across-list-ht (make-hasheq)]
+         [across-all-ht (make-hasheq)]
          [has-hole-or-hide-hole-ht (build-has-hole-or-hide-hole-ht lang)]
          [cache (make-hash)]
          [binding-forms-absent-cache (make-hash)]
          [bind-names-cache (make-hash)]
          [literals (extract-literals lang)]
          [collapsible-nts (extract-collapsible-nts lang)]
-         [clang (make-compiled-lang lang #f clang-ht clang-list-ht 
+         [clang (make-compiled-lang lang #f clang-ht clang-list-ht clang-all-ht
                                     across-ht across-list-ht
                                     has-hole-or-hide-hole-ht 
                                     cache binding-forms-absent-cache bind-names-cache
@@ -123,20 +123,24 @@ See match-a-pattern.rkt for more details
          [non-list-nt-table (build-non-list-nt-label lang)]
          [list-nt-table (build-list-nt-label lang)]
          [do-compilation
-          (lambda (ht list-ht lang)
+          (lambda (ht list-ht all-ht lang)
             (for ([nt (in-list lang)])
-              (for ([rhs (in-list (nt-rhs nt))])
+
+              ;; reverse here to ensure the list in the list in
+              ;; the hash is in the same order as the productions
+              (for ([rhs (in-list (reverse (nt-rhs nt)))])
+                
                 (define-values (compiled-pattern-proc has-hole? has-hide-hole? names) 
                   (compile-pattern/cross? clang (rhs-pattern rhs) #f))
+                (define cp (build-compiled-pattern compiled-pattern-proc names equal?))
                 (define (add-to-ht ht) 
-                  (define nv (cons
-                              (build-compiled-pattern compiled-pattern-proc names equal?)
-                              (hash-ref ht (nt-name nt))))
+                  (define nv (cons cp (hash-ref ht (nt-name nt))))
                   (hash-set! ht (nt-name nt) nv))
                 (define may-be-non-list? (may-be-non-list-pattern? (rhs-pattern rhs) non-list-nt-table))
                 (define may-be-list? (may-be-list-pattern? (rhs-pattern rhs) list-nt-table))
                 (when may-be-non-list? (add-to-ht ht))
                 (when may-be-list? (add-to-ht list-ht))
+                (add-to-ht all-ht)
                 (unless (or may-be-non-list? may-be-list?)
                   (error 'compile-language 
                          "internal error: unable to determine whether pattern matches lists, non-lists, or both: ~s"
@@ -149,6 +153,7 @@ See match-a-pattern.rkt for more details
     
     (init-ht clang-ht)
     (init-ht clang-list-ht)
+    (init-ht clang-all-ht)
     
     (hash-for-each
      clang-ht
@@ -162,14 +167,16 @@ See match-a-pattern.rkt for more details
                (build-compatible-context-language clang-ht lang)])
           (for-each (lambda (nt)
                       (hash-set! across-ht (nt-name nt) null)
-                      (hash-set! across-list-ht (nt-name nt) null))
+                      (hash-set! across-list-ht (nt-name nt) null)
+                      (hash-set! across-all-ht (nt-name nt) null))
                     compatible-context-language)
-          (do-compilation across-ht across-list-ht compatible-context-language)
+          (do-compilation across-ht across-list-ht across-all-ht compatible-context-language)
           compatible-context-language)))
-    (do-compilation clang-ht clang-list-ht lang)
+    (do-compilation clang-ht clang-list-ht clang-all-ht lang)
     (define the-ambiguity-cache (build-ambiguity-cache clang))
     (define enumerators
-      (lang-enumerators lang compatible-context-language))
+      (lang-enumerators lang clang-all-ht compatible-context-language
+                        call-nt-proc/bool))
 
     (struct-copy compiled-lang clang [delayed-cclang compatible-context-language]
                                      [enum-table enumerators]

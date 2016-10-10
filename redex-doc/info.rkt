@@ -9,6 +9,8 @@
                      "pict-doc"
                      "slideshow-doc"
                      "at-exp-lib"
+                     "data-doc"
+                     "data-enumerate-lib"
                      ["scribble-lib" #:version "1.16"]
                      "gui-lib"
                      "htdp-lib"
