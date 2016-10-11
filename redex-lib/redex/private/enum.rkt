@@ -30,7 +30,7 @@
                         lang-enum?)]
   [pat-enumerator (-> lang-enum?
                       any/c ;; pattern
-                      hash?      ;; ambiguity-cache
+                      ambiguity-cache?
                       flat-contract?
                       (or/c #f enum?))]
   [enum-ith (-> enum? exact-nonnegative-integer? any/c)]

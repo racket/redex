@@ -12,28 +12,17 @@
  (contract-out
   
   ;; expects the lang, literals, and list-ht fields of the clang to be filled in.
-  [build-ambiguity-cache (-> compiled-lang? hash?)]
+  [build-ambiguity-cache (-> compiled-lang? ambiguity-cache?)]
   
-  [ambiguous-pattern? (-> any/c hash? boolean?)]))
+  [ambiguous-pattern? (-> any/c ambiguity-cache? boolean?)]
+  [ambiguity-cache? (-> any/c boolean?)]))
 
-;; provided only for the test suite
-(provide overlapping-patterns? 
-         build-overlapping-productions-table
-         var-konsts
-         prefixes
-         build-ambiguous-ht
-         build-amb-info
-         (struct-out lp)
-         (struct-out list-lp)
-         (struct-out num-konsts)
-         (struct-out var-konsts)
-         (struct-out prefixes))
-
+(struct ambiguity-cache (ht))
 
 (define (build-ambiguity-cache clang)
   (define overlapping-productions-ht (build-overlapping-productions-table clang))
   (define ambiguous-ht (build-ambiguous-ht clang overlapping-productions-ht))
-  ambiguous-ht)
+  (ambiguity-cache ambiguous-ht))
   
 ;; returns #f when they definitely do NOT overlap
 ;; returns #t when the might overlap 
@@ -609,7 +598,11 @@ list lattice:
     
 (define (disjoint-hole hole?1 hole?2) (not (and hole?1 hole?2)))
 
-(define (ambiguous-pattern? pattern non-terminal-ambiguous-ht)
+(define (ambiguous-pattern? pattern the-ambiguity-cache)
+  (define non-terminal-ambiguous-ht (ambiguity-cache-ht the-ambiguity-cache))
+  (ambiguous-pattern?/ht pattern non-terminal-ambiguous-ht))
+
+(define (ambiguous-pattern?/ht pattern non-terminal-ambiguous-ht)
   (let loop ([pattern pattern])
     (match-a-pattern pattern
        [`any #f]
@@ -645,10 +638,25 @@ list lattice:
 (define (build-ambiguous-ht clang overlapping-productions-ht)
   (build-nt-property 
    (compiled-lang-lang clang)
-   ambiguous-pattern?
+   ambiguous-pattern?/ht
    (λ (nt)
      (cond
        [nt (hash-ref overlapping-productions-ht nt)]
        [else #f]))
    (λ (x y) (or x y))))
 
+;; provided only for the test suite
+(module+ for-tests 
+  (provide ambiguity-cache
+           ambiguity-cache-ht
+           overlapping-patterns? 
+           build-overlapping-productions-table
+           var-konsts
+           prefixes
+           build-ambiguous-ht
+           build-amb-info
+           (struct-out lp)
+           (struct-out list-lp)
+           (struct-out num-konsts)
+           (struct-out var-konsts)
+           (struct-out prefixes)))

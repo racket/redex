@@ -3,7 +3,8 @@
 (require racket/set
          rackunit
          (only-in redex/reduction-semantics define-language ::= in-hole hole)
-         redex/private/ambiguous)
+         redex/private/ambiguous
+         (submod redex/private/ambiguous for-tests))
 
 (define num-bot (num-konsts (set)))
 
@@ -59,8 +60,9 @@
                                (cons 'abc-prefix #f)
                                (cons 'q #t))))
 
-(define non-terminal-ambiguous-L1 (build-ambiguous-ht L1 L1-overlapping-productions-ht))
-(check-equal? non-terminal-ambiguous-L1
+(define non-terminal-ambiguous-L1
+  (ambiguity-cache (build-ambiguous-ht L1 L1-overlapping-productions-ht)))
+(check-equal? (ambiguity-cache-ht non-terminal-ambiguous-L1)
               (make-hash (list (cons 'E #t)
                                (cons 'n #t)
                                (cons 'v #f)
