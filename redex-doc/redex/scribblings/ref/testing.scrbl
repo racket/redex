@@ -390,6 +390,8 @@ Generates terms in a number of different ways:
                  (one where the @racket[x] comes from the first ellipses and one from the second)
                  but those two different ways produce the same term and so the enumerator
                  incorrectly produces @racket[(x x)].
+
+                 See also @racket[redex-enum].
                  
                  }
            @item{@racket[from-judgment-form]: Randomly picks a term that satisfies
