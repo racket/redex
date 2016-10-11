@@ -269,13 +269,13 @@
     [(lp sym num bool str list hole?)
      (cond
        [(symbol? v)
-        (cond
-          [(equal? sym #t) #t]
-          [(equal? sym #f) #f]
-          [(var-konsts? sym)
-           (not (set-member? (var-konsts-syms sym) v))]
-          [(prefixes? sym)
-           (for/or ([prefix (in-set (prefixes-prefixes sym))])
+        (match sym
+          ['variable #t]
+          ['bot #f]
+          [(var-konsts syms)
+           (not (set-member? syms v))]
+          [(prefixes the-prefixes)
+           (for/or ([prefix (in-set the-prefixes)])
              (regexp-match? (format "^~a" (regexp-quote (symbol->string prefix)))
                             (symbol->string v)))])]
        [(exact-nonnegative-integer? v)

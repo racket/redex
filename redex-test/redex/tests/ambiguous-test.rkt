@@ -304,3 +304,12 @@
     (x variable-not-otherwise-mentioned))
   (define a (build-ambiguity-cache Λc))
   (check-true (ambiguous-pattern? `(nt e) a)))
+
+(let ()
+  (define-language memo-lang
+    (P (v))
+    (v unit l)
+    (l number))
+  (check-false
+   (ambiguous-pattern? `(list (repeat (name P (nt P)) #f #f))
+                       (build-ambiguity-cache memo-lang))))
