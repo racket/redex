@@ -58,8 +58,8 @@
   ║                   ║                               ║                ║              ║     ║         ║            ║               ║                   ║             ║                  ║            ║         #f        ║  t u)       ║
   ║                   ║                               ║                ║              ║     ║         ║            ║               ║                   ║             ║                  ║            ║                   ║             ║
   ╠═══════════════════╣                               ╚════════════════╬══════════════╬═════╬═════════╣            ║               ║                   ║             ║                  ║            ╠═══════════════════╬═════════════╣
-  ║  (? var-pat?)     ║                                                ║(v-overlap? t ║ #f  ║(v-nt    ║            ║               ║                   ║             ║                  ║            ║                   ║ (symbol? u) ║
-  ║                   ║                                                ║            u)║     ║ t id    ║            ║               ║                   ║             ║                  ║            ║         #f        ║             ║
+  ║  (? var-pat?)     ║                                                ║(v-overlap? t ║ #f  ║(v-nt    ║            ║               ║                   ║             ║                  ║            ║                   ║ (vmatches?  ║
+  ║                   ║                                                ║            u)║     ║ t id    ║            ║               ║                   ║             ║                  ║            ║         #f        ║  t u clang) ║
   ║                   ║                                                ║              ║     ║ info)   ║            ║               ║                   ║             ║                  ║            ║                   ║             ║
   ╠═══════════════════╣                                                ╚══════════════╬═════╬═════════╣            ║               ║                   ║             ║                  ║            ╠═══════════════════╬═════════════╣
   ║     `hole         ║                                                               ║ #t  ║   #t    ║            ║               ║                   ║             ║                  ║            ║         #t        ║    #t       ║
@@ -155,10 +155,21 @@
     [(`(variable-prefix ,t-prefix) `(variable-prefix ,u-prefix))
      (define t-str (symbol->string t-prefix))
      (define u-str (symbol->string u-prefix))
-     (define (is-prefix? a b) (regexp-match? (format "^~a" (regexp-quote a)) b))
      (or (is-prefix? u-str t-str)
          (is-prefix? t-str u-str))]
     [(_ _) #t]))
+
+(define (is-prefix? a b) (regexp-match? (format "^~a" (regexp-quote a)) b))
+
+(define (vmatches? t u clang)
+  (and (symbol? u)
+       (match t
+         [`variable #t]
+         [`(variable-except ,vars ...) (not (member u vars))]
+         [`(variable-prefix ,var)
+          (is-prefix? (symbol->string var) (symbol->string u))]
+         [`variable-not-otherwise-mentioned
+          (not (member u (compiled-lang-literals clang)))])))
 
 (define (count-repeats pats)
   (for/sum ([pat (in-list pats)]

@@ -243,7 +243,7 @@
                                (cons 'g #t)
                                (cons 'h #t)
                                (cons 'i #t)
-                               (cons 'j #t)
+                               (cons 'j #f)
                                (cons 'l #f)
                                (cons 'm #t))))
 
@@ -313,3 +313,19 @@
   (check-false
    (ambiguous-pattern? `(list (repeat (name P (nt P)) #f #f))
                        (build-ambiguity-cache memo-lang))))
+
+(let ()
+  (define-language L
+    (test (variable-prefix tag)
+          call/cm)
+    (test2 (variable-prefix tag)
+           tags))
+  (check-false (ambiguous-pattern? `(nt test) (build-ambiguity-cache L)))
+  (check-true (ambiguous-pattern? `(nt test2) (build-ambiguity-cache L))))
+
+(let ()
+  (define-language L
+    (e ::= (λ (x) e) x)
+    (x ::= variable-not-otherwise-mentioned)
+    (test ::= variable-not-otherwise-mentioned λ))
+  (check-false (ambiguous-pattern? `(nt test) (build-ambiguity-cache L))))
