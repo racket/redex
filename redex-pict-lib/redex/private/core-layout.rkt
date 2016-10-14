@@ -47,6 +47,7 @@
          
          just-before
          just-after
+         fill-between
          with-unquote-rewriter
          with-compound-rewriter
          with-compound-rewriters
@@ -324,6 +325,27 @@
               0
               (+ (lw-column lw) (lw-column-span lw))
               0))
+
+(define (fill-between what lw-before lw-after)
+  (unless (= (+ (lw-line lw-before) (lw-line-span lw-before))
+             (lw-line lw-after))
+    (raise-argument-error 'fill-between
+                          "the second lw argument to start on the same line as the first one ends"
+                          1
+                          what lw-before lw-after))
+  (define start-col (+ (lw-column lw-before) (lw-column-span lw-before)))
+  (unless (<= start-col (lw-column lw-after))
+    (raise-argument-error 'fill-between
+                          "the first lw to appear before the second"
+                          1
+                          what lw-before lw-after))
+  (build-lw (if (symbol? what)
+                (symbol->string what)
+                what)
+            (+ (lw-line lw-before) (lw-line-span lw-before))
+            0
+            start-col
+            (- (lw-column lw-after) start-col)))
   
   ;; adjust-spacing : (listof (union string pict loc-wrapper))
   ;;                  number

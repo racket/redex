@@ -1284,11 +1284,23 @@ the empty string and the @racket[x] in the typeset output.
 @defproc[(just-after [stuff (or/c pict? string? symbol?)]
                      [lw lw?])
                     lw?]{}]]{
-These two helper functions build new lws whose contents are
+These two helper functions build new @racket[lw]s whose contents are
 the first argument, and whose line and column are based on
 the second argument, making the new loc wrapper be either
 just before or just after that argument. The line-span and
 column-span of the new lw is always zero.
+}
+
+@defproc[(fill-between [stuff (or/c pict? string? symbol?)]
+                       [lw-before lw?]
+                       [lw-after lw?])
+         lw?]{
+ Builds a new @racket[lw] whose content is @racket[stuff]
+ and whose location information makes it occupy all of the
+ space between @racket[lw-before] and @racket[lw-after].
+ 
+ If @racket[lw-before] and @racket[lw-after] are not on the
+ same line, @racket[fill-between] raises an error.
 }
 
 @include-section["dynamic-typesetting-and-macros.scrbl"]

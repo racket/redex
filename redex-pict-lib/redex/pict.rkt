@@ -151,7 +151,8 @@
 
 (provide/contract
  [just-before (-> (or/c pict? string? symbol?) lw? lw?)]
- [just-after (-> (or/c pict? string? symbol?) lw? lw?)])
+ [just-after (-> (or/c pict? string? symbol?) lw? lw?)]
+ [fill-between (-> (or/c pict? string? symbol?) lw? lw? lw?)])
 (provide with-unquote-rewriter
          with-compound-rewriter
          with-compound-rewriters
