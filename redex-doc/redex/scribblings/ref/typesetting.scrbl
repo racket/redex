@@ -1134,7 +1134,7 @@ metafunction application. See @racket[to-lw] for the meanings of the other field
 @defproc[(build-lw [e (or/c string?
                             symbol?
                             pict? 
-                            (listof (or/c (symbols 'spring) lw?)))]
+                            (listof (or/c 'spring lw?)))]
                    [line exact-positive-integer?]
                    [line-span exact-positive-integer?]
                    [column exact-positive-integer?]
