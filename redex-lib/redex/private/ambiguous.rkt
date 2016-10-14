@@ -121,25 +121,27 @@
        [`symbol #t]
        [`bot #f]
        [(var-konsts _) #t]
-       [(prefixes the-prefixes-set)
+       [(prefixes+literals the-prefixes-set the-literal-set)
         (match v-pat
           [`(variable-prefix ,prefix)
            (define prefixes-as-lists-of-chars
              (for/list ([s (in-set the-prefixes-set)])
                (string->list (symbol->string s))))
-           (let loop ([prefixes prefixes-as-lists-of-chars]
-                      [prefix (string->list (symbol->string prefix))])
-             (cond
-               [(ormap null? prefixes) #t]
-               [(null? prefix) #t]
-               [else
-                (define new-prefixes
-                  (for/list ([a-prefix (in-list prefixes)]
-                             #:when (equal? (car a-prefix) (car prefix)))
-                    (cdr a-prefix)))
-                (cond
-                  [(null? new-prefixes) #f]
-                  [else (loop new-prefixes (cdr prefix))])]))]
+           (or (for/or ([literal (in-set the-literal-set)])
+                 (is-prefix? (symbol->string prefix) (symbol->string literal)))
+               (let loop ([prefixes prefixes-as-lists-of-chars]
+                          [prefix (string->list (symbol->string prefix))])
+                 (cond
+                   [(ormap null? prefixes) #t]
+                   [(null? prefix) #t]
+                   [else
+                    (define new-prefixes
+                      (for/list ([a-prefix (in-list prefixes)]
+                                 #:when (equal? (car a-prefix) (car prefix)))
+                        (cdr a-prefix)))
+                    (cond
+                      [(null? new-prefixes) #f]
+                      [else (loop new-prefixes (cdr prefix))])])))]
           [_ #t])])]))
 
 ;; returns #f when the nt definitely does NOT match a list
@@ -271,7 +273,7 @@
 
 ;; nmatches : symbol constant -> vari
 ;; returns #f when the non-terminal is known NOT to
-;; match the non-terminal
+;; match the constant
 ;; return #t when the non-terminal might match the constant
 (define (nmatches? nt v info)
   (match (hash-ref info nt)
@@ -285,10 +287,11 @@
           ['bot #f]
           [(var-konsts syms)
            (not (set-member? syms v))]
-          [(prefixes the-prefixes)
-           (for/or ([prefix (in-set the-prefixes)])
-             (regexp-match? (format "^~a" (regexp-quote (symbol->string prefix)))
-                            (symbol->string v)))])]
+          [(prefixes+literals the-prefixes the-literals)
+           (define v-str (symbol->string v))
+           (or (set-member? the-literals v)
+               (for/or ([prefix (in-set the-prefixes)])
+                 (is-prefix? (symbol->string prefix) v-str)))])]
        [(exact-nonnegative-integer? v)
         (cond
           [(num-konsts? num)
@@ -326,7 +329,7 @@
 
 ;; used for the variable portion of the lattice (see below)
 (struct var-konsts (syms) #:prefab)
-(struct prefixes (prefixes) #:prefab)
+(struct prefixes+literals (prefixes literals) #:prefab)
 
 
 (define (build-amb-info clang)
@@ -355,16 +358,16 @@ variable-lattice:
    variable   -- all variables
      /  \
     /    \
- konsts  prefixes
+ konsts  prefixes+literals
     \    /
      \  /
       bot  -- no variables
 
 The middle piece of the lattice describes two different
 states. If it is a konsts, then the non-terminal can match
-any symbol except the ones listed. If it is a prefixes,
+any symbol except the ones listed. If it is a prefixes+literals,
 then the non-terminal can match any variable with one
-of the prefixes.
+of the prefixes or when the it is exactly that symbol
 
 konsts and prefixes must not have empty sets in them.
 
@@ -452,8 +455,8 @@ list lattice:
        (if (set-empty? i)
            'variable
            (var-konsts i))]
-      [((prefixes p1) (prefixes p2))
-       (prefixes (set-union p1 p2))]
+      [((prefixes+literals p1 l1) (prefixes+literals p2 l2))
+       (prefixes+literals (set-union p1 p2) (set-union l1 l2))]
       [('bot x) x]
       [(x 'bot) x]
       [(_ _)    'variable]))
@@ -515,7 +518,7 @@ list lattice:
          [`boolean (lp 'bot num-bot `bool 'bot 'bot #f)]
          [`variable (lp 'variable num-bot 'bot 'bot 'bot #f)]
          [`(variable-except ,vars ...) (lp (var-konsts (apply set vars)) num-bot 'bot 'bot 'bot #f)]
-         [`(variable-prefix ,var) (lp (prefixes (set var)) num-bot 'bot 'bot 'bot #f)]
+         [`(variable-prefix ,var) (lp (prefixes+literals (set var) (set)) num-bot 'bot 'bot 'bot #f)]
          [`variable-not-otherwise-mentioned
           (lp (var-konsts (apply set (compiled-lang-literals clang)))
               num-bot 'bot 'bot 'bot #f)]
@@ -555,6 +558,8 @@ list lattice:
              (lp 'bot num-bot 'bot (set pattern) 'bot #f)]
             [(boolean? pattern)
              (lp 'bot num-bot pattern 'bot 'bot #f)]
+            [(symbol? pattern)
+             (lp (prefixes+literals (set) (set pattern)) num-bot 'bot 'bot 'bot #f)]
             [else 'any])])))
    'bot
    join))
@@ -663,11 +668,11 @@ list lattice:
            overlapping-patterns? 
            build-overlapping-productions-table
            var-konsts
-           prefixes
+           prefixes+literals
            build-ambiguous-ht
            build-amb-info
            (struct-out lp)
            (struct-out list-lp)
            (struct-out num-konsts)
            (struct-out var-konsts)
-           (struct-out prefixes)))
+           (struct-out prefixes+literals)))
