@@ -338,3 +338,17 @@
   (check-false (ambiguous-pattern? `(nt r) (build-ambiguity-cache L)))
   (check-true (ambiguous-pattern? `(nt s) (build-ambiguity-cache L))))
 
+(let ()
+  (define-language L
+    (v #t pt)
+    (pt (variable-prefix tag))
+
+    (s1 "a" "b" "c" "d")
+    (s2 "e" "f" "g" "h")
+    (s3 s1 "p" "q" "r")
+    (s4 s1 s2)
+    (s5 s1 "a"))
+  (check-false (ambiguous-pattern? `(nt v) (build-ambiguity-cache L)))
+  (check-false (ambiguous-pattern? `(nt s3) (build-ambiguity-cache L)))
+  (check-false (ambiguous-pattern? `(nt s4) (build-ambiguity-cache L)))
+  (check-true (ambiguous-pattern? `(nt s5) (build-ambiguity-cache L))))

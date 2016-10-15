@@ -297,6 +297,17 @@
           [(num-konsts? num)
            (set-member? (num-konsts-nums num) v)]
           [else #t])]
+       [(boolean? v)
+        (match bool
+          [`bool #t]
+          [#f (equal? v #f)]
+          [#t (equal? v #t)]
+          [`bot #f])]
+       [(string? v)
+        (match str
+          [`string #t]
+          [(? set?) (set-member? str v)]
+          [`bot #f])]
        [else #t])]))
 
 (define (build-overlapping-productions-table clang)
