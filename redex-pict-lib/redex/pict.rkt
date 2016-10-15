@@ -136,7 +136,6 @@
  [current-render-pict-adjust (parameter/c (pict? symbol? . -> . pict?))])
 
 (provide
- build-lw
  lw
  lw?
  lw-e
@@ -149,7 +148,15 @@
          to-lw/stx
          (struct-out lw))
 
+(define pnum (and/c number? (or/c zero? positive?)))
+
 (provide/contract
+ [build-lw
+  (-> (or/c string?
+            symbol?
+            pict?
+            (listof (or/c 'spring lw?)))
+      pnum pnum pnum pnum lw?)]
  [just-before (-> (or/c pict? string? symbol?) lw? lw?)]
  [just-after (-> (or/c pict? string? symbol?) lw? lw?)]
  [fill-between (-> (or/c pict? string? symbol?) lw? lw? lw?)])

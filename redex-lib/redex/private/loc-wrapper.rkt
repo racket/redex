@@ -1,7 +1,6 @@
 #lang racket/base
 
 (require racket/contract
-         pict
          (for-syntax racket/base)
          (for-syntax "loc-wrapper-ct.rkt")
          "loc-wrapper-rt.rkt")
@@ -24,13 +23,9 @@
              (column pnum)
              (column-span pnum)
              (unq? boolean?)
-             (metafunction? boolean?)))
- [build-lw (-> (or/c string?
-                     symbol?
-                     pict?
-                     (listof (or/c 'spring lw?)))
-               pnum pnum pnum pnum lw?)])
+             (metafunction? boolean?))))
 
 (provide to-lw
          to-lw/uq
-         curly-quotes-for-strings)
+         curly-quotes-for-strings
+         build-lw)
