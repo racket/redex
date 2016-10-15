@@ -64,9 +64,9 @@
   ╠═══════════════════╣                                                ╚══════════════╬═════╬═════════╣            ║               ║                   ║             ║                  ║            ╠═══════════════════╬═════════════╣
   ║     `hole         ║                                                               ║ #t  ║   #t    ║            ║               ║                   ║             ║                  ║            ║         #t        ║    #t       ║
   ╠═══════════════════╣                                                               ╚═════╬═════════╣            ║               ╠═══════════════════╣             ║                  ║            ╠═══════════════════╬═════════════╣
-  ║  `(nt ,t-id)      ║                                                                     ║(nt-nt   ║            ║               ║         #t        ║             ║                  ║            ║(nt-can-be-list?   ║(nmatches?   ║
-  ║                   ║                                                                     ║ t-id id ║            ║               ║                   ║             ║                  ║            ║ t-id clang)       ║ t-id u info)║
-  ║                   ║                                                                     ║ info)   ║            ║               ║                   ║             ║                  ║            ║                   ║             ║
+  ║  `(nt ,t-id)      ║                                                                     ║(nt-nt   ║            ║               ║         #t        ║             ║                  ║            ║(nt-matches-list?  ║(nmatches?   ║
+  ║                   ║                                                                     ║ t-id id ║            ║               ║                   ║             ║                  ║            ║ t-id clang        ║ t-id u info)║
+  ║                   ║                                                                     ║ info)   ║            ║               ║                   ║             ║                  ║            ║ u-ps info)        ║             ║
   ╠═══════════════════╣                                                                     ╚═════════╬════════════╣               ╠═══════════════════╩═════════════╩══════════════════╩════════════╩═══════════════════╩═════════════╣
   ║`(name ,t-name     ║                                                                               ║ (r u2 t2)  ║               ║                                             (r u t2)                                              ║
   ║       ,t2)        ║                                                                               ║            ║               ║                                                                                                   ║
@@ -144,13 +144,24 @@
                       [else (loop new-prefixes (cdr prefix))])])))]
           [_ #t])])]))
 
-;; returns #f when the nt definitely does NOT match a list
-;; returns #t when the nt might match a list
-(define (nt-can-be-list? nt-id clang)
-  ;; if the list-ht maps the nt to the empty list,
-  ;; then we know there is no way that this nt can
-  ;; match any lists.
-  (not (null? (hash-ref (compiled-lang-list-ht clang) nt-id))))
+;; returns #t when the nt might match the list whose patterns are given by u-ps
+(define (nt-matches-list? nt-id clang u-ps info)
+  (match (hash-ref info nt-id)
+    [`any #t]
+    [`bot #f]
+    [(lp sym num bool str list hole?)
+     (match list
+       [`list #t]
+       [(list-lp fixed-sizes at-least-size)
+        (define repeat?
+          (for/or ([u-p (in-list u-ps)])
+            (match u-p
+              [`(repeat ,_ ...) #t]
+              [_ #f])))
+        (cond
+          [repeat? #t]
+          [else (set-member? fixed-sizes (length u-ps))])]
+       [`bot #f])]))
 
 (define (v-overlap? t u)
   (match* (t u)
@@ -360,6 +371,7 @@ main-lattice:
       <number-lattice>
       <boolean-lattice>
       <string-lattice>
+      <list-lattice>
       boolean?) --- hole or not
         |
        bot

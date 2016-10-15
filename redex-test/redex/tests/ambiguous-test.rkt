@@ -371,3 +371,13 @@
   (check-true (ambiguous-pattern? `(nt y) (build-ambiguity-cache L)))
   (check-false (ambiguous-pattern? `(nt z) (build-ambiguity-cache L))))
 
+
+(let ()
+  (define-language abort-core-lang/unambiguous
+    (v pt
+       (cons v v))
+
+    (pt (variable-prefix tag)
+        (PG ctc ctc v l l l)))
+
+  (check-false (ambiguous-pattern? `(nt v) (build-ambiguity-cache abort-core-lang/unambiguous))))
