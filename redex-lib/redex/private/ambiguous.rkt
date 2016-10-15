@@ -579,6 +579,18 @@ list lattice:
   (match* (sym1 sym2)
     [('bot _) #t]
     [(_ 'bot) #t]
+    [((prefixes+literals ps1 ls1) (prefixes+literals ps2 ls2))
+     (and (set-empty? (set-intersect ls1 ls2))
+          (for/and ([l (in-set ls1)]
+                    [p (in-set ps2)])
+            (not (is-prefix? (symbol->string p) (symbol->string l))))
+          (for/and ([l (in-set ls2)]
+                    [p (in-set ps1)])
+            (not (is-prefix? (symbol->string p) (symbol->string l))))
+          (for*/and ([p1 (in-set ps1)]
+                     [p2 (in-set ps2)])
+            (and (not (is-prefix? (symbol->string p1) (symbol->string p2)))
+                 (not (is-prefix? (symbol->string p2) (symbol->string p1))))))]
     ;; simplification of the the real knowledge
     [(_ _) #f]))
 (define (disjoint-num num1 num2)

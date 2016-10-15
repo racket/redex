@@ -24,7 +24,7 @@
 
 (define L1-info (build-amb-info L1))
 
-#;(check-equal? L1-info
+(check-equal? L1-info
               (make-hash
                (list
                 (cons 'E (lp 'bot num-bot 'bot 'bot (list-lp (set 2) #f) #t))
@@ -58,7 +58,7 @@
                                (cons 'y #f)
                                (cons 'z #f)
                                (cons 'abc-prefix #f)
-                               (cons 'q #t))))
+                               (cons 'q #f))))
 
 (define non-terminal-ambiguous-L1
   (ambiguity-cache (build-ambiguous-ht L1 L1-overlapping-productions-ht)))
@@ -73,7 +73,7 @@
                                (cons 'y #f)
                                (cons 'z #f)
                                (cons 'abc-prefix #f)
-                               (cons 'q #t))))
+                               (cons 'q #f))))
 
 (let ()
   (define-language Foo
@@ -352,3 +352,22 @@
   (check-false (ambiguous-pattern? `(nt s3) (build-ambiguity-cache L)))
   (check-false (ambiguous-pattern? `(nt s4) (build-ambiguity-cache L)))
   (check-true (ambiguous-pattern? `(nt s5) (build-ambiguity-cache L))))
+
+(let ()
+  (define-language L
+    (a (variable-prefix a))
+    (b (variable-prefix b))
+    (ab (variable-prefix ab))
+
+    (v a aaaaaaa)
+    (w a baaaaaa)
+    (x a b)
+    (y ab a)
+    (z ab b))
+
+  (check-true (ambiguous-pattern? `(nt v) (build-ambiguity-cache L)))
+  (check-false (ambiguous-pattern? `(nt w) (build-ambiguity-cache L)))
+  (check-false (ambiguous-pattern? `(nt x) (build-ambiguity-cache L)))
+  (check-true (ambiguous-pattern? `(nt y) (build-ambiguity-cache L)))
+  (check-false (ambiguous-pattern? `(nt z) (build-ambiguity-cache L))))
+
