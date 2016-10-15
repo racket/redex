@@ -2998,7 +2998,7 @@
                           (format "term matching `~s` in the language ~s"
                                   orig-pat-syntax lang-name)
                           term))
-  (pat-first-index (compiled-lang-enum-table lang) pat term))
+  (term-index (compiled-lang-enum-table lang) pat term))
 
 (provide (rename-out [-reduction-relation reduction-relation])
          ::=

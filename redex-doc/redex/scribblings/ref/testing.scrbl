@@ -503,7 +503,7 @@ repeating as necessary. The optional keyword argument @racket[retries-expr]
 }
 
 @defform[(redex-index language @#,ttpattern @#,tttterm)]{
- Computes the index for an occurrences of the given term
+ Computes the index for an occurrence of the given term
  in the enumerator corresponding to the given pattern or
  returns @racket[#f] if there is no enumerator.
 
@@ -519,7 +519,19 @@ repeating as necessary. The optional keyword argument @racket[retries-expr]
 
            (redex-index L e
                         (term (λ (f) ((λ (x) (f (x x)))
-                                      (λ (x) (f (x x)))))))]
+                                      (λ (x) (f (x x)))))))
+
+           (define-language L
+             (code:comment "e is an ambiguous non-terminal")
+             (code:comment "because there are multiple ways to")
+             (code:comment "parse (cons (λ (x) x) (λ (x) x))")
+             (e ::= (e e) x (cons e e) v)
+             (v ::= (cons v v) (λ (x) e))
+             (x ::= variable-not-otherwise-mentioned))
+
+           (redex-index L e
+                        (term ((λ (x) (x x))
+                               (λ (x) (x x)))))]
 }
 
 @defform/subs[(redex-check template property-expr kw-arg ...)

@@ -33,10 +33,10 @@
                       ambiguity-cache?
                       flat-contract?
                       (or/c #f enum?))]
-  [pat-first-index (-> lang-enum?
-                       any/c ;; pattern
-                       any/c ;; term
-                       (or/c exact-nonnegative-integer? #f))]
+  [term-index (-> lang-enum?
+                  any/c ;; pattern
+                  any/c ;; term
+                  (or/c exact-nonnegative-integer? #f))]
   [enum-ith (-> enum? exact-nonnegative-integer? any/c)]
   [lang-enum? (-> any/c boolean?)]
   [enum? (-> any/c boolean?)]))
@@ -139,25 +139,26 @@
 
   unparse-term+pat-nt-ht)
 
-;; the-ambiguity-cache can be #f internally, but not externally
 (define (pat-enumerator l-enum pat the-ambiguity-cache pat-matches/c)
   (cond
     [(can-enumerate? pat (lang-enum-nt-enums l-enum) (lang-enum-delayed-cc-enums l-enum))
-     (define unparser (and (or (not the-ambiguity-cache)
-                               (not (ambiguous-pattern? pat the-ambiguity-cache)))
-                           (unparse-term+pat pat (lang-enum-unparse-term+pat-nt-ht l-enum))))
+     (define from-term (and (not (ambiguous-pattern? pat the-ambiguity-cache))
+                            (top-level-unparse-term+pat pat l-enum)))
      (define raw-enumerator (pat/e pat l-enum))
      (cond
-       [unparser
-        (define (from-term term) (ann-pat (t-env #hash() #hash() #hash()) (unparser term)))
+       [from-term
         (map/e to-term from-term raw-enumerator #:contract pat-matches/c)]
        [else
         (pam/e to-term raw-enumerator #:contract pat-matches/c)])]
     [else #f]))
 
-(define (pat-first-index l-enum pat term)
-  (define enum (pat-enumerator l-enum pat #f any/c))
-  (and enum (to-nat enum term)))
+(define (term-index l-enum pat term)
+  (define raw-enumerator (pat/e pat l-enum))
+  (cond
+    [raw-enumerator
+     (define from-term (top-level-unparse-term+pat pat l-enum))
+     (to-nat raw-enumerator (from-term term))]
+    [else #f]))
 
 (define (enumerate-rhss rhss l-enum)
   (define (with-index i e)
@@ -415,12 +416,15 @@
          (cons (cons/e any/e any/e) pair?))
    #:count +inf.0))
 
-
 ;; this function turns a term back into a parsed
 ;; term to be used with an enumerator produced by pat-refs/e
 ;; also: the pat should be unambiguous ...?
 ;; (if so, we can invert; if not, we can maybe just get the first one?)
 ;; PRE: term matches pat.
+;;
+;; this variant can be used with non-terminals in a language; the function
+;; top-level-unparse-term+pat is used with raw patterns that appear
+;; outside of a language
 (define (unparse-term+pat pat unparse-nt-hash)
   (define names-encountered (make-hash))
   (let/ec k
@@ -481,3 +485,10 @@
                (set! term (cdr term))
                (to-term this-term)])))]
        [(? (compose not pair?)) values]))))
+
+(define (top-level-unparse-term+pat pat l-enum)
+  (define unparse-nt-hash (lang-enum-unparse-term+pat-nt-ht l-enum))
+  (define unparser (unparse-term+pat pat (lang-enum-unparse-term+pat-nt-ht l-enum)))
+  (and unparser
+       (λ (term)
+         (ann-pat (t-env #hash() #hash() #hash()) (unparser term)))))
