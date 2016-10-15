@@ -33,6 +33,10 @@
                       ambiguity-cache?
                       flat-contract?
                       (or/c #f enum?))]
+  [pat-first-index (-> lang-enum?
+                       any/c ;; pattern
+                       any/c ;; term
+                       (or/c exact-nonnegative-integer? #f))]
   [enum-ith (-> enum? exact-nonnegative-integer? any/c)]
   [lang-enum? (-> any/c boolean?)]
   [enum? (-> any/c boolean?)]))
@@ -135,10 +139,12 @@
 
   unparse-term+pat-nt-ht)
 
+;; the-ambiguity-cache can be #f internally, but not externally
 (define (pat-enumerator l-enum pat the-ambiguity-cache pat-matches/c)
   (cond
     [(can-enumerate? pat (lang-enum-nt-enums l-enum) (lang-enum-delayed-cc-enums l-enum))
-     (define unparser (and (not (ambiguous-pattern? pat the-ambiguity-cache))
+     (define unparser (and (or (not the-ambiguity-cache)
+                               (not (ambiguous-pattern? pat the-ambiguity-cache)))
                            (unparse-term+pat pat (lang-enum-unparse-term+pat-nt-ht l-enum))))
      (define raw-enumerator (pat/e pat l-enum))
      (cond
@@ -148,6 +154,10 @@
        [else
         (pam/e to-term raw-enumerator #:contract pat-matches/c)])]
     [else #f]))
+
+(define (pat-first-index l-enum pat term)
+  (define enum (pat-enumerator l-enum pat #f any/c))
+  (and enum (to-nat enum term)))
 
 (define (enumerate-rhss rhss l-enum)
   (define (with-index i e)

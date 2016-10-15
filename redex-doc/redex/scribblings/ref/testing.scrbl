@@ -502,6 +502,21 @@ repeating as necessary. The optional keyword argument @racket[retries-expr]
                                  (λ (x) (f (x x)))))))]
 }
 
+@defform[(redex-first-index language @#,ttpattern @#,tttterm)]{
+ Computes the index for an occurrences of the given term
+ in the enumerator corresponding to the given pattern, or
+ returns @racket[#f] if there is no enumerator.
+
+ @examples[#:eval redex-eval
+           (define-language L
+             (e ::= (e e) x (λ (x) e))
+             (x ::= variable-not-otherwise-mentioned))
+
+           (redex-first-index L e
+                              (term (λ (f) ((λ (x) (f (x x)))
+                                            (λ (x) (f (x x)))))))]
+}
+
 @defform/subs[(redex-check template property-expr kw-arg ...)
               ([template (code:line language @#,ttpattern)
                          (code:line language @#,ttpattern #:ad-hoc)

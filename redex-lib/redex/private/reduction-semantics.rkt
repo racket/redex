@@ -2963,10 +2963,6 @@
 (define-syntax (redex-enum stx)
   (syntax-case stx ()
     [(form-name lang pat)
-     (unless (identifier? #'lang)
-       (raise-syntax-error 'redex-enum
-                           "expected an identifier in the language position"
-                           stx #'lang))
      (with-syntax ([(syncheck-expr side-conditions-rewritten (names ...) (names/ellipses ...))
                     (rewrite-side-conditions/check-errs #'lang 'redex-enum #t #'pat)])
        #'(begin
@@ -2984,6 +2980,25 @@
                   (flat-named-contract
                    (format "term matching `~s` in the language ~s" orig-pat-syntax lang-name)
                    matches?)))
+
+(define-syntax (redex-first-index stx)
+  (syntax-case stx ()
+    [(form-name lang pat term)
+     (with-syntax ([(syncheck-expr side-conditions-rewritten (names ...) (names/ellipses ...))
+                    (rewrite-side-conditions/check-errs #'lang 'redex-first-index #t #'pat)])
+       #'(begin
+           syncheck-expr
+           (redex-first-term/proc lang
+                                  `side-conditions-rewritten term
+                                  'pat 'lang)))]))
+(define (redex-first-term/proc lang pat term orig-pat-syntax lang-name)
+  (define compiled (compile-pattern lang pat #t))
+  (unless (match-pattern? compiled term)
+    (raise-argument-error 'redex-first-term
+                          (format "term matching `~s` in the language ~s"
+                                  orig-pat-syntax lang-name)
+                          term))
+  (pat-first-index (compiled-lang-enum-table lang) pat term))
 
 (provide (rename-out [-reduction-relation reduction-relation])
          ::=
@@ -3028,6 +3043,7 @@
          redex-let 
          redex-let*
          redex-enum
+         redex-first-index
          make-bindings bindings-table bindings?
          match? match-bindings
          make-bind bind? bind-name bind-exp
