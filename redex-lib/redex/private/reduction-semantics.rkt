@@ -2981,20 +2981,20 @@
                    (format "term matching `~s` in the language ~s" orig-pat-syntax lang-name)
                    matches?)))
 
-(define-syntax (redex-first-index stx)
+(define-syntax (redex-index stx)
   (syntax-case stx ()
     [(form-name lang pat term)
      (with-syntax ([(syncheck-expr side-conditions-rewritten (names ...) (names/ellipses ...))
-                    (rewrite-side-conditions/check-errs #'lang 'redex-first-index #t #'pat)])
+                    (rewrite-side-conditions/check-errs #'lang 'redex-index #t #'pat)])
        #'(begin
            syncheck-expr
-           (redex-first-term/proc lang
-                                  `side-conditions-rewritten term
-                                  'pat 'lang)))]))
-(define (redex-first-term/proc lang pat term orig-pat-syntax lang-name)
+           (redex-index/proc lang
+                             `side-conditions-rewritten term
+                             'pat 'lang)))]))
+(define (redex-index/proc lang pat term orig-pat-syntax lang-name)
   (define compiled (compile-pattern lang pat #t))
   (unless (match-pattern? compiled term)
-    (raise-argument-error 'redex-first-term
+    (raise-argument-error 'redex-index
                           (format "term matching `~s` in the language ~s"
                                   orig-pat-syntax lang-name)
                           term))
@@ -3043,7 +3043,7 @@
          redex-let 
          redex-let*
          redex-enum
-         redex-first-index
+         redex-index
          make-bindings bindings-table bindings?
          match? match-bindings
          make-bind bind? bind-name bind-exp

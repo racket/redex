@@ -74,7 +74,7 @@
 
 (provide redex-check
          redex-enum
-         redex-first-index
+         redex-index
          generate-term
          check-metafunction
          check-reduction-relation
