@@ -19,5 +19,7 @@
 (include/rewrite "generators.rkt" generators bug-mod-rw)
 
 (define small-counter-example (term (1 cons)))
+(define enum-small-counter-example (term (let ((a (λ a a))) a)))
 
 (test small-counter-example)
+(test enum-small-counter-example)

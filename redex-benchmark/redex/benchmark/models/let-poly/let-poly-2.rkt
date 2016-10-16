@@ -31,9 +31,9 @@
 
 (include/rewrite "generators.rkt" generators bug-mod-rw)
 
-(define small-counter-example '(let ([x (new nil)])
-                                 ((λ ignore
-                                    ((hd (get x)) 1))
-                                  ((set x) ((cons 5) nil)))))
+(define small-counter-example '(let ([a (new nil)])
+                                 ((λ b
+                                    ((hd (get a)) 0))
+                                  ((set a) ((cons 0) nil)))))
 
 (test small-counter-example)

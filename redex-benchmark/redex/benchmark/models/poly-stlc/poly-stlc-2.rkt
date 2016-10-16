@@ -19,6 +19,6 @@
 (include/rewrite "generators.rkt" generators bug-mod-rw)
 
 (define small-counter-example
-  (term (([cons @ int] 1) [nil @ int])))
+  (term (([cons @ int] 0) [nil @ int])))
 
 (test small-counter-example)

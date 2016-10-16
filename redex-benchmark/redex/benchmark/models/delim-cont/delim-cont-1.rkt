@@ -25,7 +25,7 @@
   '(<> (ccm 
         (monitor 
          (mark/c 
-          (mark/c (flat (λ (var:p : Num) #t)) 
+          (mark/c (flat (λ (var:a : Num) #t)) 
                   Num)
           (Mark Num)) 
          (make-cm-key (Mark Num))

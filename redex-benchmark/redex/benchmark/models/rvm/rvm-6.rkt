@@ -35,8 +35,11 @@
 (include/rewrite "generators.rkt" generators bug-mod-rw)
 
 (define small-counter-example
-  '(application
-    (case-lam (lam (val) () (loc-noclr 34)))
-    'x))
+  (term (application
+         (case-lam (lam (val) () (loc-noclr 34)))
+         'x)))
+(define enum-small-counter-example
+  (term (let-void 1 (case-lam (lam () (0) (loc 0))))))
 
 (test small-counter-example)
+(test enum-small-counter-example)

@@ -19,7 +19,7 @@
 (include/rewrite "generators.rkt" generators bug-mod-rw)
 
 (define small-counter-example
-  (term ((λ (x int) cons) cons)))
+  (term ((λ (a int) cons) cons)))
 
 (test small-counter-example)
 

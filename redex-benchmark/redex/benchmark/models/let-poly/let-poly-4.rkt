@@ -20,6 +20,6 @@
 
 (include/rewrite "generators.rkt" generators bug-mod-rw exn-rw)
 
-(define small-counter-example (term ((λ x (x x)) hd)))
+(define small-counter-example (term ((λ a (a a)) hd)))
 
 (test small-counter-example)

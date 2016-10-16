@@ -22,5 +22,8 @@
   (term ((λ (x int) [nil @ int])
          [nil @ int])))
 
-(test small-counter-example)
+(define enum-small-counter-example
+  (term ((λ (a (int → int)) 0) 0)))
 
+(test small-counter-example)
+(test enum-small-counter-example)

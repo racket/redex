@@ -19,7 +19,7 @@
 (include/rewrite "generators.rkt" generators bug-mod-rw)
 
 (define small-counter-example
-  (term ((λ (x int) (λ (y (list int)) x)) 1)))
+  (term ((λ (a int) (λ (b (list int)) a)) 1)))
 
 (test small-counter-example)
 

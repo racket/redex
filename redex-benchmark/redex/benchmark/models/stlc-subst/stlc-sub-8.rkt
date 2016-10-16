@@ -19,6 +19,6 @@
 (include/rewrite "generators.rkt" generators bug-mod-rw)
 
 (define small-counter-example 
-  (term ((λ (x int) (+ 1)) 1)))
+  (term ((λ (a int) (+ 0)) 0)))
 
 (test small-counter-example)

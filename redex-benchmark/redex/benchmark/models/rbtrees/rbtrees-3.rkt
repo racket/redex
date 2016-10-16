@@ -29,4 +29,14 @@
          (num->n 4)
          (R E (num->n 5) E))))
 
+(define enum-small-counter-example
+  (term (R (B (R E O E)
+              (s O)
+              E)
+           (s (s (s O)))
+           (B E
+              (s (s (s (s O))))
+              E))))
+
 (test small-counter-example)
+(test enum-small-counter-example)

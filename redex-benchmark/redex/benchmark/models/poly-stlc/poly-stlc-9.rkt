@@ -22,6 +22,9 @@
   (term ((λ (y (list int)) ([hd @ int] x))
          [nil @ int])))
 
-(test small-counter-example)
+(define enum-small-counter-example
+  (term ((λ (b int) a) 0)))
 
+(test small-counter-example)
+(test enum-small-counter-example)
 

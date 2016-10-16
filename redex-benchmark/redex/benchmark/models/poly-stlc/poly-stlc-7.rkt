@@ -22,4 +22,8 @@
 (define small-counter-example
   (term ((+ 1) ((+ 2) 3))))
 
+(define enum-small-counter-example
+  (term ((λ (a int) 0) ((λ (a int) 0) 0))))
+
 (test small-counter-example)
+(test enum-small-counter-example)

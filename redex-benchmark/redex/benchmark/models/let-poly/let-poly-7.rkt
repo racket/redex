@@ -33,6 +33,6 @@
 
 (include/rewrite "generators.rkt" generators bug-mod-rw)
 
-(define small-counter-example (term (let ((x (λ y y))) (x x))))
+(define small-counter-example (term (let ((a (λ a a))) (a a))))
 
 (test small-counter-example)

@@ -18,6 +18,8 @@
 
 (include/rewrite "generators.rkt" generators bug-mod-rw)
 
-(define small-counter-example '(hd ((λ x x) 1)))
+(define small-counter-example (term (hd ((λ a a) 0))))
+(define enum-small-counter-example (term ((λ a a) +)))
 
 (test small-counter-example)
+(test enum-small-counter-example)
