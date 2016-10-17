@@ -1,3 +1,7 @@
+v6.8
+
+  * improved the ambiguity checker
+
 v6.7
 
   * performance improvements
