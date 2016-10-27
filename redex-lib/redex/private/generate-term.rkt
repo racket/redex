@@ -417,16 +417,22 @@
   (format "~a attempt~a" a (if (= 1 a) "" "s")))
 
 (define (check-one generator property attempts retries show term-fix term-match keep-going?)
-  (define c (check generator property attempts retries show keep-going?
-                   #:term-fix term-fix
-                   #:term-match term-match))
+  (define-values (c actual-attempts)
+    (check generator property attempts retries show keep-going?
+           #:term-fix term-fix
+           #:term-match term-match))
   (cond 
     [(counterexample? c)
      (unless show c)] ; check printed it
     [show
      (show #f
-           (format "no counterexamples in ~a\n"
-                   (format-attempts attempts)))]
+           (if (= actual-attempts attempts)
+               (format "no counterexamples in ~a\n"
+                       (format-attempts attempts))
+               (format "no counterexamples in ~a (with ~a generation failure~a)\n"
+                       (format-attempts actual-attempts)
+                       (- attempts actual-attempts)
+                       (if (= 1 (- attempts actual-attempts)) "" "s"))))]
     [else
      #t]))
 
@@ -442,16 +448,17 @@
                #:term-fix [term-fix #f]
                #:term-match [term-match #f]
                #:skip-term? [skip-term? (λ (x) #f)])
-  (let loop ([remaining attempts])
+  (let loop ([remaining attempts]
+             [actual-attempts 0])
     (cond 
       [(zero? remaining)
-       #t]
+       (values #t actual-attempts)]
       [else
        (define attempt (add1 (- attempts remaining)))
        (define-values (raw-term bindings) (generator ((attempt->size) attempt) attempt retries))
        (cond
          [(gen-fail? raw-term)
-          (loop (sub1 remaining))]
+          (loop (sub1 remaining) actual-attempts)]
          [else
           (define handler 
             (λ (action term)
@@ -469,7 +476,7 @@
           (define term (with-handlers ([exn:fail? (handler "fixing" raw-term)])
                          (if term-fix (term-fix raw-term) raw-term)))
           (cond
-            [(skip-term? term) (loop (- remaining 1))]
+            [(skip-term? term) (loop (- remaining 1) actual-attempts)]
             [(cond
                [term-match
                 (define match-result (term-match term))
@@ -489,18 +496,18 @@
                   (match (cons property term-fix)
                     [(cons (term-prop pred) _) (pred term)]
                     [(cons (bind-prop pred) #f) (pred bindings)]))])
-             (loop (sub1 remaining))]
+             (loop (sub1 remaining) (+ actual-attempts 1))]
             [else
              (when show
                (show
                 #t
                 (format "counterexample found after ~a~a:\n"
-                        (format-attempts attempt)
+                        (format-attempts (+ actual-attempts 1))
                         (if source (format " with ~a" source) "")))
                (pretty-write term (current-error-port)))
              (if keep-going?
-                 (loop (sub1 remaining))
-                 (make-counterexample term))])])])))
+                 (loop (sub1 remaining) (+ actual-attempts 1))
+                 (values (make-counterexample term) (+ actual-attempts 1)))])])])))
 
 (define (check-lhs-pats lang mf/rr prop attempts retries what show term-fix keep-going?
                         #:term-match [term-match #f])
@@ -518,32 +525,36 @@
                                                (reduction-relation-domain-pat mf/rr)
                                                #f)])
                      (λ (x) (not (match-pattern? pat x)))))]))
-  (let loop ([pats pats] [srcs srcs])
-    (if (and (null? pats) (null? srcs))
-        (if show
-            (show
-             #f
-             (format "no counterexamples in ~a (with each clause)\n"
-                     (format-attempts attempts)))
-            #t)
-        (let ([c (with-handlers ([exn:fail:redex:generation-failure?
-                                  ; Produce an error message that blames the LHS as a whole.
-                                  (λ (_)
-                                    (raise-gen-fail what (format "LHS of ~a" (car srcs)) retries))])
-                   (check
-                    (lang-gen (car pats))
-                    prop
-                    attempts
-                    retries
-                    show
-                    keep-going?
-                    #:skip-term? skip-term?
-                    #:source (car srcs)
-                    #:term-match term-match
-                    #:term-fix term-fix))])
-          (if (and (not keep-going?) (counterexample? c))
-              (unless show c)
-              (loop (cdr pats) (cdr srcs)))))))
+  (let loop ([pats pats] [srcs srcs] [overall-actual-attempts 0])
+    (cond
+      [(and (null? pats) (null? srcs))
+       (if show
+           (show
+            #f
+            (format "no counterexamples in ~a (tried ~a with each clause)\n"
+                    (format-attempts overall-actual-attempts) (format-attempts attempts)))
+           #t)]
+      [else
+       (define-values (c actual-attempts)
+         (with-handlers ([exn:fail:redex:generation-failure?
+                          ; Produce an error message that blames the LHS as a whole.
+                          (λ (_)
+                            (raise-gen-fail what (format "LHS of ~a" (car srcs)) retries))])
+           (check
+            (lang-gen (car pats))
+            prop
+            attempts
+            retries
+            show
+            keep-going?
+            #:skip-term? skip-term?
+            #:source (car srcs)
+            #:term-match term-match
+            #:term-fix term-fix)))
+       (if (and (not keep-going?) (counterexample? c))
+           (unless show c)
+           (loop (cdr pats) (cdr srcs)
+                 (+ overall-actual-attempts actual-attempts)))])))
 
 (define-syntax (check-metafunction stx)
   (syntax-case stx ()
