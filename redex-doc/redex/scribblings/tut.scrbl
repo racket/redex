@@ -1023,7 +1023,7 @@ program have the same type.
                   red
                   (λ (p) 
                     (andmap preservation-holds? p))))
-               #rx"check-reduction-relation: no counterexamples in 1000 attempts")
+               #rx"check-reduction-relation: no counterexamples in 6000 attempts")
 
 @section{Typesetting the Reduction Relation}
 
