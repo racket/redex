@@ -123,14 +123,14 @@
        [`(side-condition ,pat ,condition ,srcloc-expr) #f]
        [`(cross ,var) #f]
        [`(list ,ps ...)
-        (for/and ([p ps]) (loop p))]
+        (for/and ([p (in-list ps)]) (loop p))]
        [(? (compose not pair?))
         (or (symbol? p) (number? p) (string? p) (boolean? p))]
        [_ 
         (and is-pat*?
              (match p
                [`(cstr (,nts ...) ,p*)
-                (and (for/and ([n nts]) (n-t? n))
+                (and (for/and ([n (in-list nts)]) (n-t? n))
                      (loop p*))]
                [_ #f]))]))))
 
@@ -177,10 +177,10 @@
                 (define eqs (p*e-eqs res))
                 (define res-pat (p*e-p res))
                 (define found-pre-dqs (apply set-union (set) 
-                                             (for/list ([dq-sides/id (hash-values (dqs-found))])
+                                             (for/list ([dq-sides/id (in-list (hash-values (dqs-found)))])
                                                (list->dq-pairs dq-sides/id))))
                 (maybe-let* ([found-dqs (for/fold ([fdqs '()])
-                                          ([pdq (in-set found-pre-dqs)])
+                                                  ([pdq (in-set found-pre-dqs)])
                                           (maybe-let* ([fdqs fdqs])
                                                       (define new-dq (disunify* '() (first pdq) (second pdq) eqs L))
                                                       (and/fail new-dq
@@ -196,8 +196,8 @@
          (equal? '() (cdr dq-sides)))
      (set)]
     [else
-     (set-union (for/set ([rhs (cdr dq-sides)])
-                         (list (car dq-sides) rhs))
+     (set-union (for/set ([rhs (in-list (cdr dq-sides))])
+                  (list (car dq-sides) rhs))
                 (list->dq-pairs (cdr dq-sides)))]))
 
 ;; pat pat env lang -> (or/c env boolean?)
@@ -230,7 +230,7 @@
 
 (define (extend-dq new-eqs ineq0 eqs)
   (for/fold ([ineq ineq0])
-    ([(k v) (in-hash new-eqs)])
+            ([(k v) (in-hash new-eqs)])
     (match ineq
       [`((list ,vars ...) (list ,terms ...))
        (match* (k v)
@@ -253,7 +253,7 @@
           [`(name ,id ,(bound))
            (resolve-no-nts/var (lvar id) eqs)]
           [`(list ,ps ...)
-           `(list ,@(for/list ([p ps]) (recur p)))]
+           `(list ,@(for/list ([p (in-list ps)]) (recur p)))]
           [`(cstr (,cs ...) p)
            (recur p)]
           [_
@@ -334,7 +334,7 @@
        (define-values
          (ndql ndqr nps)
          (for/fold ([ndql new-dq-l] [ndqr new-dq-r] [nps ps])
-           ([(p lhss) (in-hash lhs-ps)])
+                   ([(p lhss) (in-hash lhs-ps)])
            (if ((length lhss) . > . 1)
                (values (foldr cons ndql lhss)
                        (foldr cons ndqr (build-list (length lhss) 
@@ -409,7 +409,7 @@
                                     `(name ,id ,(bound)))])))]
         [`(list ,pats ...)
          (let/ec fail
-           `(list ,@(for/list ([p pats])
+           `(list ,@(for/list ([p (in-list pats)])
                       (define res (loop p))
                       (if (not-failed? res)
                           res
@@ -577,7 +577,7 @@
                 (and/fail new-nts
                           (p*e `(cstr ,new-nts ,new-p) res-e))]
                [_
-                (and/fail (for/and ([n nts]) (check-nt n L res-p e))
+                (and/fail (for/and ([n (in-list nts)]) (check-nt n L res-p e))
                           (p*e `(cstr ,nts ,res-p) res-e))])))
   
 (define (u*-2nts n-t n-u e L)
@@ -704,7 +704,7 @@
      (or (eq? name name-p)
          (occurs?* name (hash-ref eqs (lvar name-p) (uninstantiated)) eqs L))]
     [`(list ,ps ...)
-     (for/or ([p ps])
+     (for/or ([p (in-list ps)])
        (occurs?* name p eqs L))]
     [`(cstr (,nts ...) ,pat)
      (occurs?* name pat eqs L)]
@@ -758,7 +758,7 @@
      (ground-pat-eq? p u-next)]
     [(`(list ,ps ...) `(list ,us ...))
      (and (equal? (length ps) (length us))
-          (for/and ([p ps] [u us]) 
+          (for/and ([p (in-list ps)] [u (in-list us)]) 
             (ground-pat-eq? p u)))]
     [(_ `(name ,id ,(bound)))
      #f]
@@ -776,7 +776,7 @@
      (equal? p* u*)]))
 
 (define (merge-ids/sorted l1 l2 lang)
-  (and (for*/and ([nt1 l1] [nt2 l2])
+  (and (for*/and ([nt1 (in-list l1)] [nt2 (in-list l2)])
          (check-nt nt1 lang `(nt ,nt2) empty-env))
        (de-dupe/sorted (merge/sorted l1 l2))))
 
@@ -961,7 +961,7 @@
                                 unique-id)))
      `(name ,new-id ,(fresh-pat-vars pat instantiations))]
     [`(list ,pats ...)
-     `(list ,@(for/list ([p pats]) (fresh-pat-vars p instantiations)))]
+     `(list ,@(for/list ([p (in-list pats)]) (fresh-pat-vars p instantiations)))]
     [`(variable-not-in ,pat ,s)
      `(variable-not-in ,(fresh-pat-vars pat instantiations) ,s)]
     [_ pre-pat]))
