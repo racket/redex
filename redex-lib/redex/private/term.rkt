@@ -134,29 +134,33 @@
       rewritten))
   
   (define (rewrite-application fn args depth srcloc-stx)
-    (let-values ([(rewritten max-depth has-var?) (rewrite/max-depth args depth #t #t)])
-      (let ([result-id (car (generate-temporaries '(f-results)))])
-        (with-syntax ([fn fn])
-          (let loop ([func (if (judgment-form-id? #'fn)
-                               (syntax/loc srcloc-stx (jf-apply fn))
-                               (syntax/loc srcloc-stx (mf-apply fn)))]
-                     [args-stx rewritten]
-                     [res result-id]
-                     [args-depth (min depth max-depth)])
-            (with-syntax ([func func]
-                          [args args-stx]
-                          [res res])
-              (if (zero? args-depth)
-                  (begin
-                    (set! outer-bindings 
-                          (cons (syntax [res (func (quasidatum args))])
-                                outer-bindings))
-                    (values result-id (min depth max-depth) has-var?))
-                  (with-syntax ([dots (datum->syntax #'here '... arg-stx)])
-                    (loop (syntax (begin (mf-map func)))
-                          (syntax/loc args-stx (args dots))
-                          (syntax (res dots))
-                          (sub1 args-depth))))))))))
+    (define-values (rewritten max-depth has-var?) (rewrite/max-depth args depth #t #t))
+    (define result-id (car (generate-temporaries
+                            (if (identifier? fn)
+                                (list (string->symbol
+                                       (format "~a-results" (syntax-e fn))))
+                                '(f-results)))))
+    (with-syntax ([fn fn])
+      (let loop ([func (if (judgment-form-id? #'fn)
+                           (syntax/loc srcloc-stx (jf-apply fn))
+                           (syntax/loc srcloc-stx (mf-apply fn)))]
+                 [args-stx rewritten]
+                 [res result-id]
+                 [args-depth (min depth max-depth)])
+        (with-syntax ([func func]
+                      [args args-stx]
+                      [res res])
+          (if (zero? args-depth)
+              (begin
+                (set! outer-bindings 
+                      (cons (syntax [res (func (quasidatum args))])
+                            outer-bindings))
+                (values result-id (min depth max-depth) has-var?))
+              (with-syntax ([dots (datum->syntax #'here '... arg-stx)])
+                (loop (syntax (begin (mf-map func)))
+                      (syntax/loc args-stx (args dots))
+                      (syntax (res dots))
+                      (sub1 args-depth))))))))
   
   (define (rewrite/max-depth stx depth ellipsis-allowed? continuing-an-application?)
     (syntax-case stx (unquote unquote-splicing in-hole hole)
