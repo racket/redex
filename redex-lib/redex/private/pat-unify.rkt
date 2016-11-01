@@ -254,8 +254,8 @@
            (resolve-no-nts/var (lvar id) eqs)]
           [`(list ,ps ...)
            `(list ,@(for/list ([p (in-list ps)]) (recur p)))]
-          [`(cstr (,cs ...) p)
-           (recur p)]
+          [`(cstr (,cs ...) ,p)
+           `(cstr (,@cs) ,(recur p))]
           [_
            (unless (groundable? p)
              (error 'mresolve-no-nts/pat 
