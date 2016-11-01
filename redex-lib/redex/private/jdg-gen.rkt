@@ -44,7 +44,7 @@
           [`(cstr (,nts ...) ,p)
            (recur p)]
           [`(variable-not-in ,not-in-p ,sym)
-           (recur not-in-p)]
+           (okk (ok))]
           [`(nt ,_)
            (okk (ok))]
           [(? predef-pat? _)

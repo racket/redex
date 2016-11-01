@@ -907,3 +907,15 @@
   
   (is-not-false
    (generate-term L #:satisfying (J e_1 e_2) 10)))
+
+(let ()
+  (define-language L
+    (x ::= variable-not-otherwise-mentioned (list x)))
+
+  (define-judgment-form L
+    #:mode (J I I O)
+    [(where x ,(variable-not-in (term (x_a x_b)) 'q))
+     ------------------
+     (J x_a x_b x)])
+
+  (is-not-false (generate-term L #:satisfying (J any_1 any_2 any_3) 4)))
