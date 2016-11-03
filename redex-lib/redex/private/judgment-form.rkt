@@ -31,6 +31,7 @@
              syntax/stx))
 
 (struct derivation (term name subs) 
+  #:extra-constructor-name make-derivation
   #:transparent
   #:guard (λ (term name subs struct-name)
             (unless (or (not name) (string? name))
