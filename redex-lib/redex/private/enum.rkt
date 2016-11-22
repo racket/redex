@@ -281,18 +281,18 @@
    (define/match (reprec/e nv-t)
      [((cons nv tpats))
       (define tpats/e
-        (hash-traverse/e val/e tpats #:get-contract (λ (x) any/c)))
+        (hash-traverse/e val/e tpats #:contract any/c))
       (listof/e
        (cons/e (env/e nv l-enum)
                tpats/e))])
    (define names-env
-     (hash-traverse/e val/e names #:get-contract (λ (x) any/c)))
+     (hash-traverse/e val/e names #:contract any/c))
 
    (define misnames-env
-     (hash-traverse/e misvals/e misnames #:get-contract (λ (x) any/c)))
+     (hash-traverse/e misvals/e misnames #:contract any/c))
    
    (define nreps-env
-     (hash-traverse/e reprec/e nreps #:get-contract (λ (x) any/c)))
+     (hash-traverse/e reprec/e nreps #:contract any/c))
    (map/e
     (λ (v) (apply t-env v))
     (λ (t-e)

@@ -4,7 +4,7 @@
 
 (define collection 'multi)
 
-(define deps '(("data-enumerate-lib" #:version "1.2")
+(define deps '(("data-enumerate-lib" #:version "1.3")
                "scheme-lib"
                ("base" #:version "6.2.900.6")
                "data-lib"
