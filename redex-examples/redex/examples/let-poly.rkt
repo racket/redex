@@ -132,7 +132,7 @@ bring that type back, recurring on the continuation.
    (tc-up τ (1 Γ M κ) σ_ans)]
   
   [(where x ,(variable-not-in (term (τ_1 τ_2 κ)) 'α1-))
-   (unifyj τ_2 (τ_1 → x) Gx)
+   (unify τ_2 (τ_1 → x) Gx)
    (tc-up (apply-subst-τ Gx x)
           (apply-subst-κ Gx κ)
           σ_ans)
@@ -170,63 +170,63 @@ Algorithm copied from Chapter 8 in _Handbook of Automated Reasoning_:
 Unification Theory by Franz Baader and Wayne Synder
 http://www.cs.bu.edu/~snyder/publications/UnifChapter.pdf
 
-The 'uhj' judgment form iterates over a set of equations applying the
+The 'uh' judgment form iterates over a set of equations applying the
 rules from the paper, building up the result substitution in Gx.
 
 |#
 
 (define-judgment-form stlc
-  #:mode (unifyj I I O)
+  #:mode (unify I I O)
 
-  [(uhj (τ σ ·) Gx)
+  [(uh (τ σ ·) Gx)
    ----------------
-   (unifyj τ σ Gx)])
+   (unify τ σ Gx)])
 
 (define-judgment-form stlc
-  #:mode (uhj I O)
-  #:contract (uhj G Gx)
+  #:mode (uh I O)
+  #:contract (uh G Gx)
 
   [--------- "bottomed out"
-   (uhj · ·)]
+   (uh · ·)]
   
-  [(uhj (x int G) Gx)
+  [(uh (x int G) Gx)
    ------------------ "orient int"
-   (uhj (int x G) Gx)]
+   (uh (int x G) Gx)]
 
-  [(uhj (x (σ → τ) G) Gx)
+  [(uh (x (σ → τ) G) Gx)
    ----------------------- "orient →"
-   (uhj ((σ → τ)  x G) Gx)]
+   (uh ((σ → τ) x G) Gx)]
 
-  [(uhj (x (list τ) G) Gx)
+  [(uh (x (list τ) G) Gx)
    ----------------------- "orient list"
-   (uhj ((list τ) x G) Gx)]
+   (uh ((list τ) x G) Gx)]
 
-  [(uhj (x (ref τ) G) Gx)
+  [(uh (x (ref τ) G) Gx)
    ----------------------- "orient ref"
-   (uhj ((ref τ)  x G) Gx)]
+   (uh ((ref τ) x G) Gx)]
 
-  [(uhj (τ_1 σ_1 (τ_2 σ_2 G)) Gx)
+  [(uh (τ_1 σ_1 (τ_2 σ_2 G)) Gx)
    ------------------------------------ "decomposition →"
-   (uhj ((τ_1 → τ_2) (σ_1 → σ_2) G) Gx)]
+   (uh ((τ_1 → τ_2) (σ_1 → σ_2) G) Gx)]
 
-  [(uhj (τ σ G) Gx)
+  [(uh (τ σ G) Gx)
    ------------------------------ "decomposition list"
-   (uhj ((list τ) (list σ) G) Gx)]
+   (uh ((list τ) (list σ) G) Gx)]
 
-  [(uhj (τ σ G) Gx)
+  [(uh (τ σ G) Gx)
    ---------------------------- "decomposition ref"
-   (uhj ((ref τ) (ref σ) G) Gx)]
+   (uh ((ref τ) (ref σ) G) Gx)]
 
-  [(uhj G Gx)
+  [(uh G Gx)
    -------------------- "decomposition int"
-   (uhj (int int G) Gx)]
+   (uh (int int G) Gx)]
 
   [(var-not-in-τ x τ)
-   (uhj (eliminate-G x τ G) Gx)
+   (uh (eliminate-G x τ G) Gx)
    (where Gx_eliminated (eliminate-Gx x τ Gx))
    (where τ_subst (apply-subst-τ Gx τ))
    ---------------------------------------------------- "variable elim"
-   (uhj (x τ G)
+   (uh (x τ G)
         (x τ_subst Gx_eliminated))])
 
 (define-metafunction stlc
@@ -243,7 +243,6 @@ rules from the paper, building up the result substitution in Gx.
    ;; rule guarantees that `y` is never the same as `x`
    (y (eliminate-τ x τ σ) (eliminate-Gx x τ Gx))])
 
-
 (define-metafunction stlc
   eliminate-τ : x τ σ -> σ
   [(eliminate-τ x τ (σ_1 → σ_2)) ((eliminate-τ x τ σ_1) → (eliminate-τ x τ σ_2))]
@@ -252,12 +251,6 @@ rules from the paper, building up the result substitution in Gx.
   [(eliminate-τ x τ int) int]
   [(eliminate-τ x τ x) τ]
   [(eliminate-τ x τ y) y])
-
-(define-metafunction stlc
-  ∨ : boolean boolean -> boolean
-  [(∨ #f #f) #f]
-  [(∨ boolean_1 boolean_2) #t])
-
 
 (define-judgment-form stlc
   #:mode (var-not-in-τ I I)
@@ -285,28 +278,6 @@ rules from the paper, building up the result substitution in Gx.
 (define-metafunction stlc
   [(different x x) #false]
   [(different x y) #true])
-
-(define-judgment-form stlc
-  #:mode (var-in-τ I I)
-
-  [--------------
-   (var-in-τ x x)]
-
-  [(var-in-τ x τ)
-   ---------------------
-   (var-in-τ x (list τ))]
-
-  [(var-in-τ x τ)
-   --------------------
-   (var-in-τ x (ref τ))]
-
-  [(var-in-τ x τ)
-   --------------------
-   (var-in-τ x (τ → σ))]
-
-  [(var-in-τ x τ)
-   --------------------
-   (var-in-τ x (σ → τ))])
 
 (define-metafunction stlc
   apply-subst-τ : Gx τ -> τ
@@ -645,29 +616,29 @@ http://en.wikipedia.org/wiki/Topological_sorting#Algorithms
                                 (term (let ((|| +)) ||)))
               #t)
   
-  (test-judgment-holds (unifyj x int (x int ·)))
-  (test-judgment-holds (unifyj int x (x int ·)))
-  (test-equal (judgment-holds (unifyj int (list int) Gx)) #f)
-  (test-judgment-holds (unifyj int int ·))
-  (test-judgment-holds (unifyj (list int) (list int) ·))
-  (test-judgment-holds (unifyj (int → x)
+  (test-judgment-holds (unify x int (x int ·)))
+  (test-judgment-holds (unify int x (x int ·)))
+  (test-equal (judgment-holds (unify int (list int) Gx)) #f)
+  (test-judgment-holds (unify int int ·))
+  (test-judgment-holds (unify (list int) (list int) ·))
+  (test-judgment-holds (unify (int → x)
                                (y → (list int))
                                (y int (x (list int) ·))))
-  (test-equal (judgment-holds (unifyj (int → x) (x → (list int)) Gx)) #f)
-  (test-equal (judgment-holds (unifyj (x   → (y          → x))
+  (test-equal (judgment-holds (unify (int → x) (x → (list int)) Gx)) #f)
+  (test-equal (judgment-holds (unify (x   → (y          → x))
                                       (int → ((list int) → y))
                                       Gx))
               #f)
-  (test-judgment-holds (unifyj (x   → (y          → x))
+  (test-judgment-holds (unify (x   → (y          → x))
                                (int → ((list int) → z))
                                (x int (y (list int) (z int ·)))))
-  (test-judgment-holds (unifyj (x   → (y          → z))
+  (test-judgment-holds (unify (x   → (y          → z))
                                (int → ((list int) → x))
                                (x int (y (list int) (z int ·)))))
-  (test-judgment-holds (unifyj (x   → (y   → z))
+  (test-judgment-holds (unify (x   → (y   → z))
                                (y   → (z   → int))
                                (x int (y int (z int ·)))))
-  (test-equal (judgment-holds (unifyj x (x → y) Gx)) #f)
+  (test-equal (judgment-holds (unify x (x → y) Gx)) #f)
 
   (test-equal (judgment-holds (typeof 5 τ) τ)
               (list (term int)))

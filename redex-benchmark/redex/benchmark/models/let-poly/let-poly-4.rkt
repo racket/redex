@@ -6,14 +6,24 @@
 (provide (all-defined-out))
 
 (define the-error
-  (string-append "misspelled the name of a metafunction in a side-condition, "
-                 "causing the occurs check to not happen"))
+  (string-append "dropped the occurs check"))
 
 (define-rewrite bug4
-  [(uh (x τ G) Gx) ⊥ (where #t (in-vars-τ? x τ))]
+  [(var-not-in-τ x τ)
+   (uh (eliminate-G x τ G) Gx)
+   (where Gx_eliminated (eliminate-Gx x τ Gx))
+   (where τ_subst (apply-subst-τ Gx τ))
+   ---------------------------------------------------- "variable elim"
+   (uh (x τ G)
+       (x τ_subst Gx_eliminated))]
   ==> 
-  [(uh (x τ G) Gx) ⊥ (where #t (in-vars? x τ))]
-  #:context (define-metafunction)
+  [(uh (eliminate-G x τ G) Gx)
+   (where Gx_eliminated (eliminate-Gx x τ Gx))
+   (where τ_subst (apply-subst-τ Gx τ))
+   ---------------------------------------------------- "variable elim"
+   (uh (x τ G)
+       (x τ_subst Gx_eliminated))]
+  #:context (define-judgment-form)
   #:once-only)
 
 (include/rewrite (lib "redex/examples/let-poly.rkt") let-poly bug4)
