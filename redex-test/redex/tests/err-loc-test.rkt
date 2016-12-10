@@ -42,7 +42,7 @@
         (thunk))))
   
   (define ((exec-error-tests setup exec) path)
-    (for ([test (read-tests (build-path this-dir path))])
+    (for ([test (in-list (read-tests (build-path this-dir path)))])
       (exec-error-test test exec setup)))
   (define exec-syntax-error-tests
     (exec-error-tests syntax-error-test-setup expand))

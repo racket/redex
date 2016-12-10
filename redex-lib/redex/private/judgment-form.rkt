@@ -78,11 +78,13 @@
        [x 
         (identifier? #'x)
         (identifier-prune-lexical-context #'x (list (syntax-e #'x) '#%top))]
-       [() (datum->syntax #f '() stx)]
+       [() (datum->syntax #f '() stx stx)]
        [_ (datum->syntax (identifier-prune-lexical-context #'whatever '(#%datum))
                          (syntax->datum stx)
                          stx
-                         stx)]))))
+                         stx)]))
+   stx
+   stx))
 
 (define-syntax (--> stx) (raise-syntax-error '--> "used outside of reduction-relation"))
 (define-syntax (fresh stx) (raise-syntax-error 'fresh "used outside of reduction-relation"))
@@ -205,12 +207,14 @@
                 #`(begin
                     syncheck-exp
                     #,(if (where/error? #'-where)
-                          (quasisyntax/loc #'pat-stx
-                            (combine-where/error-results
-                             pat-id
-                             (term e #:lang #,ct-lang)
-                             '#,orig-name #,rt-lang
-                             #,proc-stx))
+                          (forward-errortrace-prop
+                           #'pat-stx
+                           (quasisyntax/loc #'pat-stx
+                             (combine-where/error-results
+                              pat-id
+                              (term e #:lang #,ct-lang)
+                              '#,orig-name #,rt-lang
+                              #,proc-stx)))
                           #`(#,(case where-mode
                                  [(flatten)
                                   #'combine-where-results/flatten]
@@ -270,7 +274,7 @@
             (define-values (input-template output-pre-pattern)
               (let-values ([(in out) (split-by-mode (syntax->list #'(pats ...)) mode)])
                 (if under-ellipsis?
-                    (let ([ellipsis (syntax/loc premise (... ...))])
+                    (let ([ellipsis (forward-errortrace-prop premise (syntax/loc premise (... ...)))])
                       (values #`(#,in #,ellipsis) #`(#,out #,ellipsis)))
                     (values in out))))
             (define-values (syncheck-exp output-pattern output-names output-names/ellipses)
@@ -286,13 +290,17 @@
             (define rest-body
               (loop rest-clauses #`(list (term #,output-pattern) #,to-not-be-in) env+))
             (define call
-              (let ([input (quasisyntax/loc premise (term #,input-template #:lang #,ct-lang))])
+              (let ([input (forward-errortrace-prop
+                            premise
+                            (quasisyntax/loc premise (term #,input-template #:lang #,ct-lang)))])
                 (define (make-traced input)
-                  (quasisyntax/loc premise
-                    (call-judgment-form 'form-name #,judgment-proc '#,mode #,input
-                                        #,(if jf-results-id #''() #f)
-                                        #,(judgment-form-cache judgment-form) 
-                                        #,ct-lang)))
+                  (forward-errortrace-prop
+                   premise
+                   (quasisyntax/loc premise
+                     (call-judgment-form 'form-name #,judgment-proc '#,mode #,input
+                                         #,(if jf-results-id #''() #f)
+                                         #,(judgment-form-cache judgment-form)
+                                         #,ct-lang))))
                 (if under-ellipsis?
                     #`(repeated-premise-outputs #,input (λ (x) #,(make-traced #'x)))
                     (make-traced input))))
@@ -547,7 +555,7 @@
 
 (define-for-syntax (lhs-lws clauses)
   (with-syntax ([((lhs-for-lw _ ...) ...) clauses])
-    (map (λ (x) (to-lw/proc (datum->syntax #f (cdr (syntax-e x)) x)))
+    (map (λ (x) (to-lw/proc (datum->syntax #f (cdr (syntax-e x)) x x)))
          (syntax->list #'(lhs-for-lw ...)))))
 
 (define-syntax (define-judgment-form stx)
@@ -729,7 +737,7 @@
 (define-for-syntax (expand-to-id id stx)
   (syntax-case stx ()
     [(_ args ...)
-     (with-syntax ([app (datum->syntax stx '#%app)])
+     (with-syntax ([app (datum->syntax stx '#%app stx stx)])
        #`(app #,id args ...))]
     [x
      (identifier? #'x)
@@ -741,7 +749,9 @@
     (parse-judgment-form-body body syn-err-name stx (identifier? orig) is-relation?))
   (define definitions
     (with-syntax ([judgment-form-runtime-proc
-                   (syntax-property (syntax/loc judgment-form-name judgment-form-runtime-proc)
+                   (syntax-property (forward-errortrace-prop
+                                     judgment-form-name
+                                     (syntax/loc judgment-form-name judgment-form-runtime-proc))
                                     'undefined-error-name
                                     (syntax-e judgment-form-name))])
       #`(begin
@@ -959,7 +969,12 @@
 (define-syntax (judgment-holds/derivation stx)
   (syntax-case stx ()
     [(_ stx-name derivation? judgment)
-     #`(not (null? #,(syntax/loc stx (judgment-holds/derivation stx-name derivation? judgment #t))))]
+     (forward-errortrace-prop
+      stx
+      (quasisyntax/loc stx
+        (not (null? #,(forward-errortrace-prop
+                       stx
+                       (syntax/loc stx (judgment-holds/derivation stx-name derivation? judgment #t)))))))]
     [(_ stx-name derivation? (form-name . pats) tmpl)
      (and (judgment-form-id? #'form-name)
           (when (jf-is-relation? #'form-name)
@@ -993,7 +1008,7 @@
 
               ;; make sure we get the right undefined error (if there is one)
               #,(let ([s (judgment-form-proc judgment-form-record)])
-                  (datum->syntax s (syntax-e s) #'form-name s))
+                  (datum->syntax s (syntax-e s) #'form-name #'form-name))
               
               (let ([compiled-pattern-identifier (compile-pattern #,lang pattern-to-compile #t)] ...)
                 #,(if id-or-not
@@ -1015,9 +1030,11 @@
 (define-syntax (judgment-holds stx)
   (syntax-case stx ()
     [(_  (jf-id . args))
-     #`(#%expression (judgment-holds/derivation judgment-holds #f #,(stx-car (stx-cdr stx))))]
+     (let ([arg (stx-car (stx-cdr stx))])
+       #`(#%expression #,(forward-errortrace-prop arg (quasisyntax/loc arg (judgment-holds/derivation judgment-holds #f #,arg)))))]
     [(_  (jf-id . args) trm)
-     #`(#%expression (judgment-holds/derivation judgment-holds #f #,(stx-car (stx-cdr stx)) trm))]))
+     (let ([arg (stx-car (stx-cdr stx))])
+       #`(#%expression #,(forward-errortrace-prop arg (quasisyntax/loc arg (judgment-holds/derivation judgment-holds #f #,arg trm)))))]))
 
 (define-syntax (build-derivations stx)
   (syntax-case stx ()
@@ -1471,21 +1488,20 @@
                 (values #,proc-stx #,gen-stx)))]))
 
 (define-for-syntax (rewrite-relation-prems clauses)
-  (map (λ (c)
-         (syntax-case c ()
-           [(conc prems ...)
-            (with-syntax ([(new-prems ...) (map (λ (p)
-                                                  (syntax-case p ()
-                                                    [(r-name rest ...)
-                                                     (and (identifier? #'r-name)
-                                                          (judgment-form-id? #'r-name)
-                                                          (jf-is-relation? #'r-name))
-                                                     #'(r-name (rest ...))]
-                                                    [else
-                                                     p]))
-                                                (syntax->list #'(prems ...)))])
-              #'(conc new-prems ...))]))
-       clauses))
+  (for/list ([c (in-list clauses)])
+    (syntax-case c ()
+      [(conc prems ...)
+       (with-syntax ([(new-prems ...)
+                      (for/list ([p (in-list (syntax->list #'(prems ...)))])
+                        (syntax-case p ()
+                          [(r-name rest ...)
+                           (and (identifier? #'r-name)
+                                (judgment-form-id? #'r-name)
+                                (jf-is-relation? #'r-name))
+                           (forward-errortrace-prop p (syntax/loc p (r-name (rest ...))))]
+                          [else
+                           p]))])
+         #'(conc new-prems ...))])))
 
 (define-for-syntax (fix-relation-clauses name raw-clauses)
   (map (λ (clause-stx)

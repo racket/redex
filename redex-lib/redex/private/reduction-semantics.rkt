@@ -297,13 +297,17 @@
   (syntax-case stx ()
     [(_ lang args ...)
      (with-syntax ([orig-stx stx])
-       (syntax/loc stx (do-reduction-relation orig-stx reduction-relation empty-reduction-relation #f lang args ...)))]))
+       (forward-errortrace-prop
+        stx
+        (syntax/loc stx (do-reduction-relation orig-stx reduction-relation empty-reduction-relation #f lang args ...))))]))
 
 (define-syntax (extend-reduction-relation stx)
   (syntax-case stx ()
     [(_ orig-reduction-relation lang args ...)
      (with-syntax ([orig-stx stx])
-       (syntax/loc stx (do-reduction-relation orig-stx extend-reduction-relation orig-reduction-relation #t lang args ...)))]))
+       (forward-errortrace-prop
+        stx
+        (syntax/loc stx (do-reduction-relation orig-stx extend-reduction-relation orig-reduction-relation #t lang args ...))))]))
 
 (define-for-syntax (generate-binding-constraints names names/ellipses bindings syn-err-name)
   (define (id/depth stx)
@@ -2016,47 +2020,55 @@
                                       (syntax->list #'(name ...))))]
                                [(alias-names ...) (hash-keys aliases)])
                    (prune-syntax
-                    (syntax/loc stx
-                      (define define-language-name
-                        (begin
-                          (let ([all-names 1] ...)
-                            (begin (void) refs ...))
-                          (compile-language
-                           (list (list 'name rhs/lw ...) ...)
-                           (list (make-nt 'first-names (list (make-rhs `r-rhs) ...)) ...)
-                           binding-table
-                           '(alias-names ...))))))))
-               
-               (define errortrace-safe-language-def ;; this keeps things from breaking at the top level if `errortrace` is on
+                    (forward-errortrace-prop
+                     stx
+                     (syntax/loc stx
+                       (define define-language-name
+                         (begin
+                           (let ([all-names 1] ...)
+                             (begin (void) refs ...))
+                           (compile-language
+                            (list (list 'name rhs/lw ...) ...)
+                            (list (make-nt 'first-names (list (make-rhs `r-rhs) ...)) ...)
+                            binding-table
+                            '(alias-names ...)))))))))
+
+               ;; this keeps things from breaking at the top level if `errortrace` is on
+               (define errortrace-safe-language-def
                  (if (eq? 'top-level (syntax-local-context))
-                     (quasisyntax/loc
+                     (forward-errortrace-prop
                       stx
-                      (begin
-                        (define-syntaxes (define-language-name) (values))
-                        #,language-def))
+                      (quasisyntax/loc stx
+                        (begin
+                          (define-syntaxes (define-language-name) (values))
+                          #,language-def)))
                      language-def))
 
-               (quasisyntax/loc stx
-                 (begin
-                   bindings
-                   (define-syntax lang-id
-                     (make-set!-transformer
-                      (make-language-id
-                       (λ (stx)
-                         (syntax-case stx (set!)
-                           [(set! x e) (raise-syntax-error (syntax-e #'form-name) "cannot set! identifier" stx #'e)]
-                           [(x e (... ...))
-                            #'(define-language-name e (... ...))]
-                           [x 
-                            (identifier? #'x)
-                            #'define-language-name]))
-                       '(all-names ...)
-                       '#,aliases
-                       (hash #,@(apply append (for/list ([(k v) (in-hash nt-identifiers)])
-                                                (with-syntax ([k k] [v v])
-                                                  (list #''k #'#'v)))))
-                       '#,nt->hole)))
-                   #,errortrace-safe-language-def)))))))]))
+               (forward-errortrace-prop
+                stx
+                (quasisyntax/loc stx
+                  (begin
+                    bindings
+                    (define-syntax lang-id
+                      (make-set!-transformer
+                       (make-language-id
+                        (λ (stx)
+                          (syntax-case stx (set!)
+                            [(set! x e)
+                             (raise-syntax-error (syntax-e #'form-name)
+                                                 "cannot set! language identifier" stx #'e)]
+                            [(x e (... ...))
+                             #'(define-language-name e (... ...))]
+                            [x
+                             (identifier? #'x)
+                             #'define-language-name]))
+                        '(all-names ...)
+                        '#,aliases
+                        (hash #,@(apply append (for/list ([(k v) (in-hash nt-identifiers)])
+                                                 (with-syntax ([k k] [v v])
+                                                   (list #''k #'#'v)))))
+                        '#,nt->hole)))
+                    #,errortrace-safe-language-def))))))))]))
 
 (define-for-syntax (nt-hole-lub l r)
   (cond
@@ -2241,40 +2253,43 @@
              (with-syntax ([(primary-name ...) unaliased-new-names]
                            [((all-names ...) ...) namess]
                            [(alias-names ...) (hash-keys aliases)])
-               (syntax/loc stx
-                 (do-extend-language
-                  (begin r-syncheck-expr ... ... orig-lang)
-                  (list (make-nt 'primary-name
-                                 (list (make-rhs `r-rhs) ...)) ...)
-                  new-bindings-table
-                  (list (list '(all-names ...) rhs/lw ...) ...)
-                  '(alias-names ...))))))
-         
-         (quasisyntax/loc stx
-           (begin
-             uses
-             bindings
-             (define define-language-name #,extended-language-stx)
-             (define-syntax name
-               (make-set!-transformer
-                (make-language-id
-                 (λ (stx)
-                   (syntax-case stx (set!)
-                     [(set! x e) (raise-syntax-error 'define-extended-language "cannot set! identifier" stx #'e)]
-                     [(x e (... ...)) #'(define-language-name e (... ...))]
-                     [x 
-                      (identifier? #'x)
-                      #'define-language-name]))
-                 '#,unaliased-all-names
+               (forward-errortrace-prop
+                stx
+                (syntax/loc stx
+                  (do-extend-language
+                   (begin r-syncheck-expr ... ... orig-lang)
+                   (list (make-nt 'primary-name
+                                  (list (make-rhs `r-rhs) ...)) ...)
+                   new-bindings-table
+                   (list (list '(all-names ...) rhs/lw ...) ...)
+                   '(alias-names ...)))))))
+         (forward-errortrace-prop
+          stx
+          (quasisyntax/loc stx
+            (begin
+              uses
+              bindings
+              (define define-language-name #,extended-language-stx)
+              (define-syntax name
+                (make-set!-transformer
+                 (make-language-id
+                  (λ (stx)
+                    (syntax-case stx (set!)
+                      [(set! x e) (raise-syntax-error 'define-extended-language "cannot set! identifier" stx #'e)]
+                      [(x e (... ...)) #'(define-language-name e (... ...))]
+                      [x 
+                       (identifier? #'x)
+                       #'define-language-name]))
+                  '#,unaliased-all-names
                  
-                 ;; make sure the aliases hash is immutable
-                 '#,(for/hash ([(k v) (in-hash aliases)])
-                      (values k v))
+                  ;; make sure the aliases hash is immutable
+                  '#,(for/hash ([(k v) (in-hash aliases)])
+                       (values k v))
                  
-                 (hash #,@(apply append (for/list ([(k v) (in-hash nt-identifiers)])
-                                          (with-syntax ([k k] [v v])
-                                            (list #''k #'#'v)))))
-                 '#,nt->hole)))))))]))
+                  (hash #,@(apply append (for/list ([(k v) (in-hash nt-identifiers)])
+                                           (with-syntax ([k k] [v v])
+                                             (list #''k #'#'v)))))
+                  '#,nt->hole))))))))]))
 
 (define extend-nt-ellipses '(....))
 
@@ -2816,23 +2831,27 @@
         (define pats '())
         (define any-vars '())
         (define jf-stx
-          (quasisyntax/loc orig-jf-stx
-            (jf #,@
-                (for/list ([IO (in-list mode)]
-                           [arg (cdr jf-list)]
-                           [i (in-naturals 1)])
-                  (cond
-                    [(equal? IO 'I) arg]
-                    [else
-                     (set! suffix (+ suffix 1))
-                     (with-syntax ([(syncheck-expr side-conditions-rewritten (names ...) (names/ellipses ...))
-                                    (rewrite-side-conditions/check-errs (judgment-form-lang a-judgment-form)
-                                                                        'test-judgment-holds #t arg)])
-                       (define any-var (string->symbol (format "any_~a" (+ i suffix))))
-                       (set! syncheck-exprs #`(begin syncheck-expr #,syncheck-exprs))
-                       (set! pats (cons #'side-conditions-rewritten pats))
-                       (set! any-vars (cons any-var any-vars))
-                       any-var)])))))
+          (forward-errortrace-prop
+           orig-jf-stx
+           (quasisyntax/loc orig-jf-stx
+             (jf #,@
+                 (for/list ([IO (in-list mode)]
+                            [arg (cdr jf-list)]
+                            [i (in-naturals 1)])
+                   (cond
+                     [(equal? IO 'I) arg]
+                     [else
+                      (set! suffix (+ suffix 1))
+                      (with-syntax ([(syncheck-expr side-conditions-rewritten
+                                                    (names ...) (names/ellipses ...))
+                                     (rewrite-side-conditions/check-errs
+                                      (judgment-form-lang a-judgment-form)
+                                      'test-judgment-holds #t arg)])
+                        (define any-var (string->symbol (format "any_~a" (+ i suffix))))
+                        (set! syncheck-exprs #`(begin syncheck-expr #,syncheck-exprs))
+                        (set! pats (cons #'side-conditions-rewritten pats))
+                        (set! any-vars (cons any-var any-vars))
+                        any-var)]))))))
         #`(begin
             #,syncheck-exprs
             (test-judgment-holds/proc (λ () (judgment-holds #,jf-stx (#,@(reverse any-vars))))

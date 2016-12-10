@@ -1,41 +1,41 @@
 (#rx"incompatible ellipsis match counts"
- ([body (((x y) ...) ...)])
+ ([the-body (term (((x y) ...) ...))])
  ([xlhs (x ...)] [ylhs ((y ...) ...)])
  (term-let ([xlhs '(a b c)]
             [ylhs '((1 2) (4 5 6) (7 8 9))])
-           (term body)))
+           the-body))
 
 (#rx"incompatible ellipsis match counts"
- ([body ((((f x) y) ...) ...)])
+ ([body (term ((((f x) y) ...) ...))])
  ([fn f] [xlhs (x ...)] [ylhs ((y ...) ...)])
  (term-let-fn ([fn car])
               (term-let ([xlhs '(a b c)]
                          [ylhs '((1 2) (4 5 6) (7 8 9))])
-                        (term body))))
+                        body)))
 
 (#rx"incompatible ellipsis match counts"
- ([body (f ((x y) ...))])
+ ([body (term (f ((x y) ...)))])
  ([fn f] [xlhs (x ...)] [ylhs (y ...)])
  (term-let-fn ([fn car])
               (term-let ([xlhs '(a b)]
                          [ylhs '(c d e)])
-                        (term body))))
+                        body)))
 
 (#rx"incompatible ellipsis match counts"
- ([app (f (x y))])
+ ([app (term ((f (x y)) ...))])
  ([fn f] [xlhs (x ...)] [ylhs (y ...)] [ellipsis ...])
  (term-let-fn ([fn car])
               (term-let ([xlhs '(a b)]
                          [ylhs '(c d e)])
-                        (term (app ellipsis)))))
+                        app)))
 
 (#rx"incompatible ellipsis match counts"
- ([plug (in-hole hole (x y))])
+ ([plug (term ((in-hole hole (x y)) ...))])
  ([xlhs (x ...)] [ylhs (y ...)] [ellipsis ...])
  (term-let-fn ([fn car])
               (term-let ([xlhs '(a b)]
                          [ylhs '(c d e)])
-                        (term (plug ellipsis)))))
+                        plug)))
 
 (#rx"term .* does not match pattern"
  ([rhs 'a]) ([ellipsis ...])

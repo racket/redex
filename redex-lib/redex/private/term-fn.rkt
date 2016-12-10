@@ -23,7 +23,9 @@
          build-disappeared-use
 
          from-smiley-number
-         to-smiley-number)
+         to-smiley-number
+
+         forward-errortrace-prop)
 
 (define-values (struct-type make-term-fn term-fn? term-fn-get term-fn-set!) 
   (make-struct-type 'term-fn #f 1 0))
@@ -127,3 +129,10 @@
     (check-equal? x (from-smiley-number (to-smiley-number x))))
   
   (check-equal? (from-smiley-number "☺☺☺☺☺☺☹☺☺☹☺") 18))
+
+
+(define (forward-errortrace-prop prop stx)
+  (if (and (syntax-property prop 'errortrace:annotate)
+           (syntax-source prop))
+      (syntax-property stx 'errortrace:annotate #t #t)
+      stx))

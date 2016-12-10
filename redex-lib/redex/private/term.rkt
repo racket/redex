@@ -40,13 +40,13 @@
 
 (define-syntax (term stx)
   (syntax-case stx ()
-    [(term t . kw-args)
+    [(_ t . kw-args)
      (let ()
        (define lang-stx (car
                          (parse-kw-args (list lang-keyword)
                                         (syntax kw-args)
                                         stx
-                                        (syntax-e #'form))))
+                                        'term)))
        (cond
          [lang-stx
           (define-values (lang-nts lang-nt-ids lang-id)
@@ -58,18 +58,24 @@
                                   (language-id-nts ls 'term))
                           (language-id-nt-identifiers ls 'term)
                           ls))))
-          (quasisyntax/loc stx
-            (wdl #,lang-id
-                 (λ () #,(quasisyntax/loc stx (term/nts t #,lang-nts #,lang-nt-ids)))))]
+          (forward-errortrace-prop
+           stx
+           (quasisyntax/loc stx
+             (wdl #,lang-id
+                  (λ () #,(forward-errortrace-prop
+                           stx
+                           (quasisyntax/loc stx (term/nts t #,lang-nts #,lang-nt-ids)))))))]
          [else
-          (syntax/loc stx (term/nts t #f #f))]))]))
+          (forward-errortrace-prop
+           stx
+           (syntax/loc stx (term/nts t #f #f)))]))]))
 
 (define (wdl lang thunk) (parameterize ([default-language lang]) (thunk)))
 
 (define-syntax (term/nts stx)
   (syntax-case stx ()
     [(_ arg nts nt-ids)
-     (syntax/loc stx (#%expression (term/private arg nts nt-ids)))]))
+     #`(#%expression #,(forward-errortrace-prop stx (syntax/loc stx (term/private arg nts nt-ids))))]))
 
 (define-for-syntax current-id-stx-table (make-parameter #f))
 
@@ -78,18 +84,22 @@
     [(_ arg-stx nts-stx id-stx-table)
      (parameterize ([current-id-stx-table (syntax-e #'id-stx-table)])
        (with-disappeared-uses
-        (let-values ([(t a-mfs) (term-rewrite/private #'arg-stx #'nts-stx #f)])
+        (let-values ([(t a-mfs) (term-rewrite/private stx #'arg-stx #'nts-stx #f)])
           (term-temp->unexpanded-term t a-mfs))))]))
 
 (define-for-syntax (term-rewrite t names)
-  (let*-values ([(t-t a-mfs) (term-rewrite/private t #`#f names)]
+  (let*-values ([(t-t a-mfs) (term-rewrite/private t t #`#f names)]
                 [(t-pat) (term-temp->pat t-t names)])
     t-pat))
 
 (define-syntax (mf-apply stx)
   (syntax-case stx ()
     [(_ mf)
-     (quasisyntax/loc stx (λ (x) #,(syntax/loc stx (mf x))))]))
+     (forward-errortrace-prop
+      stx
+      (quasisyntax/loc stx (λ (x) #,(forward-errortrace-prop
+                                     stx
+                                     (syntax/loc stx (mf x))))))]))
 
 (define-syntax (jf-apply stx)
   (syntax-case stx ()
@@ -122,7 +132,7 @@
 ;; and expands into an error
 ;; *bound* things will be caught by the other rewrite/max-depth possibilities
 
-(define-for-syntax (term-rewrite/private arg-stx nts-stx names)
+(define-for-syntax (term-rewrite/private srcloc-stx arg-stx nts-stx names)
 
   (define lang-nts (syntax->datum nts-stx))
   (define outer-bindings '())
@@ -142,8 +152,12 @@
                                 '(f-results)))))
     (with-syntax ([fn fn])
       (let loop ([func (if (judgment-form-id? #'fn)
-                           (syntax/loc srcloc-stx (jf-apply fn))
-                           (syntax/loc srcloc-stx (mf-apply fn)))]
+                           (forward-errortrace-prop
+                            srcloc-stx
+                            (syntax/loc srcloc-stx (jf-apply fn)))
+                           (forward-errortrace-prop
+                            srcloc-stx
+                            (syntax/loc srcloc-stx (mf-apply fn))))]
                  [args-stx rewritten]
                  [res result-id]
                  [args-depth (min depth max-depth)])
@@ -158,7 +172,7 @@
                 (values result-id (min depth max-depth) has-var?))
               (with-syntax ([dots (datum->syntax #'here '... arg-stx)])
                 (loop (syntax (begin (mf-map func)))
-                      (syntax/loc args-stx (args dots))
+                      (forward-errortrace-prop args-stx (syntax/loc args-stx (args dots)))
                       (syntax (res dots))
                       (sub1 args-depth))))))))
   
@@ -175,7 +189,7 @@
          (free-identifier-mapping-put! applied-metafunctions 
                                        (datum->syntax f (syntax-e f) #'metafunc-name)
                                        #t)
-         (rewrite-application f (syntax/loc stx (arg ...)) depth stx))]
+         (rewrite-application f (forward-errortrace-prop stx (syntax/loc stx (arg ...))) depth stx))]
       [(jf-name arg ...)
        (and (not continuing-an-application?)
             (identifier? (syntax jf-name))
@@ -188,7 +202,7 @@
            (raise-syntax-error 'term 
                                "judgment forms with output mode (\"O\") positions disallowed"
                                arg-stx stx))
-         (rewrite-application #'jf-name (syntax/loc stx (arg ...)) depth stx))]
+         (rewrite-application #'jf-name (forward-errortrace-prop stx (syntax/loc stx (arg ...))) depth stx))]
       [f
        (and (identifier? (syntax f))
             (if names
@@ -200,7 +214,7 @@
        (and (identifier? #'x)
             (term-id? (syntax-local-value #'x (λ () #f))))
        (let ([id (syntax-local-value/record #'x (λ (x) #t))])
-         (define stx-result (datum->syntax (term-id-id id) (syntax-e (term-id-id id)) #'x))
+         (define stx-result (datum->syntax (term-id-id id) (syntax-e (term-id-id id)) #'x #'x))
          
          (define raw-sym (syntax-e #'x))
          (define raw-str (symbol->string raw-sym))
@@ -238,7 +252,7 @@
       [(unquote-splicing . x)
        (raise-syntax-error 'term "malformed unquote splicing" arg-stx stx)]
       [(in-hole id body)
-       (rewrite-application (syntax (λ (x) (apply plug x))) (syntax/loc stx (id body)) depth stx)]
+       (rewrite-application (syntax (λ (x) (apply plug x))) (forward-errortrace-prop stx (syntax/loc stx (id body))) depth stx)]
       [(in-hole . x)
        (raise-syntax-error 'term "malformed in-hole" arg-stx stx)]
       [hole (values (syntax (undatum the-hole)) 0 #f)]
@@ -295,6 +309,7 @@
                      (define id (syntax-local-value/record (cadr xs) (λ (x) #t)))
                      (define stx-result (datum->syntax (term-id-id id)
                                                        (syntax-e (term-id-id id))
+                                                       (cadr xs)
                                                        (cadr xs)))
                      (cons #`(undatum-splicing (make-list (datum #,stx-result) (datum #,fst)))
                            rst)]
@@ -329,7 +344,7 @@
             arg-stx stx)))]
       [else
        (unless ellipsis-allowed?
-         (when (equal? id '...) 
+         (when (equal? id '...)
            (raise-syntax-error
             'term
             "misplaced ellipsis"
@@ -338,31 +353,36 @@
   (values
    (with-syntax ([rewritten (rewrite arg-stx)])
      (with-syntax ([(outer-bs ...) (reverse outer-bindings)]
-                   [qd (let ([orig #'(quasidatum rewritten)])
-                         (datum->syntax orig
-                                        (syntax-e orig)
-                                        #f
-                                        orig))])
-       #'(term-template
-          (outer-bs ...)
-          qd)))
-   applied-metafunctions))
+                   [qd (datum->syntax #'here
+                                      `(,#'quasidatum ,(forward-errortrace-prop
+                                                        srcloc-stx
+                                                        (syntax/loc srcloc-stx rewritten)))
+                                      srcloc-stx
+                                      srcloc-stx)])
+       (define stx #'(term-template
+                      (outer-bs ...)
+                      qd))
+       (datum->syntax stx (syntax-e stx) #f #f)))
+  applied-metafunctions))
 
 (define-for-syntax (term-temp->unexpanded-term term-stx applied-mfs)
   (syntax-case term-stx (term-template)
     [(term-template (outer-bs ...) t)
      (let ([outer-bindings (syntax->list #'(outer-bs ...))])
-       #`(begin
-           #,@(free-identifier-mapping-map
-               applied-mfs
-               (λ (f _) (defined-check f "metafunction")))
-           #,(let loop ([bs outer-bindings])
-               (cond
-                 [(null? bs) (syntax t)]
-                 [else (with-syntax ([rec (loop (cdr bs))]
-                                     [fst (car bs)])
-                         (syntax (with-datum (fst)
-                                             rec)))]))))]))
+       (forward-errortrace-prop
+        #'t
+        (quasisyntax/loc #'t
+          (let ()
+            #,@(free-identifier-mapping-map
+                applied-mfs
+                (λ (f _) (defined-check f "metafunction")))
+            #,(let loop ([bs outer-bindings])
+                (cond
+                  [(null? bs) (syntax t)]
+                  [else (with-syntax ([rec (loop (cdr bs))]
+                                      [fst (car bs)])
+                          (syntax (with-datum (fst)
+                                              rec)))]))))))]))
 
 (define-for-syntax (term-temp->pat t-t names)
   (syntax-case t-t (term-template)
@@ -472,12 +492,6 @@
                              #'error-name))
        (define-values (orig-names new-names depths new-x1)
          (let loop ([stx #'x1] [depth 0] [seen-an-ellipsis-at-this-depth? #f])
-           (define ((combine orig-names new-names depths new-pat)
-                    orig-names* new-names* depths* new-pat*)
-             (values (append orig-names orig-names*)
-                     (append new-names new-names*)
-                     (append depths depths*)
-                     (cons new-pat new-pat*)))
            (syntax-case stx (...)
              [x 
               (and (identifier? #'x)
@@ -489,37 +503,50 @@
                         new-name))]
              [(x (... ...) . xs)
               (let-values ([(orig-names new-names depths new-pat)
-                            (call-with-values
-                             (λ () (loop #'xs depth #t))
-                             (call-with-values
-                              (λ () (loop #'x (add1 depth) #f))
-                              combine))])
+                            (let-values ([(orig-names1 new-names1 depths1 new-pat1)
+                                          (loop #'x (add1 depth) #f)]
+                                         [(orig-names2 new-names2 depths2 new-pat2)
+                                          (loop #'xs depth #t)])
+                              (values (append orig-names1 orig-names2)
+                                      (append new-names1 new-names2)
+                                      (append depths1 depths2)
+                                      (cons new-pat1 new-pat2)))])
                 (when seen-an-ellipsis-at-this-depth?
                   (raise-syntax-error (syntax-e #'error-name)
                                       "only one ellipsis is allowed in each sequence"
                                       (cadr (syntax->list stx))))
                 (values orig-names new-names depths 
-                        (list* (car new-pat) #'(... ...) (cdr new-pat))))]
+                        (datum->syntax stx
+                                       (list* (car new-pat) #'(... ...) (cdr new-pat))
+                                       stx stx)))]
              [(x . xs)
-              (call-with-values
-               (λ () (loop #'xs depth seen-an-ellipsis-at-this-depth?))
-               (call-with-values
-                (λ () (loop #'x depth #f))
-                combine))]
+              (let-values ([(orig-names1 new-names1 depths1 new-pat1)
+                            (loop #'x depth #f)]
+                           [(orig-names2 new-names2 depths2 new-pat2)
+                            (loop #'xs depth seen-an-ellipsis-at-this-depth?)])
+                (values (append orig-names1 orig-names2)
+                        (append new-names1 new-names2)
+                        (append depths1 depths2)
+                        (datum->syntax stx (cons new-pat1 new-pat2) stx stx)))]
              [_
               (values '() '() '() stx)])))
        (with-syntax ([(orig-names ...) orig-names]
                      [(new-names ...) new-names]
                      [(depths ...) depths]
                      [new-x1 new-x1]
-                     [no-match (syntax/loc (syntax rhs1)
-                                 (error 'error-name "term ~s does not match pattern ~s" rhs1 'x1))])
-         (syntax
-          (datum-case rhs1 ()
-                      [new-x1
-                       (let-syntax ([orig-names (make-term-id #'new-names depths #'orig-names)] ...)
-                         (term-let/error-name error-name ((x rhs) ...) body1 body2 ...))]
-                      [_ no-match]))))]
+                     [no-match
+                      (forward-errortrace-prop
+                       #'rhs1
+                       (syntax/loc #'rhs1
+                         (error 'error-name "term ~s does not match pattern ~s" rhs1 'x1)))])
+         (forward-errortrace-prop
+          stx
+          (syntax/loc stx
+            (datum-case rhs1 ()
+              [new-x1
+               (let-syntax ([orig-names (make-term-id #'new-names depths #'orig-names)] ...)
+                 (term-let/error-name error-name ((x rhs) ...) body1 body2 ...))]
+              [_ no-match])))))]
     [(_ error-name () body1 body2 ...)
      (syntax
       (begin body1 body2 ...))]
@@ -531,8 +558,10 @@
     [(_ () body1)
      #'body1]
     [(_ ([x rhs] ...) body1 body2 ...)
-     (syntax
-      (term-let/error-name term-let ((x rhs) ...) body1 body2 ...))]
+     (forward-errortrace-prop
+      stx
+      (syntax/loc stx
+        (term-let/error-name term-let ((x rhs) ...) body1 body2 ...)))]
     [(_ x)
      (raise-syntax-error 'term-let "expected at least one body" stx)]))
 
@@ -540,7 +569,7 @@
   (syntax-parse stx
                 [(_ x:id t:expr)
                  (not-expression-context stx)
-                 (with-syntax ([term-val (syntax-property (syntax/loc #'x term-val)
+                 (with-syntax ([term-val (syntax-property (forward-errortrace-prop #'x (syntax/loc #'x term-val))
                                                           'undefined-error-name
                                                           (syntax-e #'x))])
                    #'(begin
