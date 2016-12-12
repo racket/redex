@@ -2759,7 +2759,6 @@
        (unless test-failed?
          (let* ([⊆ (λ (s1 s2 reverse?)
                      (andmap (λ (x1) (memf (λ (x)
-                                             (printf "x: ~s x1: ~s\n" x x1)
                                              (if reverse?
                                                  (equiv? x1 x)
                                                  (equiv? x x1)))
