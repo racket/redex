@@ -271,7 +271,6 @@
 
    (define (check-referrents names-and-depths)
      (unless (empty? names-and-depths)
-       (printf "s-body ~s\n" s-body)
        (match (assoc (first (car names-and-depths)) pattern-names)
          [#f (raise-syntax-error 
               (syntax-e form-name)
