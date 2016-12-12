@@ -2757,8 +2757,15 @@
        (eprintf "found a cycle in the reduction graph\n")]
       [else
        (unless test-failed?
-         (let* ([⊆ (λ (s1 s2) (andmap (λ (x1) (memf (λ (x) (equiv? x1 x)) s2)) s1))]
-                [set-equal? (λ (s1 s2) (and (⊆ s1 s2) (⊆ s2 s1)))])
+         (let* ([⊆ (λ (s1 s2 reverse?)
+                     (andmap (λ (x1) (memf (λ (x)
+                                             (printf "x: ~s x1: ~s\n" x x1)
+                                             (if reverse?
+                                                 (equiv? x1 x)
+                                                 (equiv? x x1)))
+                                           s2))
+                             s1))]
+                [set-equal? (λ (s1 s2) (and (⊆ s1 s2 #f) (⊆ s2 s1 #t)))])
            (unless (set-equal? expected got)
              (fail)
              (print-failed srcinfo)

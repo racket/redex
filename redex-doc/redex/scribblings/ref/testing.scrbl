@@ -73,6 +73,11 @@ predicate returns @racket[#f]). If that happens, then the test fails
 and a message is printed with the term that failed to satisfy the
 predicate.
 
+The procedure supplied after @racket[#:equiv] is always
+passed the result of reducing the expression as its first
+argument and (one of) the expected result(s) as its second
+argument.
+
 This test uses
 @racket[apply-reduction-relation*], so it does not terminate
 when the resulting reduction graph is infinite, although it 

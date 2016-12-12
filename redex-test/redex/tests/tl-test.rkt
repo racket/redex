@@ -240,6 +240,16 @@
   (test-bad-equiv-arg test-->>))
 
 (let ()
+  (define-language L)
+  (define red (reduction-relation L (--> (1 ignored) (2 ignored))))
+  (test (capture-output
+         (test-->> red #:equiv (λ (x y) (equal? (car x) y))
+                   (term (1 ignored)) (term 2))
+         (test-results))
+        "One test passed.\n"))
+        
+
+(let ()
   (capture-output (test-results))
   (define-language L)
   
