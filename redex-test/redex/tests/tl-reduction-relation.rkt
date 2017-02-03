@@ -289,6 +289,14 @@
        1)
       '(2))
 
+;; Should not have syntax error
+(test (apply-reduction-relation
+       (reduction-relation
+        empty-language
+        #:domain boolean
+        (--> boolean_12 boolean_12))
+       #f)
+      '(#f))
 
 (test (let ([red
              (reduction-relation 
