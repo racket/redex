@@ -73,7 +73,7 @@
 (define (language-id-nt-identifiers stx id) (language-id-getter stx id 3))
 (define (language-id-nt-hole-map stx id) (language-id-getter stx id 4))
 
-(define pattern-symbols '(any number natural integer real string variable 
+(define pattern-symbols '(any number natural integer real string boolean variable
                               variable-not-otherwise-mentioned hole symbol))
 
 (define (build-disappeared-use id-stx-table nt id-stx)
