@@ -153,7 +153,7 @@ sides of the non-terminal. If the non-terminal appears
 twice in a single pattern, then the match is constrained
 to expressions that are the same, unless the pattern is part
 of a @racket[define-language] definition or a contract (e.g., in
-@racket[define-metafunction], @racket[define-judment-form], or
+@racket[define-metafunction], @racket[define-judgment-form], or
 @racket[define-relation])
 in which case there is no constraint. Also, the
 non-terminal will be bound in the expression in any
