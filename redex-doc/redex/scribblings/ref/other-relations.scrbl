@@ -244,7 +244,7 @@ and input positions in premises must be @|tttterm|s; input positions in conclusi
 output positions in premises must be @|ttpattern|s. When the optional @racket[contract-spec] 
 declaration is present, Redex dynamically checks that the terms flowing through
 these positions match the provided patterns, raising an exception recognized by 
-@racket[exn:fail:redex] if not. The term in the optional @racket[invariant-spec] is
+@racket[exn:fail:redex?] if not. The term in the optional @racket[invariant-spec] is
 evaluated after the output positions have been computed and the contract has matched
 successfully, with variables from the contract bound; a result of @racket[#f] is
 considered to be a contract violation and an exception is raised.
