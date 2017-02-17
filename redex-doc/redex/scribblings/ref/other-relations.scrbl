@@ -226,7 +226,7 @@ and @racket[#f] otherwise.
                        (side-condition/hidden @#,tttterm)]
               [rule-name (code:line)
                          string
-                         non-ellipsis-non-hypens-var]
+                         non-ellipsis-non-dashes-var]
               [pat/term @#,ttpattern
                         @#,tttterm]
               [maybe-ellipsis (code:line)
@@ -285,11 +285,11 @@ to compute all pairs with a given sum.
            (define-judgment-form nats
              #:mode (sumr O O I)
              #:contract (sumr n n n)
-             [------------
+             [------------ sumr-z
               (sumr z n n)]
              
              [(sumr n_1 n_2 n_3)
-              --------------------------
+              -------------------------- sumr-s
               (sumr (s n_1) n_2 (s n_3))])
            (judgment-holds (sumr n_1 n_2 (s (s z))) (n_1 n_2))]
 
