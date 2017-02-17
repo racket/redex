@@ -196,7 +196,9 @@ legitimate inputs according to @racket[metafunction-name]'s contract,
 and @racket[#f] otherwise.
 }
 
-@defform/subs[#:literals (I O where where/hidden where/error side-condition side-condition/hidden etc.)
+@defform/subs[#:literals (I O where where/hidden where/error
+                            side-condition side-condition/hidden
+                            etc.)
              (define-judgment-form language
                mode-spec
                contract-spec
@@ -241,7 +243,11 @@ without ``guessing'' values for any of their pattern variables. Redex checks thi
 property using the mandatory @racket[mode-spec] declaration, which partitions positions
 into inputs @racket[I] and outputs @racket[O]. Output positions in conclusions
 and input positions in premises must be @|tttterm|s; input positions in conclusions and 
-output positions in premises must be @|ttpattern|s. When the optional @racket[contract-spec] 
+output positions in premises must be @|ttpattern|s.
+The @racket[rule-name]s are used by @racket[build-derivations]
+and by @racket[render-judgment-form].
+
+When the optional @racket[contract-spec]
 declaration is present, Redex dynamically checks that the terms flowing through
 these positions match the provided patterns, raising an exception recognized by 
 @racket[exn:fail:redex?] if not. The term in the optional @racket[invariant-spec] is
@@ -400,7 +406,10 @@ demonstrates three use cases.
 These files can be found via DrRacket's @onscreen{File|Open Require Path...} menu item.
 Type @litchar{redex/examples/d/} into the dialog and then
 choose one of the names listed above. Or, evaluate the expression
-@racketblock[(collection-file-path #,(list "\"" @bold{«filename.rkt»} "\"") "redex" "examples" "define-judgment-form")]
+ @racketblock[(collection-file-path #,(bold "«filename.rkt»")
+                                    "redex"
+                                    "examples"
+                                    "define-judgment-form")]
 replacing @bold{«filename.rkt»} with one of the names listed above.
 }
 
