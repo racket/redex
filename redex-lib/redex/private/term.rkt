@@ -17,6 +17,7 @@
 
 (provide term term-let define-term
          hole in-hole
+         #%mf-apply
          term-let/error-name term-let-fn term-define-fn
          (for-syntax term-rewrite
                      term-temp->pat
@@ -25,6 +26,7 @@
 
 (define-syntax (hole stx) (raise-syntax-error 'hole "used outside of term" stx))
 (define-syntax (in-hole stx) (raise-syntax-error 'in-hole "used outside of term" stx))
+(define-syntax (#%mf-apply stx) (raise-syntax-error 'mf-apply "used outside of term" stx))
 
 (define (with-syntax* stx)
   (syntax-case stx ()
@@ -177,7 +179,18 @@
                       (sub1 args-depth))))))))
   
   (define (rewrite/max-depth stx depth ellipsis-allowed? continuing-an-application?)
-    (syntax-case stx (unquote unquote-splicing in-hole hole)
+    (syntax-case stx (unquote unquote-splicing in-hole hole #%mf-apply)
+      [(#%mf-apply metafunc-name arg ...)
+       ;; Assert that `metafunc-name` refers to a term-fn, then loop.
+       (if (and (identifier? (syntax metafunc-name))
+                (if names
+                    (not (memq (syntax->datum #'metafunc-name) names))
+                    #t)
+                (term-fn? (syntax-local-value (syntax metafunc-name) (λ () #f))))
+           (rewrite/max-depth (syntax/loc stx (metafunc-name arg ...)) depth ellipsis-allowed? continuing-an-application?)
+           (raise-syntax-error 'term "expected a previously defined metafunction" stx (syntax metafunc-name)))]
+      [(#%mf-apply . x)
+       (raise-syntax-error 'term "malformed mf-apply" arg-stx stx)]
       [(metafunc-name arg ...)
        (and (not continuing-an-application?)
             (identifier? (syntax metafunc-name))

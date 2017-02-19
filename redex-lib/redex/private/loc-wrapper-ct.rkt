@@ -30,10 +30,13 @@
                 'init-loc-wrapper-sequence/unquoted)
           #,op #,(syntax-line stx) #,(syntax-column stx)
           others ...)))
-  (syntax-case* stx (name unquote quote unquote-splicing term) (λ (x y) (eq? (syntax-e x) (syntax-e y)))
+  (syntax-case* stx (name unquote quote unquote-splicing term mf-apply) (λ (x y) (eq? (syntax-e x) (syntax-e y)))
     ['a (reader-shorthand #'a +1 (if (= quote-depth 0) "" "'"))]
     [,a (reader-shorthand #'a -1 (if (= quote-depth 1) "" ","))]
     [,@a (reader-shorthand #'a -1 (if (= quote-depth 1) "" ",@"))]
+    [(mf-apply . e)
+     ;; do not render `mf-apply` annotations
+     (process-arg (syntax e) quote-depth)]
     [(term a)
      (if (= quote-depth 0)
          #`#(#,init-loc-wrapper/q?

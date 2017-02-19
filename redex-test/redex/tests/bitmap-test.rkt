@@ -315,6 +315,18 @@
 (parameterize ([delimit-ellipsis-arguments? #f])
   (btest (render-metafunction rdups) "rdups-undelimited.png"))
 
+;; using `mf-apply` should not affect the output
+(let ()
+  (define-metafunction lang
+    rdups : x ... -> (x ...)
+    [(rdups x_1 x_2 ... x_1 x_3 ...)
+     (rdups x_2 ... x_1 x_3 ...)]
+    [(rdups x_1 x_2 ...)
+     (x_1 x_3 ...)
+     (where (x_3 ...) (mf-apply rdups x_2 ...))]
+    [(rdups) ()])
+  (btest (render-metafunction rdups) "rdups-delimited.png"))
+
 ;; Non-terminal superscripts
 (btest (render-lw lang (to-lw (x_^abcdef x_q^abcdef)))
        "superscripts.png")
@@ -443,9 +455,9 @@
     [(typeof Γ (e_1 e_2) τ)
      (typeof Γ e_1 (τ_2 → τ)) (typeof Γ e_2 τ_2)]
     [(typeof Γ (λ (x : τ) e) (τ → σ))
-     (typeof (extend Γ x τ) e σ)]
+     (typeof (mf-apply extend Γ x τ) e σ)] ;; `mf-apply` shouldn't appear in the output
     [(typeof Γ x τ)
-     (where τ (lookup Γ x))])
+     (where τ (mf-apply lookup Γ x))])
   
   (define-metafunction STLC
     extend : Γ x τ -> Γ

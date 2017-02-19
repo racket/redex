@@ -22,12 +22,13 @@ the visible representation of terms.
 The grammar of @deftech{term}s is (note that an ellipsis
 stands for repetition unless otherwise indicated):
 
-@(racketgrammar* #:literals (in-hole hole unquote unquote-splicing) 
+@(racketgrammar* #:literals (in-hole hole mf-apply unquote unquote-splicing)
    [term identifier
          (term-sequence ...)
          ,expr
          (in-hole term term)
          hole
+         (mf-apply identifier term ...)
          #t #f
          string]
    [term-sequence 
@@ -59,6 +60,9 @@ the contents of the list into the expression at that point in the sequence.}
 them.}
 
 @item{A term written @racket[hole] produces a hole.}
+
+@item{A term written @racket[(mf-apply f arg ...)] asserts that @racket[f]
+is a @tech{metafunction} and produces the term @racket[(f arg ...)].}
 
 @item{A term written as a literal boolean or a string
 produces the boolean or the string.}
@@ -120,6 +124,10 @@ process that @tech{binding forms} use.
 
 @defidform[in-hole]{ Recognized specially within
   @racket[reduction-relation]. An @racket[in-hole] form is an
+  error elsewhere.  }
+
+@defidform[mf-apply]{ Recognized specially within
+  @racket[term]. A @racket[mf-apply] form is an
   error elsewhere.  }
 
 @defform/subs[(term-let ([tl-pat expr] ...) body)
