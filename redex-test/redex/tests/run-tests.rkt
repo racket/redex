@@ -40,6 +40,7 @@
      "core-layout-test.rkt"
      "pict-test.rkt"
      "hole-test.rkt"
+     "mf-apply-test.rkt"
      "stepper-test.rkt"
      "check-syntax-test.rkt"
      "test-docs-complete.rkt"

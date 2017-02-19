@@ -47,7 +47,8 @@
                                    (clause-name name)
                                    (code:line or @#,tttterm)])]{
 
-The @racket[define-metafunction] form builds a function on
+@deftech[#:key "metafunction"]{The} @racket[define-metafunction]
+form builds a function on
 terms according to the pattern and right-hand-side
 expressions. The first argument indicates the language used
 to resolve non-terminals in the pattern expressions. Each of

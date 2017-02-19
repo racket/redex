@@ -17,6 +17,7 @@
 (provide reduction-relation 
          --> fresh with ;; keywords for reduction-relation
          hole in-hole ;; keywords for term
+         (rename-out [#%mf-apply mf-apply]) ;; keyword for term
          ::= ;; keywords for language definition
          I O ;; keyword for define-judgment-form
          extend-reduction-relation
