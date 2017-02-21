@@ -126,7 +126,7 @@ sets @racket[dc-for-text-size] and the latter does not.
  Produces a pict like @racket[render-term], but without
  adjusting @racket[dc-for-text-size].
 
- The first argument is expected to be a @racket[compiled-language?] and
+ The first argument is expected to be a @racket[compiled-lang?] and
  the second argument is expected to be a term (without the
  @racket[term] wrapper). The formatting in the @racket[term] argument
  is used to determine how the resulting pict will look.
