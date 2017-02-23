@@ -1789,7 +1789,7 @@
                                                 `(,name ,@exp)
                                                 (if (= 1 (length mtchs))
                                                     "but"
-                                                    (format "~a different ways and "
+                                                    (format "~a different ways and"
                                                             (length mtchs))))]
                                   [else
                                    (define ans (car anss))
