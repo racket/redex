@@ -20,6 +20,7 @@
          #%mf-apply
          term-let/error-name term-let-fn term-define-fn
          (for-syntax term-rewrite
+                     term-fn-id?
                      term-temp->pat
                      currently-expanding-term-fn
                      judgment-form-id?))
@@ -186,7 +187,7 @@
                 (if names
                     (not (memq (syntax->datum #'metafunc-name) names))
                     #t)
-                (term-fn? (syntax-local-value (syntax metafunc-name) (λ () #f))))
+                (term-fn-id? (syntax metafunc-name)))
            (rewrite/max-depth (syntax/loc stx (metafunc-name arg ...)) depth ellipsis-allowed? continuing-an-application?)
            (raise-syntax-error 'term "expected a previously defined metafunction" stx (syntax metafunc-name)))]
       [(#%mf-apply . x)
@@ -197,7 +198,7 @@
             (if names
                 (not (memq (syntax->datum #'metafunc-name) names))
                 #t)
-            (term-fn? (syntax-local-value (syntax metafunc-name) (λ () #f))))
+            (term-fn-id? (syntax metafunc-name)))
        (let ([f (term-fn-get-id (syntax-local-value/record (syntax metafunc-name) (λ (x) #t)))])
          (free-identifier-mapping-put! applied-metafunctions 
                                        (datum->syntax f (syntax-e f) #'metafunc-name)
@@ -221,7 +222,7 @@
             (if names
                 (not (memq (syntax->datum #'f) names))
                 #t)
-            (term-fn? (syntax-local-value (syntax f) (λ () #f))))
+            (term-fn-id? (syntax f)))
        (raise-syntax-error 'term "metafunction must be in an application" arg-stx stx)]
       [x
        (and (identifier? #'x)
@@ -588,3 +589,12 @@
                    #'(begin
                        (define term-val (term t))
                        (define-syntax x (defined-term #'term-val))))]))
+
+;; term-fn-id? : identifier? -> boolean?
+;; Return #t when given an identifier whose transformer binding is a term function,
+;;  and #f otherwise
+(define-for-syntax term-fn-id?
+  (let ([fail-thunk (λ () #f)])
+    (λ (stx)
+      (let ([v (syntax-local-value stx fail-thunk)])
+        (and v (term-fn? v))))))

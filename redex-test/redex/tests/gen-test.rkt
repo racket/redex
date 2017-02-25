@@ -554,6 +554,20 @@
           "didn't raise an exception")
         #rx".*generate-term:.*repeat.*"))
 
+;; errors for define-metafunction/extension with a syntax transformer
+;;  (as opposed to a metafunction, a term-fn?)
+(let ()
+  (test (with-handlers ((exn:fail? exn-message))
+          (expand
+            #'(let ()
+                (define-language L (n any))
+                (define-syntax (fake-mf stx)
+                  (syntax (term 3)))
+                (define-metafunction/extension fake-mf L
+                ((g) ()))))
+            "didn't raise an exception")
+        #rx"expected a previously defined metafunction"))
+
 (let ()
   (define-language L
     (n 1))
