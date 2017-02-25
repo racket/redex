@@ -1232,12 +1232,10 @@
        (when (null? (syntax-e #'rest))
          (raise-syntax-error syn-error-name "no clauses" orig-stx))
        (when prev-metafunction
-         (syntax-local-value 
-          prev-metafunction
-          (λ ()
-            (raise-syntax-error 
-             syn-error-name 
-             "expected a previously defined metafunction" orig-stx prev-metafunction))))
+         (unless (term-fn-id? prev-metafunction)
+           (raise-syntax-error
+            syn-error-name
+            "expected a previously defined metafunction" orig-stx prev-metafunction)))
        (let*-values ([(contract-name dom-ctcs pre-condition 
                                      codom-contracts codomain-separators post-condition
                                      pats)
