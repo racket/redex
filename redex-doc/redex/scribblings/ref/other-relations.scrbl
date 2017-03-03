@@ -47,9 +47,9 @@
                                    (clause-name name)
                                    (code:line or @#,tttterm)])]{
 
-@deftech[#:key "metafunction"]{The} @racket[define-metafunction]
-form builds a function on
-terms according to the pattern and right-hand-side
+A @deftech{metafunction} is a function on terms.
+The @racket[define-metafunction] form builds a metafunction
+according to the pattern and right-hand-side
 expressions. The first argument indicates the language used
 to resolve non-terminals in the pattern expressions. Each of
 the rhs-expressions is implicitly wrapped in @|tttterm|. 
