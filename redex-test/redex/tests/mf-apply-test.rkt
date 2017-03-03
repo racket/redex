@@ -171,3 +171,55 @@
   (to-lw (term (mf-apply real-mf (mf-apply real-mf (S Z)))))
   (to-lw (term (real-mf (real-mf (S Z))))))
 
+;; -----------------------------------------------------------------------------
+;; typesetting, with-compound-rewriter test, from Ryan Culpepper
+
+(let ()
+  (define-language Arith
+    [e number
+       (plus e e)])
+
+  (define-metafunction Arith
+    [(invisible-id e) e])
+
+  (define-metafunction Arith
+    [(times e 1) e]
+    [(times e natural_k)
+     (plus e (times e ,(sub1 (term natural_k))))])
+
+  (define (call/rewrites proc)
+    (with-compound-rewriter
+     'plus
+     ;; (plus e1 e2) =render=> e1 + e2
+     (lambda (lws) ;; wrapped "(" 'plus" <e1> <e2> ")"
+       (list "" (caddr lws) " + " (cadddr lws) ""))
+     (with-compound-rewriter
+      'times
+      ;; (times e1 n) =render=> e1 × e2
+      (lambda (lws) ;; wrapped "(" 'times <e1> <e2> ")"
+        (list "(" (caddr lws) ") × " (cadddr lws) ""))
+      (with-compound-rewriter
+       'invisible-id
+       ;; (invisible-id e) =render=> e
+       (lambda (lws)
+         (list "" (caddr lws) ""))
+       (proc)))))
+
+  (test-case "mtwt:without-rewrites"
+    (check pixels=?
+      (term->pict Arith (times (plus 1 2) 3))
+      (term->pict Arith (mf-apply times (plus 1 2) 3)))
+
+    (check pixels=?
+      (term->pict Arith (invisible-id (times (plus 1 2) 3)))
+      (term->pict Arith (invisible-id (mf-apply times (plus 1 2) 3)))))
+
+  (test-case "mtwt:with-rewrites"
+    (check pixels=?
+      (call/rewrites (lambda () (term->pict Arith (times (plus 1 2) 3))))
+      (call/rewrites (lambda () (term->pict Arith (mf-apply times (plus 1 2) 3)))))
+
+    (check pixels=?
+      (call/rewrites (lambda () (term->pict Arith (invisible-id (times (plus 1 2) 3)))))
+      (call/rewrites (lambda () (term->pict Arith (invisible-id (mf-apply times (plus 1 2) 3)))))))
+)
