@@ -151,7 +151,7 @@
   (define clauses (judgment-form-gen-clauses j-f))
   (define relation? (judgment-form-relation? j-f))
   (define args-stx (if relation?
-                       (syntax/loc #'args #`(#,pats))
+                       (quasisyntax/loc #'args (#,pats))
                        pats))
   (with-syntax* ([(syncheck-exp pattern (names ...) (names/ellipses ...))
                   (rewrite-side-conditions/check-errs lang 'redex-check #t args-stx)]

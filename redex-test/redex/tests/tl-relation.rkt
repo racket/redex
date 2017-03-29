@@ -186,4 +186,20 @@
   (test (judgment-holds (J Z Z)) #f)
   )
 
+(let ()
+  (define-language L)
+
+  (define-relation L
+    R ⊂ any
+    [(R any)])
+
+  (define tried-body? #f)
+  (parameterize ([current-output-port (open-output-nowhere)])
+    (redex-check
+     L
+     #:satisfying (R any)
+     (set! tried-body? #t)
+     #:attempts 1))
+  (test tried-body? #t))
+
 (print-tests-passed 'tl-relation.rkt)
