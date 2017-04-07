@@ -104,6 +104,49 @@
         (expected-arrows
          (list language-binding judgment-form-binding))))
 
+;; define-relation
+(let ([annotations (new collector%)])
+  (define-values (add-syntax done)
+    (make-traversal module-namespace #f))
+  
+  (define language-def-name (identifier L))
+  (define language-use-name (identifier L))
+  
+  (define contract-name (identifier J))
+  (define conclusion-name (identifier J))
+  (define premise-name (identifier J))
+  (define render-name (identifier J))
+  (define holds-name (identifier J))
+
+  (define any-ctc (identifier any))
+  (define any-conc (identifier any))
+  (define any-prem (identifier any))
+  
+  (define language-binding 
+    (list language-def-name language-use-name))
+  (define judgment-form-binding
+    (list contract-name conclusion-name premise-name #; #;render-name holds-name))
+  (define any-binding
+    (list any-conc any-prem))
+  
+  (parameterize ([current-annotations annotations]
+                 [current-namespace module-namespace])
+    (add-syntax
+     (expand #`(let ()
+                 (define-language #,language-def-name)
+                 (define-relation #,language-use-name
+                   #,contract-name ⊂ any
+                   [(#,conclusion-name #,any-conc)
+                    (#,premise-name #,any-prem)])
+                 (void))))
+    (done))
+  
+  (test (send annotations collected-arrows)
+        (expected-arrows
+         (list language-binding
+               judgment-form-binding
+               any-binding))))
+
 ;; metafunctions
 (let ([annotations (new collector%)])
   (define-values (add-syntax done)

@@ -44,6 +44,8 @@
                                    (where/error pat @#,tttterm)
                                    (judgment-holds 
                                     (judgment-form-id pat/term ...))
+                                   (judgment-holds
+                                    (relation-id @#,tttterm ...))
                                    (clause-name name)
                                    (code:line or @#,tttterm)])]{
 
@@ -91,7 +93,7 @@ except the match guards the clause. The @racket[where/error]
 extra is like @racket[where], except that the pattern must match.
 
 The @racket[judgment-holds] clause is like @racket[side-condition]
-and @racket[where], except the given judgment must hold for the
+and @racket[where], except the given judgment or relation must hold for the
 clause to be taken.
 
 The @racket[clause-name] is used only when typesetting. See
@@ -222,6 +224,7 @@ and @racket[#f] otherwise.
                      rule-name]]
               [conclusion (form-id pat/term ...)]
               [premise (code:line (judgment-form-id pat/term ...) maybe-ellipsis)
+                       (code:line (relation-id pat/term ...) maybe-ellipsis)
                        (where @#,ttpattern @#,tttterm)
                        (where/hidden @#,ttpattern @#,tttterm)
                        (where/error @#,ttpattern @#,tttterm)
@@ -428,13 +431,18 @@ replacing @bold{«filename.rkt»} with one of the names listed above.
  must be the same.
 }
                              
-@defform*/subs[((judgment-holds judgment)
-                (judgment-holds judgment @#,tttterm))
-               ([judgment (judgment-form-id pat/term ...)])]{
-In its first form, checks whether @racket[judgment] holds for any assignment of
-the pattern variables in @racket[judgment-id]'s output positions. In its second
+@defform*/subs[((judgment-holds judgment-or-relation)
+                (judgment-holds judgment-or-relation @#,tttterm))
+               ([judgment-or-relation
+                 (judgment-form-id pat/term ...)
+                 (relation-id pat/term ...)])]{
+In its first form, checks whether @racket[judgment-or-relation] holds for any assignment of
+the pattern variables in @racket[judgment-for-id]'s output positions (or just that it holds
+ in the case that a relation from @racket[define-relation] is used). In its second
 form, produces a list of terms by instantiating the supplied term template with
-each satisfying assignment of pattern variables.
+each satisfying assignment of pattern variables. In the second case, if a relation
+is supplied, there are no pattern variables, so the result is either a list with
+one element or the empty list.
 
  @examples[#:label #f #:eval redex-eval
            (judgment-holds (sum (s (s z)) (s z) n))
@@ -442,9 +450,9 @@ each satisfying assignment of pattern variables.
  See @racket[define-judgment-form] for more examples.
 }
 
-@defform[(build-derivations judgment)]{
+@defform[(build-derivations judgment-or-relation)]{
   Constructs all of the @racket[derivation] trees
-  for @racket[judgment]. 
+  for @racket[judgment-or-relation].
   
 @examples[
 #:eval redex-eval
@@ -481,8 +489,7 @@ is an error elsewhere.
                                   (code:line form-id ⊂ @#,ttpattern x ... x @#,ttpattern)
                                   (code:line form-id ⊆ @#,ttpattern × ... × @#,ttpattern)])]{
 Similar to @racket[define-judgment-form] but suitable only when every position
-is an input. There is no associated form corresponding to 
-@racket[judgment-holds]; querying the result uses the same syntax as 
+is an input. Querying the result uses @racket[judgment-holds] or the same syntax as 
 metafunction application.
 
 The contract specification for a relation restricts the patterns that can
@@ -505,9 +512,9 @@ the argument contracts.
           (subtype τ_2 σ_2)]
          [(subtype τ τ)])
 
-       (term (subtype int num))
-       (term (subtype (int → int) (num → num)))
-       (term (subtype (num → int) (num → num)))]
+       (judgment-holds (subtype int num))
+       (judgment-holds (subtype (int → int) (num → num)))
+       (judgment-holds (subtype (num → int) (num → num)))]
 }
 
 @defproc[(judgment-form? [v any/c]) boolean?]{

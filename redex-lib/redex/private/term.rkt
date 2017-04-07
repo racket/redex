@@ -211,8 +211,8 @@
                 (not (memq (syntax->datum #'jf-name) names))
                 #t)
             (judgment-form-id? #'jf-name))
-       (begin
-         (unless (not (memq 'O (judgment-form-mode (syntax-local-value #'jf-name))))
+       (let ([mode (judgment-form-mode (syntax-local-value #'jf-name))])
+         (when (and mode (memq 'O mode))
            (raise-syntax-error 'term 
                                "judgment forms with output mode (\"O\") positions disallowed"
                                arg-stx stx))

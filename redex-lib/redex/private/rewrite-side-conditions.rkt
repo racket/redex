@@ -38,6 +38,10 @@
                                               #:rewrite-as-any-id [rewrite-as-any-id #f]
                                               #:aliases [_aliases #f]
                                               #:nt-identifiers [_nt-identifiers #f])
+    (unless (or (not what) (symbol? what))
+      (error 'rewrite-side-conditions/check-errs
+             "expected `what' argument to be a symbol or #f, got ~s"
+             what))
     (define aliases
       (or _aliases
           (and (identifier? all-nts/lang-id)
