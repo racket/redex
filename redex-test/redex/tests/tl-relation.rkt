@@ -202,4 +202,50 @@
      #:attempts 1))
   (test tried-body? #t))
 
+(let ()
+  (define-language L)
+  
+  (define-relation L
+    zero? ⊆ (any ...)
+    [(zero? (0 ...))])
+  
+  (define-metafunction L
+    F : any -> string
+    [(F (any ...)) "was zero" (judgment-holds (zero? (any ...)))]
+    [(F any) "wasn’t zero"])
+
+  (test (term (F (0 0))) "was zero")
+
+  (test (judgment-holds (zero? (0 0 0))) #t)
+  (test (judgment-holds (zero? (0 1 0))) #f)
+  (test (judgment-holds (zero? (0 0 0)) "huh") '("huh")))
+
+(let ()
+  (define-relation empty-language
+    [(R any any)])
+
+  (test (build-derivations (R 1 1))
+        (list (derivation '(R 1 1) #f '()))))
+
+(let ()
+  
+  (define-relation empty-language
+    [(J2 natural natural)]
+    [(J2 (any_1) any_2) (J2 any_1 any_2)]
+    [(J2 any_1 (any_2)) (J2 any_1 any_2)])
+
+  (test (apply set (build-derivations (J2 (1) (1))))
+        (set (derivation '(J2 (1) (1))
+                         #f
+                         (list (derivation
+                                '(J2 1 (1))
+                                #f
+                                (list (derivation '(J2 1 1) #f '())))))
+             (derivation '(J2 (1) (1))
+                         #f
+                         (list (derivation
+                                '(J2 (1) 1)
+                                #f
+                                (list (derivation '(J2 1 1) #f '()))))))))
+
 (print-tests-passed 'tl-relation.rkt)

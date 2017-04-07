@@ -193,7 +193,15 @@
         "1 test failed (out of 1 total).\n"))
 
 
-
+(let ()
+  (define-relation empty-language
+    [(R any any)])
+  (test (test-judgment-holds (R 1 1)) (void))
+  (test (capture-output
+         (test-judgment-holds
+          (R 1 2))
+         (test-results))
+        #rx"not in relation R\n1 test failed"))
 
 (let ()
   (define red (reduction-relation empty-language (--> any (any))))

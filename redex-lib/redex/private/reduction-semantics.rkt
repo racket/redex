@@ -343,14 +343,15 @@
   (syntax-case judgment ()
     [(form-name pat ...)
      (judgment-form-id? #'form-name)
-     (let ([expected (length (judgment-form-mode (lookup-judgment-form-id #'form-name)))]
-           [actual (length (syntax->list #'(pat ...)))])
-       (unless (= actual expected)
-         (raise-syntax-error 
-          #f 
-          (format "mode specifies a ~a-ary relation but use supplied ~a term~a" 
-                  expected actual (if (= actual 1) "" "s"))
-          judgment)))]
+     (unless (jf-is-relation? #'form-name)
+       (let ([expected (length (judgment-form-mode (lookup-judgment-form-id #'form-name)))]
+             [actual (length (syntax->list #'(pat ...)))])
+         (unless (= actual expected)
+           (raise-syntax-error
+            #f
+            (format "mode specifies a ~a-ary relation but use supplied ~a term~a"
+                    expected actual (if (= actual 1) "" "s"))
+            judgment))))]
     [(form-name pat ...)
      (raise-syntax-error #f "expected a judgment form name" stx #'form-name)]))
 
@@ -2813,14 +2814,14 @@
     [(_ (jf . rest))
      (unless (judgment-form-id? #'jf)
        (raise-syntax-error 'test-judgment-holds
-                           "expected the name of a judgment-form"
+                           "expected a name introduced by define-judgment-form or define-relation"
                            #'jf))
      (define a-judgment-form (syntax-local-value #'jf))
      (define mode (judgment-form-mode a-judgment-form))
      (define orig-jf-stx (list-ref (syntax->list stx) 1))
      (define jf-list (syntax->list #'(jf . rest)))
      (cond
-       [(and jf-list (= (length jf-list) (+ 1 (length mode))))
+       [(or (not mode) (and jf-list (= (length jf-list) (+ 1 (length mode)))))
         (define suffix 0)
         (let loop ([stx (syntax->datum #'rest)])
           (cond
@@ -2835,45 +2836,51 @@
         (define pats '())
         (define any-vars '())
         (define jf-stx
-          (forward-errortrace-prop
-           orig-jf-stx
-           (quasisyntax/loc orig-jf-stx
-             (jf #,@
-                 (for/list ([IO (in-list mode)]
-                            [arg (cdr jf-list)]
-                            [i (in-naturals 1)])
-                   (cond
-                     [(equal? IO 'I) arg]
-                     [else
-                      (set! suffix (+ suffix 1))
-                      (with-syntax ([(syncheck-expr side-conditions-rewritten
-                                                    (names ...) (names/ellipses ...))
-                                     (rewrite-side-conditions/check-errs
-                                      (judgment-form-lang a-judgment-form)
-                                      'test-judgment-holds #t arg)])
-                        (define any-var (string->symbol (format "any_~a" (+ i suffix))))
-                        (set! syncheck-exprs #`(begin syncheck-expr #,syncheck-exprs))
-                        (set! pats (cons #'side-conditions-rewritten pats))
-                        (set! any-vars (cons any-var any-vars))
-                        any-var)]))))))
+          (cond
+            [mode
+             (forward-errortrace-prop
+              orig-jf-stx
+              (quasisyntax/loc orig-jf-stx
+                (jf #,@
+                    (for/list ([IO (in-list mode)]
+                               [arg (cdr jf-list)]
+                               [i (in-naturals 1)])
+                      (cond
+                        [(equal? IO 'I) arg]
+                        [else
+                         (set! suffix (+ suffix 1))
+                         (with-syntax ([(syncheck-expr side-conditions-rewritten
+                                                       (names ...) (names/ellipses ...))
+                                        (rewrite-side-conditions/check-errs
+                                         (judgment-form-lang a-judgment-form)
+                                         'test-judgment-holds #t arg)])
+                           (define any-var (string->symbol (format "any_~a" (+ i suffix))))
+                           (set! syncheck-exprs #`(begin syncheck-expr #,syncheck-exprs))
+                           (set! pats (cons #'side-conditions-rewritten pats))
+                           (set! any-vars (cons any-var any-vars))
+                           any-var)])))))]
+            [else orig-jf-stx]))
         #`(begin
             #,syncheck-exprs
             (test-judgment-holds/proc (λ () (judgment-holds #,jf-stx (#,@(reverse any-vars))))
                                       'jf
                                       #,(judgment-form-lang a-judgment-form)
                                       `(list #,@(reverse pats))
-                                      #,(get-srcloc stx)))]
+                                      #,(get-srcloc stx)
+                                      #,(not mode)))]
        [else
         ;; this case should always result in a syntax error
         #`(judgment-holds #,orig-jf-stx)])]))
 
-(define (test-judgment-holds/proc thunk name lang pat srcinfo)
+(define (test-judgment-holds/proc thunk name lang pat srcinfo is-relation?)
   (define results (thunk))
   (cond
     [(null? results)
      (inc-failures)
      (print-failed srcinfo)
-     (eprintf "  judgment of ~a does not hold\n" name)]
+     (if is-relation?
+         (eprintf "  not in relation ~a\n" name)
+         (eprintf "  judgment of ~a does not hold\n" name))]
     [else
      (define cpat (compile-pattern lang pat #t))
      (define one-matched?
