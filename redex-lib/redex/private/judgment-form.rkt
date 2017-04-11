@@ -1695,18 +1695,16 @@
     (define p-mode (judgment-form-mode p-form))
     (define p-clauses (judgment-form-gen-clauses p-form))
     (define-values (p/-s p/+s) (split-by-mode (syntax->list prem-body) p-mode))
-    (define-values (p/-rws mf-apps) (rewrite-terms p/-s ns in-judgment-form?))
-    (define-values (syncheck-exps p/+rws new-names)
+    (define-values (p/-rws mf-apps)
       (if p-mode
-          (rewrite-pats p/+s lang what)
-          (rewrite-pats (list p/+s) lang what)))
+          (rewrite-terms p/-s ns in-judgment-form?)
+          (rewrite-terms (list (datum->syntax #f p/-s)) ns in-judgment-form?)))
+    (define-values (syncheck-exps p/+rws new-names) (rewrite-pats p/+s lang what))
     (define p-rw (assemble p-mode p/-rws p/+rws))
     (with-syntax ([(p ...) p-rw])
       (values (cons #`(begin
                         #,@syncheck-exps
-                        (prem #,p-clauses #,(if p-mode
-                                                #''(list p ...)
-                                                #''(list (list p ...)))))
+                        (prem #,p-clauses '(list p ...)))
                     (append mf-apps ps-rw))
               eqs
               (append ns new-names))))

@@ -248,4 +248,15 @@
                                 #f
                                 (list (derivation '(J2 1 1) #f '()))))))))
 
+(let ()
+  (define-language empty-lang)
+
+  (define-relation empty-lang
+    [(≈ () ...)]
+    [(≈ (any_1 any_2 ...) ...)
+     (≈ (any_2 ...) ...)])
+
+  (test (term (≈ (1) (1))) #t)
+  (test (term (≈ (1 2) (1))) #f))
+
 (print-tests-passed 'tl-relation.rkt)
