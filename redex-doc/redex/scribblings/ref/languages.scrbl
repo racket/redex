@@ -119,8 +119,11 @@ of the lambda refer to the argument. In a binding declaration, this is specified
 @examples[#:label #f #:eval redex-eval
  (term (substitute (x (λ (x) (λ (y) x)))
                    x
-                   (y y)) #:lang lc-lang)]
+                   (y y)) #:lang lc-bind)]
 
+Note that sometimes substitute changes the names of the bound identifiers, in this case
+replacing the @racket[x] and @racket[y] with identifiers that have @racket[«] and @racket[»]
+in their names.
 
 The @racket[#:refers-to] declaration says that, in a @racket[λ] term, the @racket[e] subterm has the name from
 the @racket[x] subterm in scope.
