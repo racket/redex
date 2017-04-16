@@ -999,4 +999,40 @@
     (x ::= variable-not-otherwise-mentioned))
   (test (redex-match? L (in-hole A x) (term (y z (z t)))) #t))  
 
+(let ()
+  (define-language L1
+    (v ::= (clo [x any_1] any) number)
+    (x ::= variable-not-otherwise-mentioned)
+    #:binding-forms
+    (clo [x _] v #:refers-to x))
+
+  (define-language L2
+    (v ::= (clo [x any_1] any) number)
+    (x ::= variable-not-otherwise-mentioned)
+    #:binding-forms
+    (clo [x any] v #:refers-to x))
+
+  (define example-v (term (clo [x 3] 2)))
+
+  (test (redex-match? L1 (clo [x v_0] any_1) example-v) #t)
+
+  (test (redex-match? L2 (clo [x v_0] any_1) example-v) #t))
+
+(let ()
+  (define-language L
+    (v ::=
+       (clo σ v)
+       number)
+    (σ ::= [x v])
+    (x ::= variable-not-otherwise-mentioned)
+    #:binding-forms
+    (clo [x _] v #:refers-to (shadow x)))
+  ;;        ⬑ problem here
+
+  (define example-v (term (clo [x 3] 2)))
+  
+  (test (redex-match? L v example-v) #t)
+  (test (redex-match? L (clo [x v_0] v_1) example-v) #t))
+
+
 (print-tests-passed 'tl-language.rkt)
