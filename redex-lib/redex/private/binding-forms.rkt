@@ -271,10 +271,10 @@ to traverse the whole value at once, rather than one binding form at a time.
 
 ;; == Redex match stuff ==
 ;; Lookup into Redex matches, with fallback
-(define-syntax-rule (rm-lookup-or name red-match otherwise)
+(define (rm-lookup-or name red-match otherwise)
   (let loop ([rm red-match])
     (cond
-     [(empty? rm) otherwise]
+     [(empty? rm) (otherwise)]
      [(and ;; check in case `name` is actually a literal keyword or
            ;; some other non-symbol literal
            (symbol? name)
@@ -285,7 +285,7 @@ to traverse the whole value at once, rather than one binding form at a time.
 ;; ... with error
 (define (rm-lookup name red-match)
   (rm-lookup-or name red-match
-                (redex-error #f "name `~s` not found in redex match: ~s" name red-match)))
+                (λ () (redex-error #f "name `~s` not found in redex match: ~s" name red-match))))
 
 (define (rm-lookup-as-list name red-match) `(,(rm-lookup name red-match)))
 
@@ -507,7 +507,7 @@ to traverse the whole value at once, rather than one binding form at a time.
        `(,(loop red-match body-first σ) . ,(loop red-match body-rest σ))]
       [`() `()]
       [name
-       (define leaf-value (rm-lookup-or name red-match name))
+       (define leaf-value (rm-lookup-or name red-match (λ () name)))
        (if (and (symbol? leaf-value) (member name (bspec-ported-nts bs)))
            leaf-value ;; this atom is a binder, not a reference
            (rename-references leaf-value σ))])))
@@ -632,12 +632,16 @@ to traverse the whole value at once, rather than one binding form at a time.
    red-match))
 
 
-(define (rec-freshen-spec red-match bs noop? top-level?)
+(define (rec-freshen-spec redex-val red-match bs noop? top-level?)
   (define freshened-subterms (freshen-subterms red-match bs noop? top-level?))
-
   (define freshened-body
     (let loop ([red-match red-match] [freshened-subterms freshened-subterms]
-               [body (bspec-body bs)])
+               [body (bspec-body bs)]
+               [redex-val redex-val])
+      (define maybe-car (if (value-with-spec? redex-val) values car))
+      (define maybe-cdr (if (value-with-spec? redex-val) values cdr))
+      (define maybe-drop (if (value-with-spec? redex-val) values drop))
+      (define maybe-take (if (value-with-spec? redex-val) values take))
       (match body
         ;; I thought that `rename-reference`ing this subterm of the current form was
         ;; going to be a problem: `rename-reference` doesn't have any idea about the
@@ -648,31 +652,41 @@ to traverse the whole value at once, rather than one binding form at a time.
         ;; been renamed to fresh names (relative to the domain of this renaming), and
         ;; so will be unaffected: just what we want.
         [(import/internal sub-body beta)
-         (rename-references (loop red-match freshened-subterms sub-body)
+         (rename-references (loop red-match freshened-subterms sub-body redex-val)
                             (interp-beta-as-fs-subst beta freshened-subterms))]
 
         [`(,(.../internal sub-body driving-names) . ,body-rest)
          (define red-match-under-... (pass-... red-match driving-names))
 
-         `(,@(map (λ (sub-red-match sub-freshened-subterms)
-                    (loop sub-red-match sub-freshened-subterms sub-body))
+         `(,@(map (λ (sub-red-match sub-freshened-subterms redex-val)
+                    (loop sub-red-match sub-freshened-subterms sub-body redex-val))
                   red-match-under-...
-                  (pass-... freshened-subterms driving-names (length red-match-under-...)))
+                  (pass-... freshened-subterms driving-names (length red-match-under-...))
+                  (maybe-take redex-val (length red-match-under-...)))
 
-           . ,(loop red-match freshened-subterms body-rest))]
+           . ,(loop red-match freshened-subterms body-rest
+                    (maybe-drop redex-val (length red-match-under-...))))]
 
         [`(,(...bind/internal ...-name _ _) . ,body-rest)
          `(,@(unsplay
               (first (rm-lookup-or
                       ...-name freshened-subterms
-                      `(,(rm-lookup ...-name red-match) ()))))
+                      (λ () `(,(rm-lookup ...-name red-match) ())))))
 
-           . ,(loop red-match freshened-subterms body-rest))]
+           ;; using `redex-val` here seems suspicious; it seems like I should
+           ;; drop some prefix of it based on what is going on in the case, but
+           ;; I'm not sure how to do that in general and this seems to make the
+           ;; test suite pass (whereas other things I tried do not)
+           . ,(loop red-match freshened-subterms body-rest redex-val))]
 
         [`(,body-first . ,body-rest)
-         `(,(loop red-match freshened-subterms body-first)
-           . ,(loop red-match freshened-subterms body-rest))]
+         `(,(loop red-match freshened-subterms body-first (maybe-car redex-val))
+           . ,(loop red-match freshened-subterms body-rest (maybe-cdr redex-val)))]
         [`() `()]
+        [`_
+         (when (value-with-spec? redex-val)
+           (error 'binding-forms.rkt "internal error: cannot support _ in this position"))
+         redex-val]
         [nt
          (first ;; discard the substitution; we only need the freshened value
           (rm-lookup-or
@@ -681,7 +695,7 @@ to traverse the whole value at once, rather than one binding form at a time.
            ;; are treated as bound. For Redex purposes, it's important that they be
            ;; free, so that putting things into plain lists doesn't unexpectedly bind things.
            ;; See https://github.com/paulstansifer/redex/issues/10
-           `(,(rm-lookup-or nt red-match nt) ())))])))
+           (λ () `(,(rm-lookup-or nt red-match (λ () nt)) ()))))])))
 
   (define freshened-exports
     (interp-beta-as-fs-subst (bspec-export-beta bs) freshened-subterms))
@@ -700,7 +714,7 @@ to traverse the whole value at once, rather than one binding form at a time.
 
 (define (rec-freshen redex-val n? t-l? a-b?)
   ;; assume-binder? is only relevant for atoms, which never have specs
-  (dispatch redex-val (λ (rv bs) (rec-freshen-spec rv bs n? t-l?))
+  (dispatch redex-val (λ (rv bs) (rec-freshen-spec redex-val rv bs n? t-l?))
             (λ (rv) (rec-freshen-nospec rv n? t-l? a-b?))))
 
 
@@ -713,7 +727,7 @@ to traverse the whole value at once, rather than one binding form at a time.
 ;; exported-binders : redex-value -> (list symbol)
 (define (exported-binders redex-val)
   (map cadr (second ;; top-level? needs to be off, since lone binders matter!
-             (dispatch redex-val (λ (rv bs) (rec-freshen-spec rv bs #t #f))
+             (dispatch redex-val (λ (rv bs) (rec-freshen-spec redex-val rv bs #t #f))
                        (λ (rv) (rec-freshen-nospec rv #t #f #t))))))
 
 
@@ -745,6 +759,7 @@ to traverse the whole value at once, rather than one binding form at a time.
 
     (check-match
      (rec-freshen-spec
+      '((1 2) (3 4) 5) ;; this is mostly ignored, I believe
       (mrm (lambda lambda) (x a) (expr (a b c)))
       lambda-bspec #f #t)
      `((lambda (,aa) (,aa b c)) ())
