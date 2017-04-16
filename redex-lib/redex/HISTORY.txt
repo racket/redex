@@ -1,3 +1,12 @@
+v6.9
+
+  * add mf-apply
+
+  * improve define-relation's cooperation with judgment-holds and
+    related constructs
+
+  * various bug fixes
+
 v6.8
 
   * improved the ambiguity checker
