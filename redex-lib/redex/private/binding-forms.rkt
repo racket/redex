@@ -640,8 +640,7 @@ to traverse the whole value at once, rather than one binding form at a time.
                [redex-val redex-val])
       (define maybe-car (if (value-with-spec? redex-val) values car))
       (define maybe-cdr (if (value-with-spec? redex-val) values cdr))
-      (define maybe-drop (if (value-with-spec? redex-val) values drop))
-      (define maybe-take (if (value-with-spec? redex-val) values take))
+      (define maybe-drop (if (value-with-spec? redex-val) (λ (x y) x) drop))
       (match body
         ;; I thought that `rename-reference`ing this subterm of the current form was
         ;; going to be a problem: `rename-reference` doesn't have any idea about the
@@ -657,13 +656,18 @@ to traverse the whole value at once, rather than one binding form at a time.
 
         [`(,(.../internal sub-body driving-names) . ,body-rest)
          (define red-match-under-... (pass-... red-match driving-names))
-
-         `(,@(map (λ (sub-red-match sub-freshened-subterms redex-val)
-                    (loop sub-red-match sub-freshened-subterms sub-body redex-val))
-                  red-match-under-...
-                  (pass-... freshened-subterms driving-names (length red-match-under-...))
-                  (maybe-take redex-val (length red-match-under-...)))
-
+         (define fst
+           (if (value-with-spec? redex-val)
+               (map (λ (sub-red-match sub-freshened-subterms)
+                      (loop sub-red-match sub-freshened-subterms sub-body redex-val))
+                    red-match-under-...
+                    (pass-... freshened-subterms driving-names (length red-match-under-...)))
+               (map (λ (sub-red-match sub-freshened-subterms redex-val)
+                      (loop sub-red-match sub-freshened-subterms sub-body redex-val))
+                    red-match-under-...
+                    (pass-... freshened-subterms driving-names (length red-match-under-...))
+                    (take redex-val (length red-match-under-...)))))
+         `(,@fst
            . ,(loop red-match freshened-subterms body-rest
                     (maybe-drop redex-val (length red-match-under-...))))]
 
