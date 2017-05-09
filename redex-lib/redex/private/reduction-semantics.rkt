@@ -12,13 +12,15 @@
          "lang-struct.rkt"
          "enum.rkt"
          (only-in "binding-forms.rkt"
-                  α-equal? safe-subst binding-forms-opened?)
+                  α-equal? α-equal-hash-code safe-subst binding-forms-opened?
+                  make-α-hash make-immutable-α-hash)
          (only-in "binding-forms-definitions.rkt"
                   shadow nothing bf-table-entry-pat bf-table-entry-bspec)
          racket/trace
          racket/contract
          racket/list
          racket/set
+         racket/dict
          racket/pretty
          rackunit/log
          (rename-in racket/match (match match:)))
@@ -2558,9 +2560,12 @@
                                   #:all? [return-all? #f]
                                   #:cache-all? [cache-all? (or return-all? (current-cache-all?))]
                                   #:stop-when [stop-when (λ (x) #f)])
-  (define visited (and (or cache-all? return-all?) (make-hash)))
+  (define lang (reduction-relation-lang reductions))
+  (define binding-table (compiled-lang-binding-table lang))
+  (define (term-equal? x y) (α-equal? binding-table match-pattern x y))
+  (define visited (and (or cache-all? return-all?) (make-α-hash binding-table match-pattern)))
   (let/ec return
-    (define answers (if return-all? #f (make-hash)))
+    (define answers (if return-all? #f (make-α-hash binding-table match-pattern)))
     (define cycle? #f)
     (define cutoff? #f)
     (let loop ([term start]
@@ -2570,12 +2575,12 @@
                ;; in commit
                ;;    152084d5ce6ef49df3ec25c18e40069950146041
                ;; suggest that a hash works better than a trie.
-               [path (make-immutable-hash '())]
+               [path (make-immutable-α-hash binding-table match-pattern)]
                [more-steps steps])
       (if (and goal? (goal? term))
           (return (search-success))
           (cond
-            [(hash-ref path term #f)
+            [(dict-ref path term #f)
              (set! cycle? #t)]
             [else
              (visit term)
@@ -2583,26 +2588,26 @@
                [(stop-when term)
                 (unless goal?
                   (when answers
-                    (hash-set! answers term #t)))]
+                    (dict-set! answers term #t)))]
                [else
                 (define nexts (apply-reduction-relation reductions term))
                 (cond
                   [(null? nexts) 
                    (unless goal?
                      (when answers
-                       (hash-set! answers term #t)))]
+                       (dict-set! answers term #t)))]
                   [else (if (zero? more-steps)
                             (set! cutoff? #t)
-                            (for ([next (in-list (remove-duplicates nexts))])
+                            (for ([next (in-list (remove-duplicates nexts term-equal?))])
                               (when (or (not visited)
-                                        (not (hash-ref visited next #f)))
-                                (when visited (hash-set! visited next #t))
+                                        (not (dict-ref visited next #f)))
+                                (when visited (dict-set! visited next #t))
                                 (loop next 
-                                      (hash-set path term #t) 
+                                      (dict-set path term #t)
                                       (sub1 more-steps)))))])])])))
     (if goal?
         (search-failure cutoff?)
-        (values (sort (hash-map (or answers visited) (λ (x y) x))
+        (values (sort (dict-map (or answers visited) (λ (x y) x))
                       string<?
                       #:key (λ (x) (format "~s" x)))
                 cycle?))))
