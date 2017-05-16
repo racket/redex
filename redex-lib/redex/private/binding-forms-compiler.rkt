@@ -45,7 +45,10 @@
       (raise-syntax-error (syntax-e form-name)
                           "#:refers-to must appear nested inside a binding-form"
                           (car (syntax-e binding-forms-stx)))]
-     [anything (raise-syntax-error (syntax-e form-name) "expected a parenthesized binding form." #`anything)]))
+     [(x . y)
+      (raise-syntax-error (syntax-e form-name) "expected a parenthesized binding form" #`x)]
+     [anything
+      (raise-syntax-error (syntax-e form-name) "expected a parenthesized binding form" #`anything)]))
 
 
 
