@@ -730,6 +730,33 @@
 
   (test (judgment-holds (J (1) any) any) (list 1)))
 
+(let ()
+  (define-language L
+    (x ::= variable-not-otherwise-mentioned)
+    (e ::= x (λ (x) e))
+    #:binding-forms
+    (λ (x) e #:refers-to x))
+
+  (define-judgment-form L
+    #:mode (equal1 I I)
+    #:contract (equal1 e e)
+
+    [(where (e e) (e_1 e_2))
+     -----------------
+     (equal1 e_1 e_2)])
+
+  (define-judgment-form L
+    #:mode (equal2 I I)
+    #:contract (equal2 e e)
+
+    [(where e e_1)
+     (where e e_2)
+     -----------------
+     (equal2 e_1 e_2)])
+
+  (test (judgment-holds (equal1 (λ (x1) x1) (λ (x2) x2))) #t)
+  (test (judgment-holds (equal2 (λ (x1) x1) (λ (x2) x2))) #t))
+
 (parameterize ([current-namespace (make-base-namespace)])
   (eval '(require errortrace))
   (eval '(require redex/reduction-semantics))
