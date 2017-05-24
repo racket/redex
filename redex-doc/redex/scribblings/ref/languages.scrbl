@@ -25,9 +25,12 @@
                                  (non-terminal-name @#,ttpattern ...+)
                                  ((non-terminal-name ...+) @#,ttpattern ...+)]
                [maybe-binding-spec (code:line)
-                                   (code:line #:binding-forms binding-declaration ...)]
-	       [binding-declaration binding-pattern
-	                            (code:line binding-pattern #:exports beta)]
+                                   (code:line #:binding-forms binding-pattern ...)]
+               [binding-pattern
+                pattern
+                (code:line binding-pattern #:exports beta)
+                (code:line binding-pattern #:refers-to beta)
+                (code:line binding-pattern #:...bind (id id beta))]
 	       [beta nothing
 	             symbol
 		     (shadow beta-seqence ...)]
@@ -76,7 +79,11 @@ binding forms makes safely manipulating terms containing binding simpler and eas
 need to write operations that (explicitly) respect the binding structure of the language.
 
 When @racket[maybe-binding-spec] is provided, it declares binding specifications
-for certain forms in the language. The language, @racket[_lc-lang], above does not
+for certain forms in the language. The @racket[binding-pattern] specification is an
+extension of Redex's @|pattern| language, allowing the keywords @racket[#:refers-to],
+@racket[#:exports], and @racket[#:...binds] to appear nested inside a binding pattern.
+
+The language, @racket[_lc-lang], above does not
 declare any binding specifications, despite the clear intention of @racket[λ] as
 a binding form. To understand the consequences of not specifying any binding forms, consider
 the behavior of substitution on terms of @racket[_lc-lang].
@@ -362,12 +369,12 @@ which then is exported by the entire sequence.
                               (+ x y z))
                             x
                             1)
-                #:lang λL.4)
+                #:lang lc-bind+let*)
           (term (substitute (let* ([x y] [y x])
                               (+ x y z))
                             y
                             2)
-                #:lang λL.4)]
+                #:lang lc-bind+let*)]
 }
 
 @defidform[::=]{
