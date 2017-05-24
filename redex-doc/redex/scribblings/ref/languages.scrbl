@@ -11,6 +11,7 @@
                               vc-append hbl-append vl-append)
                      redex))
 @(define redex-eval (make-base-eval '(require redex/reduction-semantics)))
+@(define (mini-heading . whatever) (apply section whatever))
 
 @title{Languages}
 
@@ -62,6 +63,8 @@ grammar of the λ-calculus:
 Non-terminals used in @racket[define-language] are not bound in
 @pattech[side-condition] patterns and duplicates are not constrained
 to be the same unless they have underscores in them.
+
+@mini-heading{Binding Forms}
 
 Typical languages provide a mechanism for the programmer to introduce new names
 and give them meaning. The language forms used for this (such as Racket's @racket[let]
@@ -128,6 +131,8 @@ in their names.
 The @racket[#:refers-to] declaration says that, in a @racket[λ] term, the @racket[e] subterm has the name from
 the @racket[x] subterm in scope.
 
+@mini-heading{Multiple Variables in a Single Scope}
+
 To generalize to the version of @racket[λ] in @racket[_lc-lang], we need to cope with multiple
 variables at once. And in order to do that, we must handle the situation where some of the
 names are the same. Redex's binding support offers only one option for this, namely taking
@@ -166,7 +171,8 @@ The intuition behind the name of the @racket[shadow] form can be seen in the fol
 Because the @racket[_lc-bind+let]  language does not require that all binders in its @racket[let] form
 be distinct from one another, the @tech{binding forms} specification must declare what happens when there is a conflict.
 The @racket[shadow] form specifies that duplicate binders will be shadowed by earlier binders in its list of
-arguments.
+arguments. (Of course, if we were interested in modelling Racket's @racket[let] form, we'd
+want that term to be malformed syntax.)
 
 It is possible to have multiple uses of @racket[#:refers-to] in a single binding specification. For example,
 consider a language with a @racket[letrec] form.
@@ -201,6 +207,8 @@ refer to the bound variables @racket[(shadow x ...)].
     (λ (x) 5))
    #:lang lc-bind+letrec)]
 
+@mini-heading{Ellipses in Binding Forms}
+
 Some care must be taken when writing binding specifications that match patterns with ellipses.
 If a pattern symbol is matched underneath ellipses, it may only be mentioned under the same number of ellipses.
 Consider, for example, a language with Racket's @racket[let-values] binding form.
@@ -223,6 +231,9 @@ In the binding specification for the @racket[let-values] form, the bound variabl
 occurs only under a single ellipsis, thus when it is mentioned in a @racket[#:refers-to] clause it
 is restricted to be mentioned only underneath a single ellipsis. Therefore the body of the @racket[let-values]
 form must refer to @racket[(shadow (shadow x ...) ...)] rather than @racket[(shadow x ... ...)].
+
+@mini-heading{Compound Forms with Binders}
+
 
 So far, the nonterminals mentioned in @racket[#:refers-to] have always represented
 individual atoms. If a non-atom is mentioned, and it does not have a binding specification,
@@ -261,6 +272,102 @@ shows this behavior.
 The use of the @racket[#:exports] clause in the binding specification for @racket[_lc-bind+patterns]
 allows the use of nested binding patterns seen in the example. More precisely, each @racket[p] may itself
 be a pattern that mentions any number of bound variables.
+
+@mini-heading{Binding Repetitions}
+
+ In some situations, the @racket[#:exports] and
+ @racket[#:refers-to] keywords are not sufficiently
+ expressive to be able to describe the binding structure of
+ different parts of a repeated sequence relate to each other.
+ For example, consider the @racket[let*] form. Its shape is
+ the same as @racket[let], namely
+ @racket[(let* ([x e] ...) e)], but the binding structure is
+ different.
+
+ In a @racket[let*] form, each variable is accessible to
+ each of the @racket[e]s that follow it, with all of the
+ variables available in the body (the final @racket[e]). With
+ @racket[#:exports], we can build an expression form that has
+ a structure like that, but we must write syntax that nests
+ differently than @racket[let*].
+
+@examples[#:label #f #:eval redex-eval #:no-result
+          (define-language lc-bind+awkward-let*
+            (e ::= (let*-awk c e) natural x (+ e ...))
+            (x ::= variable-not-otherwise-mentioned)
+            (c ::= (clause x e c) ())
+            #:binding-forms
+            (let*-awk c e #:refers-to c)
+            (clause x e c #:refers-to x) #:exports (shadow x c))]
+
+The @racket[let*-awk] form binds like Racket's @racket[let*], with
+each clause's variable being active for the subsequent ones, but
+the syntax is different with extra nesting inside the clauses:
+
+@examples[#:label #f #:eval redex-eval
+          (term (substitute (let*-awk (clause x y (clause y x ()))
+                                      (+ x y z))
+                            x
+                            1)
+                #:lang lc-bind+awkward-let*)
+          (term (substitute (let*-awk (clause x y (clause y x ()))
+                                      (+ x y z))
+                            y
+                            2)
+                #:lang lc-bind+awkward-let*)]
+
+ In order to get the same syntax as Racket's @racket[let*],
+ we need to use the @racket[#:...bind] binding pattern
+ annotation. A @racket[#:...bind] can appear wherever a
+ @racket[_...] might appear, and it has the same function,
+ namely indicating a repetition of the preceding pattern. In
+ addition, however it comes with three extra pieces that
+ follow the @racket[#:...bind] form that describe how the
+ binding structure inside the repetition is handled. The
+ first part is a name that can be used by a
+ @racket[#:refers-to] outside of the repetition to indicate
+ all of the exported variables of the sequence. The middle
+ piece indicates the variables from a specific repetition of
+ the ellipsis are exported to all subsequent repetitions of
+ the ellipsis. The last piece is a @racket[beta] that moves
+ backwards through the sequence, indicating what is exported
+ from the last repetition of the sequence to the one before,
+ from the one before to the one before that, and then finally
+ from the first one to the export of the entire sequence (as
+ named by the identifier in the first position).
+
+ So, in this example, we use @racket[#:...bind] to express the
+ scope of @racket[let*].
+
+@examples[#:label #f #:eval redex-eval #:no-result
+          (define-language lc-bind+let*
+            (e ::= (let* ([x e] ...) e) natural x (+ e ...))
+            (x ::= variable-not-otherwise-mentioned)
+            #:binding-forms
+            (let* ([x e] #:...bind (clauses x (shadow clauses x)))
+              e_body #:refers-to clauses))]
+
+It says that the name of the exported variables from the entire sequence
+is @racket[clauses], which means that all of the variable exported
+from the sequence in the second position of the @racket[let*] bind
+variables in the body (thanks to the last @racket[#:refers-to] in the
+example). The @racket[x] in the second position following the @racket[#:...bind]
+says that @racket[x] is in scope for each of the subsequent @racket[[x e]] elements of
+the sequence. The final @racket[(shadow clauses x)] says that the variables
+in a subsequent @racket[clauses] are exported by the current one, as well as @racket[x],
+which then is exported by the entire sequence.
+
+@examples[#:label #f #:eval redex-eval
+          (term (substitute (let* ([x y] [y x])
+                              (+ x y z))
+                            x
+                            1)
+                #:lang λL.4)
+          (term (substitute (let* ([x y] [y x])
+                              (+ x y z))
+                            y
+                            2)
+                #:lang λL.4)]
 }
 
 @defidform[::=]{
