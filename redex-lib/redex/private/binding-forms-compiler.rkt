@@ -241,7 +241,7 @@
                       #`(#,@pat #,pat-sub #,@(if dotdotdoting #`((... ...)) #`())))))
 
             (define (bind-must-be-followed-by)
-              (rse "#...bind must be followed by `(id tail-imports-beta tail-exports-beta)`"))
+              (rse "#...bind must be followed by `(id beta beta)`"))
 
             (syntax-case #'rest (...) ;; is it followed by a postfix/infix operator?
               [(#:refers-to imports-beta (... ...) . rest-of-body)

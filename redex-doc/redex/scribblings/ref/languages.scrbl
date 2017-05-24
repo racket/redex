@@ -30,7 +30,7 @@
                 #,pattern
                 (code:line binding-pattern #:exports beta)
                 (code:line binding-pattern #:refers-to beta)
-                (code:line binding-pattern #:...bind (id tail-imports-beta tail-exports-beta))]
+                (code:line binding-pattern #:...bind (id beta beta))]
 	       [beta nothing
 	             symbol
 		     (shadow beta-seqence ...)]
@@ -81,7 +81,7 @@ need to write operations that (explicitly) respect the binding structure of the 
 When @racket[maybe-binding-spec] is provided, it declares binding specifications
 for certain forms in the language. The @racket[binding-pattern] specification is an
 extension of Redex's @|pattern| language, allowing the keywords @racket[#:refers-to],
-@racket[#:exports], and @racket[#:...binds] to appear nested inside a binding pattern.
+@racket[#:exports], and @racket[#:...bind]s to appear nested inside a binding pattern.
 
 The language, @racket[_lc-lang], above does not
 declare any binding specifications, despite the clear intention of @racket[λ] as
