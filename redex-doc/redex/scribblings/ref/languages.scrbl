@@ -30,7 +30,7 @@
                 #,pattern
                 (code:line binding-pattern #:exports beta)
                 (code:line binding-pattern #:refers-to beta)
-                (code:line binding-pattern #:...bind (id beta beta))]
+                (code:line binding-pattern #:...bind (id tail-imports-beta tail-exports-beta))]
 	       [beta nothing
 	             symbol
 		     (shadow beta-seqence ...)]

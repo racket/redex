@@ -240,6 +240,8 @@
                         ,(maybe-ddd (maybe-import bspec-sub imports-beta) dotdotdoting))
                       #`(#,@pat #,pat-sub #,@(if dotdotdoting #`((... ...)) #`())))))
 
+            (define (bind-must-be-followed-by)
+              (rse "#...bind must be followed by `(id tail-imports-beta tail-exports-beta)`"))
 
             (syntax-case #'rest (...) ;; is it followed by a postfix/infix operator?
               [(#:refers-to imports-beta (... ...) . rest-of-body)
@@ -247,15 +249,15 @@
               [(#:refers-to imports-beta #:...bind (name tail-imports tail-exports) . rest-of-body)
                (process-under #'rest-of-body #'imports-beta #'(name tail-imports tail-exports))]
               [(#:refers-to imports-beta #:...bind . anything-else)
-               (rse "#...bind must be followed by `(name tail-imports tail-exports)`")]
+               (bind-must-be-followed-by)]
               [(#:refers-to imports-beta . rest-of-body)
                (process-under #'rest-of-body #'imports-beta #f)]
               [((... ...) . rest-of-body)
                (process-under #'rest-of-body #f #'(nothing nothing))]
               [(#:...bind (name tail-imports tail-exports) . rest-of-body)
                (process-under #'rest-of-body #f #'(name tail-imports tail-exports))]
-              [(#:...bind . anything-else)
-               (rse "#...bind must be followed by `(name tail-imports tail-exports)`")]
+              [(#:...bind . anythinge-else)
+               (bind-must-be-followed-by)]
               [rest-of-body ;; no imports or ...s
                (process-under #'rest-of-body #f #f)]))]
 
