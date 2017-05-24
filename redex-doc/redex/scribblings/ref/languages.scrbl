@@ -27,7 +27,7 @@
                [maybe-binding-spec (code:line)
                                    (code:line #:binding-forms binding-pattern ...)]
                [binding-pattern
-                pattern
+                #,pattern
                 (code:line binding-pattern #:exports beta)
                 (code:line binding-pattern #:refers-to beta)
                 (code:line binding-pattern #:...bind (id id beta))]
