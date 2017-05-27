@@ -410,12 +410,12 @@
                           (car pair-of-boxed-caches)
                           (cdr pair-of-boxed-caches)))
   (when (caching-enabled?)
-    (when (>= (hash-count (unbox boxed-cache)) cache-size)
-      (set-box! boxed-cache (make-hash))))
+    (when (>= (dict-count (unbox boxed-cache)) cache-size)
+      (set-box! boxed-cache (make-α-hash (compiled-lang-binding-table ct-lang) match-pattern))))
   (define traced (current-traced-metafunctions))
   (define cache (unbox boxed-cache))
   (define in-cache? (and (caching-enabled?)
-                         (let ([cache-value (hash-ref cache input not-in-cache)])
+                         (let ([cache-value (dict-ref cache input not-in-cache)])
                            (not (eq? cache-value not-in-cache)))))
   (define p-a-e (print-as-expression))
   (define (form-proc/cache recur input derivation-init pair-of-boxed-caches)
@@ -424,12 +424,12 @@
                    [binding-forms-opened? (if (caching-enabled?) (box #f) #f)])
       (cond
         [(caching-enabled?)
-         (define candidate (hash-ref cache input not-in-cache))
+         (define candidate (dict-ref cache input not-in-cache))
          (cond
            [(equal? candidate not-in-cache)
             (define computed-ans (form-proc recur input derivation-init pair-of-boxed-caches))
             (unless (unbox (binding-forms-opened?))
-              (hash-set! cache input computed-ans))
+              (dict-set! cache input computed-ans))
             computed-ans]
            [else
             candidate])]
