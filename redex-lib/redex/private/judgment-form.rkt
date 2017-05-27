@@ -12,6 +12,7 @@
          racket/list
          racket/stxparam
          racket/dict
+         racket/function
          (only-in "pat-unify.rkt"
                   unsupported-pat-err-name
                   unsupported-pat-err)
@@ -426,7 +427,7 @@
         [(caching-enabled?)
          (define candidate (dict-ref cache input not-in-cache))
          (cond
-           [(equal? candidate not-in-cache)
+           [(eq? candidate not-in-cache)
             (define computed-ans (form-proc recur input derivation-init pair-of-boxed-caches))
             (unless (unbox (binding-forms-opened?))
               (dict-set! cache input computed-ans))
@@ -467,8 +468,10 @@
           outputs)
         (form-proc/cache form-proc/cache input derivation-init pair-of-boxed-caches)))
   
-  (define without-exact-duplicates-vec (apply vector (remove-duplicates dwoos)))
-  (define ht (make-α-hash (compiled-lang-binding-table ct-lang) match-pattern))
+  (define btable (compiled-lang-binding-table ct-lang))
+  (define without-exact-duplicates-vec
+    (apply vector (remove-duplicates dwoos (curry α-equal? btable match-pattern))))
+  (define ht (make-α-hash btable match-pattern))
   (for ([d (in-vector without-exact-duplicates-vec)]
         [i (in-naturals)])
     (define t (derivation-with-output-only-output d))
@@ -783,7 +786,8 @@
           (define jf-lws (compiled-judgment-form-lws #,clauses #,judgment-form-name #,stx))
           (define judgment-runtime-gen-clauses (mk-judgment-gen-clauses #,lang (λ () (judgment-runtime-gen-clauses))))
           (define jf-term-proc (make-jf-term-proc #,judgment-form-name #,syn-err-name #,lang #,nts #,mode-stx))
-          (define jf-cache (cons (box (make-hash)) (box (make-hash))))
+          (define jf-cache (cons (box (make-α-hash (compiled-lang-binding-table #,lang) match-pattern))
+                                 (box (make-α-hash (compiled-lang-binding-table #,lang) match-pattern))))
           (define the-runtime-judgment-form
             (runtime-judgment-form '#,judgment-form-name
                                    judgment-form-runtime-proc
