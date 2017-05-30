@@ -437,7 +437,7 @@ replacing @bold{«filename.rkt»} with one of the names listed above.
                  (judgment-form-id pat/term ...)
                  (relation-id pat/term ...)])]{
 In its first form, checks whether @racket[judgment-or-relation] holds for any assignment of
-the pattern variables in @racket[judgment-for-id]'s output positions (or just that it holds
+the pattern variables in @racket[judgment-form-id]'s output positions (or just that it holds
  in the case that a relation from @racket[define-relation] is used). In its second
 form, produces a list of terms by instantiating the supplied term template with
 each satisfying assignment of pattern variables. In the second case, if a relation
