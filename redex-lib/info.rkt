@@ -20,4 +20,4 @@
 
 (define pkg-authors '(robby bfetscher))
 
-(define version "1.11")
+(define version "1.12")
