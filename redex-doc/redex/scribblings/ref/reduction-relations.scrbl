@@ -16,7 +16,7 @@
 
 @declare-exporting[redex/reduction-semantics redex]
 
-@defform/subs[#:literals (--> fresh side-condition side-condition/hidden
+@defform/subs[#:literals (--> fresh side-condition side-condition/hidden computed-name
                           where where/hidden where/error bind bind/hidden judgment-holds with)
               (reduction-relation language domain base-arrow
                                   reduction-case ...
