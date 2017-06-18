@@ -87,6 +87,7 @@
          metafunction-up/down-indent
          metafunction-cases
          judgment-form-cases
+         judgment-form-show-rule-names
          compact-vertical-min-width
          extend-language-show-union
          extend-language-show-extended-order
@@ -1508,6 +1509,7 @@
      (parameterize ([dc-for-text-size (make-object bitmap-dc% (make-object bitmap% 1 1))])
        (make-pict))]))
 
+(define judgment-form-show-rule-names (make-parameter #t))
 (define (inference-rules-pict name all-eqns eqn-names lang judgment-form?)
   (define all-nts (language-nts lang))
   (define (wrapper->pict lw) (lw->pict all-nts lw))
@@ -1576,7 +1578,7 @@
         top
         line
         conclusion))
-     (if name
+     (if (and name (judgment-form-show-rule-names))
          (let ([label (string->bracketed-label name)])
            (let-values ([(x y) (rc-find w/out-label line)])
              (hb-append w/out-label 

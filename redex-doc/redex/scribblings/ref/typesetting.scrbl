@@ -673,6 +673,13 @@ case, only the numbers are used).
    in a judgment form).
 }
 
+@defparam[judgment-form-show-rule-names show-rule-names? boolean?]{
+  Determines if the names of the cases are shown beside the
+ rules in a rendered judgment form. Defaults to @racket[#t].
+
+ @history[#:added "1.13"]
+}
+
 @deftogether[[
 @defparam[label-style style text-style/c]{}
 @defparam[grammar-style style text-style/c]{}
