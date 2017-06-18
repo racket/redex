@@ -677,7 +677,7 @@ case, only the numbers are used).
   Determines if the names of the cases are shown beside the
  rules in a rendered judgment form. Defaults to @racket[#t].
 
- @history[#:added "1.13"]
+ @history[#:added "1.5"]
 }
 
 @deftogether[[
