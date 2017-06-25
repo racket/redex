@@ -1392,8 +1392,14 @@
    [else (error 'render-metafunction "internal error: more than one contract")]))
 
 (define (render-metafunction-contract lang name doms rngs separators)
+  (define name-rewritten (apply-atomic-rewrite name))
+  (define name-pict
+    (cond
+      [(or (symbol? name-rewritten) (string? name-rewritten))
+       ((current-text) (format "~a" name) (metafunction-style) (metafunction-font-size))]
+      [else name-rewritten]))
   ((adjust 'metafunction-contract)
-   (hbl-append ((current-text) (format "~a" name) (metafunction-style) (metafunction-font-size))
+   (hbl-append name-pict
                (basic-text " : " (default-style))
                (apply hbl-append (add-between (map (λ (x) (lw->pict lang x)) doms) 
                                               (basic-text " " (default-style))))

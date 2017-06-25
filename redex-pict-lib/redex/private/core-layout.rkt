@@ -15,7 +15,8 @@
          racket/contract 
          
          (for-syntax racket/base
-                     syntax/parse))
+                     syntax/parse
+                     syntax/contract))
 
 (define pink-code-font 'modern)
 
@@ -60,6 +61,8 @@
          left-curly-bracket-middle-piece
          left-curly-bracket-lower-hook
          curly-bracket-extension
+         (contract-out
+          [apply-atomic-rewrite (-> symbol? (or/c string? pict? symbol?))])
 
          current-render-pict-adjust
          adjust
@@ -75,7 +78,7 @@
   
   (define STIX? #f)
   
-  ;; atomic-rewrite-table : (parameter (listof (list symbol (union string pict))))
+  ;; atomic-rewrite-table : (parameter (listof (list symbol (or/c string (-> pict)))))
   (define atomic-rewrite-table 
     (make-parameter 
      `((... ,(λ ()
@@ -93,8 +96,9 @@
        #:declare transformer
        (expr/c #'(or/c (-> pict?) string?)
                #:name "atomic-rewriter rewrite")
-       #'(parameterize ([atomic-rewrite-table
-                         (cons (list name.c transformer.c)
+       #`(parameterize ([atomic-rewrite-table
+                         (cons (list name.c #,(wrap-expr/c #'(or/c string? (-> pict?))
+                                                           #'transformer.c))
                                (atomic-rewrite-table))])
            e)]))
   
@@ -774,17 +778,24 @@
       [else (error 'atom->tokens "unk ~s" atom)]))
 
   (define (rewrite-atomic col span e get-style)
+    (define str/pict/sym (apply-atomic-rewrite e))
     (cond
-     [(assoc e (atomic-rewrite-table))
-      =>
-      (λ (m)
-         (when (eq? (cadr m) e)
-           (error 'apply-rewrites "rewritten version of ~s is still ~s" e e))
-         (let ([p (cadr m)])
-           (if (procedure? p)
-               (make-pict-token col span (p))
-               (make-string-token col span p (get-style)))))]
-     [else #f]))
+     [(string? str/pict/sym) (make-string-token col span str/pict/sym (get-style))]
+     [(pict? str/pict/sym) (make-pict-token col span str/pict/sym)]
+     [(symbol? str/pict/sym) #f]))
+
+(define (apply-atomic-rewrite e)
+  (cond
+    [(assoc e (atomic-rewrite-table))
+     =>
+     (λ (m)
+       (when (eq? (cadr m) e)
+         (error 'apply-rewrites "rewritten version of ~s is still ~s" e e))
+       (let ([p (cadr m)])
+         (if (procedure? p)
+             (p)
+             p)))]
+    [else e]))
 
   (define (non-terminal->token col span str)
     (let ([e (string->symbol str)])
