@@ -241,16 +241,19 @@ form must refer to @racket[(shadow (shadow x ...) ...)] rather than @racket[(sha
 
 @mini-heading{Compound Forms with Binders}
 
+ So far, the nonterminals mentioned in @racket[#:refers-to]
+ have always stood directly for variables that appear in the
+ terms. But sometimes the variables are down inside some
+ piece of the term, or only some of the variables are
+ relevant. The @racket[#:exports] clause can be used to
+ handle such situations.
 
-So far, the nonterminals mentioned in @racket[#:refers-to] have always represented
-individual atoms. If a non-atom is mentioned, and it does not have a binding specification,
-or that specification lacks an @racket[#:exports] clause, no names are brought into scope.
-
-The @racket[#:exports] clause can be used to create more complex binding structures. When a
-binding form with such a clause is mentioned, the names brought into scope
-are determined by recursively examining everything mentioned by that @racket[#:exports] clause.
-Consider the following version of the @racket[_lc-bind] language with lists that allows for pattern matching
-in binding positions.
+ When a binding form with an @racket[#:exports] clause is
+ mentioned, the names brought into scope are determined by
+ recursively examining everything mentioned by that
+ @racket[#:exports] clause. Consider the following version of
+ the @racket[_lc-bind] language with lists that allows for
+ pattern matching in binding positions.
 
 @examples[#:label #f #:eval redex-eval #:no-result
 (define-language lc-bind+patterns
