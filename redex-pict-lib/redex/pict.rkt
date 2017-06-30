@@ -91,7 +91,8 @@
  [non-terminal-style (parameter/c text-style/c)]
  [non-terminal-subscript-style (parameter/c text-style/c)]
  [non-terminal-superscript-style (parameter/c text-style/c)]
- [linebreaks (parameter/c (or/c false/c (listof boolean?)))]
+ [linebreaks (parameter/c (or/c #f (listof boolean?)))]
+ [sc-linebreaks (parameter/c (or/c #f (listof boolean?)))]
  [curly-quotes-for-strings (parameter/c boolean?)]
  [white-bracket-sizing (parameter/c
                         (-> string? number? (values number? number? number? number?)))]

@@ -244,6 +244,10 @@
         (clip
          (parameterize ([metafunction-pict-style 'left-right/beside-side-conditions]
                         [linebreaks '(#t #f)])
+           (render-metafunction Name)))
+        (clip
+         (parameterize ([metafunction-pict-style 'left-right/beside-side-conditions]
+                        [sc-linebreaks '(#t #f)])
            (render-metafunction Name))))
        "metafunction-Name-horizontal.png")
 
