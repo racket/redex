@@ -158,13 +158,21 @@
       [w/ellipses names/ellipses])
      (hash-set extended (syntax-e name) w/ellipses))))
 
-(define (alpha-equivalent? lang lhs rhs)
-  (unless (compiled-lang? lang)
-    (raise-argument-error 'alpha-equivalent?
-                          "compiled-lang?"
-                          0
-                          lang lhs rhs))
-  (α-equal? (compiled-lang-binding-table lang) match-pattern lhs rhs))
+(define alpha-equivalent?
+  (case-lambda
+    [(lang lhs rhs)
+     (unless (compiled-lang? lang)
+       (raise-argument-error 'alpha-equivalent?
+                             "compiled-lang?"
+                             0
+                             lang lhs rhs))
+     (α-equal? (compiled-lang-binding-table lang) match-pattern lhs rhs)]
+    [(lhs rhs)
+     (define l (default-language))
+     (unless l
+       (error 'alpha-equivalent?
+              "contract violation\n  expected default-language to be  a language\n  got: #f"))
+     (alpha-equivalent? l lhs rhs)]))
 
 ;; the withs, freshs, and side-conditions come in backwards order
 ;; rt-lang is an identifier that will be bound to a (runtime) language,
