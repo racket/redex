@@ -207,7 +207,10 @@ Here are two more metafunctions that use patterns in interesting ways:
    (where #false (in x (x_1 ...)))]
   [(subtract1 (x ...) x_1) (x ...)])
 
-
+(define-metafunction Lambda
+  in : x (x ...) -> boolean
+  [(in x (x_1 ... x x_2 ...)) #true]
+  [(in x (x_1 ...)) #false])
 
 ))
 @;%
