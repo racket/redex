@@ -198,7 +198,11 @@
               ('a 'b 'x 'y xx aa))
 
   (define-syntax-rule (aeq lhs rhs)
-    (alpha-equivalent? big-language (term lhs) (term rhs)))
+    (alpha-equivalent? (term lhs) (term rhs)))
+
+  (check-true (alpha-equivalent? big-language
+                                 (term (lambda (xxxxx) xxxxx))
+                                 (term (lambda (y) y))))
 
   ;; alpha-equivalence tests
 
@@ -206,7 +210,7 @@
    [(default-language big-language)]
 
    (check-equal? (aeq (lambda (x) x) (lambda (x) x)) #t)
-
+    
    (check-equal? (aeq (lambda (xxxxx) xxxxx) (lambda (y) y)) #t)
 
    (check-equal? (aeq (lambda (x) x) (lambda (x) y)) #f)

@@ -511,12 +511,16 @@ The @racket[default-language] parameter is set to the appropriate language insid
 metafunctions, and by @racket[apply-reduction-relation].
 }
 
-@defproc[(alpha-equivalent? [lang compiled-lang?] [lhs any/c] [rhs any/c]) boolean?]{
+@defproc*[([(alpha-equivalent? [lang compiled-lang?] [lhs any/c] [rhs any/c]) boolean?]
+           [(alpha-equivalent? [lhs any/c] [rhs any/c]) boolean?])]{
 Returns @racket[#t] if (according to the binding specification in @racket[lang])
 the bound names in @racket[lhs] and @racket[rhs] have the same structure and,
 in everything but bound names, they are @racket[equal?]. If @racket[lang]
 has no @tech{binding forms}, terms have no bound names and therefore
 @racket[alpha-equivalent?] is the same as @racket[equal?].
+
+If the @racket[lang] argument is not supplied, it
+defaults to the value of @racket[(default-language)], which must not @racket[#f].
 }
 
 @defform[#:kind "metafunction"
