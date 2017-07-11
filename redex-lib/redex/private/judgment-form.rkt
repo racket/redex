@@ -1478,22 +1478,6 @@
             (with-syntax ([(syncheck ctc-pat (names ...) (names/ellipses ...))
                            (rewrite-side-conditions/check-errs #'lang syn-err-name #f ctc-stx)])
               (values #'syncheck #'ctc-pat))]))
-       (define-values (syncheck-exprs contracts)
-         (syntax-case #'ctcs ()
-           [#f (values '() #f)]
-           [(p ...)
-            (let loop ([pats (syntax->list #'(p ...))]
-                       [ctcs '()]
-                       [syncheck-exps '()])
-              (cond
-                [(null? pats) (values syncheck-exps (reverse ctcs))]
-                [else
-                 (define pat (car pats))
-                 (with-syntax ([(syncheck-exp pat (names ...) (names/ellipses ...)) 
-                                (rewrite-side-conditions/check-errs #'lang syn-err-name #f pat)])
-                   (loop (cdr pats)
-                         (cons #'pat ctcs)
-                         (cons #'syncheck-exp syncheck-exps)))]))]))
        (define proc-stx (do-compile-judgment-form-proc #'judgment-form-name
                                                        #'mode-arg
                                                        clauses
