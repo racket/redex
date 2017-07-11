@@ -106,7 +106,7 @@ metafunctions. Roughly, a metafunction is a function on the terms of a
 specific language. 
 
 We don't want parameter sequences with repeated variables. Can we say this
-with a metafunction.
+with a metafunction?
 @;%
 @(begin
 #reader scribble/comment-reader
@@ -119,7 +119,7 @@ with a metafunction.
  @racket[unique-vars] consumes a sequence of @racket[x]s and produces a
  @racket[boolean]. 
 
-How do we way we don't want repeated variables? With patterns. 
+How do we say we don't want repeated variables? With patterns. 
 @;%
 @(begin
 #reader scribble/comment-reader
@@ -160,8 +160,8 @@ they are about, work through examples, write down the latter as tests,
 Submodules delegate the tests to where they belong and they allow us to
   document functions by example. 
 
-Sadly, @racket[unique-vars] doesn't work for our language
-definition. They create circular definitions. 
+Sadly, our language definition cannot use the @racket[unique-vars] metafunction.
+(In order to define the metafunction, we first need to define the language.)
 
 Fortunately, language definitions can employ more than Kleene patterns: 
 @;%
