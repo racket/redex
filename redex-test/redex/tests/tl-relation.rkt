@@ -259,4 +259,12 @@
   (test (term (≈ (1) (1))) #t)
   (test (term (≈ (1 2) (1))) #f))
 
+(let ()
+  (define-relation empty-language
+    unique ⊆ any × ...
+    [(unique any_!_1 ...)])
+
+  (test (judgment-holds (unique 0 1 2 3 4 5 6 7 8 9 10)) #t)
+  (test (judgment-holds (unique 0 1 2 3 4 5 5 7 8 9 10)) #f))
+
 (print-tests-passed 'tl-relation.rkt)
