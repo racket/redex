@@ -80,8 +80,8 @@ need to write operations that (explicitly) respect the binding structure of the 
 
 When @racket[maybe-binding-spec] is provided, it declares binding specifications
 for certain forms in the language. The @racket[binding-pattern] specification is an
-extension of Redex's @|pattern| language, allowing the keywords @racket[#:refers-to],
-@racket[#:exports], and @racket[#:...bind]s to appear nested inside a binding pattern.
+extension of Redex's @|pattern| language, allowing the keywords @indexed-racket[#:refers-to],
+@indexed-racket[#:exports], and @indexed-racket[#:...bind]s to appear nested inside a binding pattern.
 
 The language, @racket[_lc-lang], above does not
 declare any binding specifications, despite the clear intention of @racket[λ] as

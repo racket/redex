@@ -16,7 +16,7 @@
  ;; syntax<(listof (list pattern bspec))>
  (define (compile-binding-forms binding-forms-stx all-nts form-name aliases nt-identifiers)
    (syntax-case binding-forms-stx ()
-     [((bf-name . bf-body) . rest-plus-exports)
+     [(bf-name+bf-body . rest-plus-exports)
       (begin
         ;; pull the #:exports off (it can only occur at the end of a binding form
         ;; declaration), along with all subsequent binding forms
@@ -30,15 +30,18 @@
              (values #'(rest-of-bfs ...) #'nothing)]
             [_ (raise-syntax-error (syntax-e form-name) "internal error")]))
 
-        (define-values (pat bspec)
-          (surface-bspec->pat&bspec #`((bf-name . bf-body) #:exports #,exports) form-name))
-
-        (with-syntax ([(syncheck-expr rewritten-pat _ _)
-                       (rewrite-side-conditions/check-errs all-nts (syntax-e form-name) #t pat
+        (define-values (pat bspec betas+ellipses)
+          (surface-bspec->pat&bspec #`(bf-name+bf-body #:exports #,exports) form-name))
+        
+        (with-syntax ([(syncheck-expr rewritten-pat-with-betas _ _)
+                       (rewrite-side-conditions/check-errs all-nts (syntax-e form-name) #t
+                                                           `(,pat ,betas+ellipses)
                                                            #:aliases aliases
                                                            #:nt-identifiers nt-identifiers)])
-          #`(cons (begin syncheck-expr `(rewritten-pat , `#,bspec))
-                  #,(compile-binding-forms rest-of-bfs all-nts form-name aliases nt-identifiers)))
+          (syntax-case #'rewritten-pat-with-betas (list)
+            [(list rewritten-pat rewritten-betas)
+             #`(cons (begin syncheck-expr `(rewritten-pat , `#,bspec))
+                     #,(compile-binding-forms rest-of-bfs all-nts form-name aliases nt-identifiers))]))
         )]
      [() #`'()]
      [(#:refers-to . rest)
@@ -98,7 +101,7 @@
              #t
              (raise-syntax-error
               (syntax-e form-name)
-              (format "Same name used at two different ... depths: ~s (depth ~s) vs. ~s (depth ~s)"
+              (format "same name used at two different ... depths: ~s (depth ~s) vs. ~s (depth ~s)"
                       id-a depth-a id-b depth-b)
               stx-for-error))
          #f)])))
@@ -180,7 +183,11 @@
 
 
 
- ;; surface-bspec->pat&bspec : syntax syntax<ident> -> syntax<Redex pattern> bspec
+ ;; surface-bspec->pat&bspec : syntax syntax<ident> ->
+ ;;     syntax<Redex pattern> bspec syntax<redex pattern>
+ ;; the third result is a redex pattern synthesized out of the `beta`s
+ ;; that appear in the input; it is intended to be used only for
+ ;; checking that the syntax is well-formed
  (define (surface-bspec->pat&bspec surface-bspec form-name)
    (define-values (s-body export-beta)
      (syntax-case surface-bspec ()
@@ -188,8 +195,18 @@
        [_ (raise-syntax-error (syntax-e form-name) "expected `(body #:exports beta)`"
                               surface-bspec)]))
 
+   ;; : (listof syntax)
+   ;; these are all of the betas, in redex pattern form for error checking
+   (define betas+ellipses '())
+   (define (save-a-beta beta ellipsis-depth)
+     (set! betas+ellipses
+           (cons (for/fold ([beta beta])
+                           ([i (in-range ellipsis-depth)])
+                   `(,beta ...))
+                 betas+ellipses)))
+   
    (define-values (bspec-body pat-body)
-     (let loop [(s-body s-body) (bspec '()) (pat #'())]
+     (let loop ([s-body s-body] [bspec '()] [pat #'()] [ellipsis-depth 0])
        (define (rse str)
          (raise-syntax-error (syntax-e form-name) str s-body))
 
@@ -215,11 +232,14 @@
                       [(export-name imports exports)
                        ;; make a spec for separate binding object that `...bind` creates
                        (let-values
-                           ([(_ sub-bspec)
+                           ([(_ sub-bspec betas+ellipses)
                              (surface-bspec->pat&bspec
                               #`((#,sub export-name #:refers-to imports) #:exports exports)
                               form-name)])
-
+                         (for ([beta+ellipsis (in-list betas+ellipses)])
+                           ;; add `ellipsis-depth` ellipses around the ones that
+                           ;; we got from the previous call
+                           (save-a-beta beta+ellipsis (+ ellipsis-depth 1)))
                          (...bind/internal (syntax-e #'export-name)
                                            (map first (names-transcribed-in-body
                                                        sub form-name #'sbspec-sub))
@@ -234,24 +254,38 @@
                     sub))
 
               (begin
-                (define-values (bspec-sub pat-sub) (loop #'sbspec-sub '() #'()))
+                (define-values (bspec-sub pat-sub) (loop #'sbspec-sub '() #'()
+                                                         (if dotdotdoting
+                                                             (+ ellipsis-depth 1)
+                                                             ellipsis-depth)))
                 (loop rest-of-body
                       `(,@bspec
                         ,(maybe-ddd (maybe-import bspec-sub imports-beta) dotdotdoting))
-                      #`(#,@pat #,pat-sub #,@(if dotdotdoting #`((... ...)) #`())))))
+                      #`(#,@pat #,pat-sub #,@(if dotdotdoting #`((... ...)) #`()))
+                      ellipsis-depth)))
 
             (define (bind-must-be-followed-by)
               (rse "#...bind must be followed by `(id beta beta)`"))
 
+            ;; save only the betas that appear in a #:refers-to;
+            ;; the ones in #:...bind will show up in those positions, thanks
+            ;; to the recursive call to surface-bspec->pat&bspec above.
+            ;; (and the ones in #:export appear to be checked more carefully elsewhere?)
             (syntax-case #'rest (...) ;; is it followed by a postfix/infix operator?
               [(#:refers-to imports-beta (... ...) . rest-of-body)
-               (process-under #'rest-of-body #'imports-beta #'(nothing nothing))]
+               (begin
+                 (save-a-beta #'imports-beta ellipsis-depth)
+                 (process-under #'rest-of-body #'imports-beta #'(nothing nothing)))]
               [(#:refers-to imports-beta #:...bind (name tail-imports tail-exports) . rest-of-body)
-               (process-under #'rest-of-body #'imports-beta #'(name tail-imports tail-exports))]
+               (begin
+                 (save-a-beta #'imports-beta ellipsis-depth)
+                 (process-under #'rest-of-body #'imports-beta #'(name tail-imports tail-exports)))]
               [(#:refers-to imports-beta #:...bind . anything-else)
                (bind-must-be-followed-by)]
               [(#:refers-to imports-beta . rest-of-body)
-               (process-under #'rest-of-body #'imports-beta #f)]
+               (begin
+                 (save-a-beta #'imports-beta ellipsis-depth)
+                 (process-under #'rest-of-body #'imports-beta #f))]
               [((... ...) . rest-of-body)
                (process-under #'rest-of-body #f #'(nothing nothing))]
               [(#:...bind (name tail-imports tail-exports) . rest-of-body)
@@ -275,26 +309,15 @@
                                        (lambda (lhs rhs) (equal? (first lhs) (first rhs))))))
 
    (define (check-referrents names-and-depths)
-     (unless (empty? names-and-depths)
-       (match (assoc (first (car names-and-depths)) pattern-names)
-         [#f (raise-syntax-error 
-              (syntax-e form-name)
-              (format "undefined name imported or exported: ~a" (first (car names-and-depths)))
-              surface-bspec)]
-         [`(,_ ,pattern-depth)
-          (if (> pattern-depth (second (car names-and-depths)))
-              (raise-syntax-error 
-               (syntax-e form-name)
-               (format "name ~a occurs at ellipsis depth ~a, but is referred to at ellipsis depth ~a"
-                       (first (car names-and-depths))
-                       pattern-depth
-                       (second (car names-and-depths)))
-               surface-bspec)
-              (check-referrents (cdr names-and-depths)))])))
+     (for/list ([name-and-depth (in-list names-and-depths)])
+       (unless (assoc (first name-and-depth) pattern-names) 
+         (raise-syntax-error 
+          (syntax-e form-name)
+          (format "unknown name imported or exported: ~a" (first name-and-depth))
+          surface-bspec))))
    
    (check-referrents import-names)
    (check-referrents export-names)
-   
 
    (values
     pat-body
@@ -302,13 +325,14 @@
            (remove-duplicates (map first import-names))
            (remove-duplicates (map first export-names))
            (remove-duplicates (map first (append import-names export-names)))
-           pattern-names)))
+           pattern-names)
+    betas+ellipses))
 
 
  (module+ test
    (define-syntax-rule (surface-bspec->bspec sb)
      (let ()
-       (define-values (p b) (surface-bspec->pat&bspec sb #'irrelevant))
+       (define-values (p b _) (surface-bspec->pat&bspec sb #'irrelevant))
        b))
 
    (define lambda-bspec

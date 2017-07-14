@@ -727,6 +727,28 @@
   (parameterize ([default-language kw-lang])
     (check-not-exn (λ () (term (substitute (Λ (x_1 #:kw x_2) 0) x_1 1)))))
 
+(check-equal?
+ (with-handlers ([exn:fail:syntax?
+                  (λ (x)
+                    (regexp-match? #rx"unknown name imported or exported"
+                                   (exn-message x)))])
+   (expand #'(define-language L
+               (x ::= variable)
+               (e ::= (e e) (lambda (x) e) x)
+               #:binding-forms
+               (lambda (x) e #:refers-to q))))
+ #t)
+
+(check-regexp-match
+ #rx"found the same binder, var, at different depths"
+ (with-handlers ([exn:fail:syntax? exn-message])
+   (expand (quote-syntax
+            (define-language L
+              (var ::= variable)
+              (e ::= (e e) (lambda (var) e) var)
+              #:binding-forms
+              (lambda (var) e #:refers-to (shadow var ...)))))))
+
   (let ()
     (define-language L
       (e ::= (e e) (λ (x) e) x)
