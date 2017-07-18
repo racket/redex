@@ -1,5 +1,17 @@
 #lang racket/base
 
+#|
+
+Additional (backwards-incompatible) checks to
+consider adding when in some special mode:
+
+  - ellipses that have a name => should not be literals; instead syntax errors
+
+see also rewrite-side-conditions.rkt for some restrictions/changes there
+
+
+|#
+
 (require (for-syntax racket/base 
                      "term-fn.rkt"
                      syntax/boundmap

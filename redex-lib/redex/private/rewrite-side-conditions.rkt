@@ -1,5 +1,18 @@
 #lang racket/base
 
+#|
+
+Additional (backwards-incompatible) checks to
+consider adding when in some special mode:
+
+  - metafunction names should be syntax errors (not literals)
+
+  - keywords should be syntax errors
+
+see also term.rkt for some restrictions/changes there
+
+|#
+
   (require "underscore-allowed.rkt"
            "term-fn.rkt"
            "keyword-macros.rkt"
