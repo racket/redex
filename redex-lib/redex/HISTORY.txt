@@ -1,3 +1,18 @@
+v6.10
+
+  * added a two argument version of `alpha-equivalent?`
+
+  * added `sc-linebreaks`
+
+  * use the atomic rewriters when rendering a 
+    metafunction's name in its type signature
+
+  * added judgment-form-show-rule-names
+
+  * improved the binding-forms documentation
+
+  * misc bug fixes
+
 v6.9
 
   * add mf-apply
