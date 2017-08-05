@@ -98,8 +98,10 @@
                         (-> string? number? (values number? number? number? number?)))]
  [horizontal-bar-spacing (parameter/c exact-nonnegative-integer?)]
  [relation-clauses-combine (parameter/c (-> (listof pict?) pict?))]
+ [metafunction-arrow-pict (parameter/c (-> pict?))]
  [where-make-prefix-pict (parameter/c (-> pict?))]
  [where-combine (parameter/c (-> pict? pict? pict?))])
+
 
 (provide/contract
  [rule-pict-style 

@@ -70,6 +70,7 @@
 
          where-make-prefix-pict
          where-combine
+         metafunction-arrow-pict
          
          just-before
          just-after         
@@ -432,6 +433,8 @@
 (define where-make-prefix-pict
   (make-parameter (lambda ()
                     (basic-text " where " (default-style)))))
+(define metafunction-arrow-pict
+  (make-parameter (λ () (basic-text " → " (default-style)))))
 (define otherwise-make-pict
   (make-parameter (lambda ()
                     (basic-text " otherwise" (default-style)))))
@@ -1415,7 +1418,7 @@
                (basic-text " : " (default-style))
                (apply hbl-append (add-between (map (λ (x) (lw->pict lang x)) doms) 
                                               (basic-text " " (default-style))))
-               (basic-text " → " (default-style))
+               ((metafunction-arrow-pict))
                (apply hbl-append 
                       (add-between (interleave-ctc-separators
                                     (map (λ (x) (lw->pict lang x)) rngs)

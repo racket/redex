@@ -944,6 +944,11 @@ single reduction relation.
   @racket[(λ (l) (apply vc-append 20 l))]
 }
 
+@defparam[metafunction-arrow-pict make-arrow (parameter/c (-> pict?))]{
+  Specifies the pict to use for the arrow when typesetting
+  a metafunction contract.
+}
+
 @defparam[where-make-prefix-pict make-prefix (parameter/c (-> pict?))]{
   The @racket[make-prefix] function is called with no arguments to generate a pict
   that prefixes @tech{@racket[where] clauses}. It defaults to a function that
