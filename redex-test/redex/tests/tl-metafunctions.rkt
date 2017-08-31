@@ -685,7 +685,7 @@
   (test (with-handlers ([exn:fail:redex? exn-message])
           (term (f (s (s z))))
           "")
-        #rx"returned different results"))
+        #rx"returned 2 different results"))
 
 (let ()
   (define-metafunction empty-language
