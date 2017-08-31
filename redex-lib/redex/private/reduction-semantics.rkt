@@ -1777,11 +1777,12 @@
                                                       mtchs))))
                                 (define ht (make-hash))
                                 (for-each (λ (ans) (hash-set! ht ans #t)) anss)
+                                (define num-results (hash-count ht))
                                 (cond
                                   [(null? anss)
                                    (continue)]
-                                  [(not (= 1 (hash-count ht)))
-                                   (redex-error name "~a matched ~s ~a returned different results" 
+                                  [(not (= 1 num-results))
+                                   (redex-error name "~a matched ~s ~a returned ~a different results"
                                                 (if (< num 0)
                                                     "a clause from an extended metafunction"
                                                     (format "clause #~a (counting from 0)" num))
@@ -1789,7 +1790,8 @@
                                                 (if (= 1 (length mtchs))
                                                     "but"
                                                     (format "~a different ways and"
-                                                            (length mtchs))))]
+                                                            (length mtchs)))
+                                                num-results)]
                                   [else
                                    (define ans (car anss))
                                    (unless (for/or ([codom-compiled-pattern 
