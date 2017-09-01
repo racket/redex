@@ -123,7 +123,7 @@ process that @tech{binding forms} use.
   error elsewhere.  }
 
 @defidform[in-hole]{ Recognized specially within
-  @racket[reduction-relation]. An @racket[in-hole] form is an
+  @racket[term]. An @racket[in-hole] form is an
   error elsewhere.  }
 
 @defidform[mf-apply]{ Recognized specially within
