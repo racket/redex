@@ -119,15 +119,15 @@ process that @tech{binding forms} use.
 }
 
 @defidform[hole]{ Recognized specially within
-  @racket[term]. A @racket[hole] form is an
+  @tech{terms}. A @racket[hole] form is an
   error elsewhere.  }
 
 @defidform[in-hole]{ Recognized specially within
-  @racket[reduction-relation]. An @racket[in-hole] form is an
+  @tech{terms}. An @racket[in-hole] form is an
   error elsewhere.  }
 
 @defidform[mf-apply]{ Recognized specially within
-  @racket[term]. A @racket[mf-apply] form is an
+  @tech{terms}. A @racket[mf-apply] form is an
   error elsewhere.  }
 
 @defform/subs[(term-let ([tl-pat expr] ...) body)
