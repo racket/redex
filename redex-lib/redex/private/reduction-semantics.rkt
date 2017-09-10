@@ -2477,7 +2477,7 @@
                 (make-language-id
                  (λ (stx)
                    (syntax-case stx (set!)
-                     [(set! x e) (raise-syntax-error 'define-extended-language "cannot set! identifier" stx #'e)]
+                     [(set! x e) (raise-syntax-error 'define-union-language "cannot set! identifier" stx #'e)]
                      [(x e (... ...)) #'(define-language-name e (... ...))]
                      [x 
                       (identifier? #'x)
