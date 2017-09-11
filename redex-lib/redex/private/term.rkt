@@ -249,12 +249,10 @@ see also rewrite-side-conditions.rkt for some restrictions/changes there
                                 (string->symbol (list-ref m 1))
                                 raw-sym))
          (check-id (syntax->datum (term-id-id id)) stx ellipsis-allowed? #t)
-         
-         (define new-id
-           (build-disappeared-use (current-id-stx-table) 
+         (record-disappeared-uses
+          (build-disappeared-uses (current-id-stx-table)
                                   prefix-sym
                                   (syntax-local-introduce #'x)))
-         (when new-id (record-disappeared-uses (list new-id)))
          (values stx-result
                  (term-id-depth id)
                  #t))]

@@ -33,11 +33,11 @@
         (syntax-column stx)))
 
 (define (expected-arrows bindings)
-  (for/fold ([arrs (set)]) ([binding bindings])
-            (for/fold ([arrs arrs]) ([bound (cdr binding)])
-                      (set-add arrs
-                               (list (source (car binding))
-                                     (source bound))))))
+  (for/fold ([arrs (set)]) ([binding (in-list bindings)])
+    (for/fold ([arrs arrs]) ([bound (in-list (cdr binding))])
+      (set-add arrs
+               (list (source (car binding))
+                     (source bound))))))
 
 (define (expected-rename-class binding)
   (apply set (map source binding)))
@@ -224,7 +224,7 @@
   (define extended-lang-bindings
     (list extended-lang-def extended-lang-use))
   (define base-nt-bindings
-    (list base-nt-name extended-nt-name base-nt-use))
+    (list base-nt-name base-nt-use extended-nt-use))
   (define extended-nt-bindings
     (list extended-nt-name extended-nt-use))
   (define alias-bindings
@@ -272,7 +272,45 @@
     (test (send annotations collected-arrows)
           (expected-arrows
            (list (list base-lang-def base-lang-use1)
-                 (list extended-nt-name extended-nt-name2))))))
+                 (list extended-nt-name extended-nt-name2)))))
+
+  (let ([annotations (new collector%)])
+    (define-values (add-syntax done)
+      (make-traversal module-namespace #f))
+
+    (define L1-def (identifier L1))
+    (define L1-ref (identifier L1))
+    (define L2-def (identifier L2))
+    (define L2-ref (identifier L2))
+    
+    (define nt1-def1 (identifier e))
+    (define nt1-def2 (identifier e))
+    (define nt1-ref  (identifier e))
+    (define nt2-def1 (identifier f))
+    (define nt2-def2 (identifier f))
+    (define nt2-ref  (identifier f))
+    
+    (parameterize ([current-annotations annotations]
+                   [current-namespace module-namespace])
+      (add-syntax
+       (expand #`(let ()
+                   (define-language #,L1-def
+                     (#,nt1-def1 ::= 0)
+                     (#,nt2-def1 ::= 0))
+                   (define-extended-language #,L2-def #,L1-ref
+                     (#,nt1-def2 ::= 1)
+                     (#,nt2-def2 ::= .... 1))
+                   (define-metafunction #,L2-ref
+                     [(g #,nt1-ref #,nt2-ref) 1])
+                   (void))))
+      (done))
+    
+    (test (send annotations collected-arrows)
+          (set (list (source L1-def) (source L1-ref))
+               (list (source L2-def) (source L2-ref))
+               (list (source nt1-def2) (source nt1-ref))
+               (list (source nt2-def1) (source nt2-ref))
+               (list (source nt2-def2) (source nt2-ref))))))
   
     
 

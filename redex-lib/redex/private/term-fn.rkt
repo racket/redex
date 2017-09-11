@@ -20,7 +20,7 @@
          language-id-nt-hole-map
          pattern-symbols
          
-         build-disappeared-use
+         build-disappeared-uses
 
          from-smiley-number
          to-smiley-number
@@ -77,28 +77,25 @@
 (define pattern-symbols '(any number natural integer real string boolean variable
                               variable-not-otherwise-mentioned hole symbol))
 
-(define (build-disappeared-use id-stx-table nt id-stx)
+(define (build-disappeared-uses nt-identifiers nt id-stx)
   (cond
-    [id-stx-table
-     (define table-entry (hash-ref id-stx-table nt #f))
-     (cond
-       [table-entry
-        (define the-srcloc (vector
-                            (syntax-source id-stx)
-                            (syntax-line id-stx)
-                            (syntax-column id-stx)
-                            (syntax-position id-stx)
-                            ;; shorten the span so it covers only up to the underscore
-                            (string-length (symbol->string nt))))
-        (define the-id (datum->syntax table-entry
-                                      (syntax-e table-entry)
-                                      the-srcloc id-stx))
-        (syntax-property the-id 'original-for-check-syntax #t)]
-       [else
-        #f])]
-    [else
-     #f]))
-
+    [nt-identifiers
+     (define table-entries (hash-ref nt-identifiers nt '()))
+     (for/list ([table-entry (in-list (if (syntax? table-entries)
+                                          (syntax->list table-entries)
+                                          table-entries))])
+       (define the-srcloc (vector
+                           (syntax-source id-stx)
+                           (syntax-line id-stx)
+                           (syntax-column id-stx)
+                           (syntax-position id-stx)
+                           ;; shorten the span so it covers only up to the underscore
+                           (string-length (symbol->string nt))))
+       (define the-id (datum->syntax table-entry
+                                     (syntax-e table-entry)
+                                     the-srcloc id-stx))
+       (syntax-property the-id 'original-for-check-syntax #t))]
+    [else '()]))
 
 (define (to-smiley-number n)
   (define candidate

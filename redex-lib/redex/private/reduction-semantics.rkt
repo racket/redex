@@ -2089,7 +2089,7 @@
                   ([prod (in-list prods)]
                    [orig-prod (in-list orig-prods)])
           (cond
-            [(equal? (syntax-e prod) '....) nt-hole-count]
+            [(member (syntax-e prod) extend-nt-ellipses) nt-hole-count]
             [else
              (nt-hole-lub (check-hole-sanity 'define-language prod nt->hole orig-prod)
                           nt-hole-count)])))
@@ -2119,9 +2119,19 @@
              #:source nt-stx
              #:props nt-stx))
              
-(define-for-syntax (build-nt-identifiers-table lang x)
-  (for/hash ([id (in-list (if (syntax? x) (syntax->list x) x))])
-    (values (syntax-e id) (lang-nt-id lang id))))
+(define-for-syntax (build-nt-identifiers-table lang x
+                                               #:previous-table [previous-table #f])
+  (define new (if previous-table
+                  (hash-copy previous-table)
+                  (make-hash)))
+  (for ([id (in-list (if (syntax? x) (syntax->list x) x))])
+    (define k (syntax-e id))
+    (define ov (hash-ref new k '()))
+    (hash-set! new k (cons (lang-nt-id lang id)
+                           (if (syntax? ov)
+                               (syntax->list ov)
+                               ov))))
+  new)
 
 (define-struct binds (source binds))
 
@@ -2194,35 +2204,40 @@
            (hash-ref aliases name name)))
 
        (define unaliased-all-names (remove-duplicates (append old-names unaliased-new-names)))
-       
+       (define names-with-extend-nt-ellipses (make-hash))
        (for ([rhss (in-list rhsss)]
              [the-name (in-list unaliased-new-names)]
              #:when #t
              [rhs (in-list rhss)])
-         (when (equal? (syntax-e rhs) '....)
+         (when (member (syntax-e rhs) extend-nt-ellipses)
            (unless (member the-name old-names)
              (raise-syntax-error
               #f
               (format "cannot extend the `~a' non-terminal because `~s' does not define it"
                       the-name
                       (syntax->datum #'orig-lang))
-              stx rhs))))
+              stx rhs))
+           (hash-set! names-with-extend-nt-ellipses the-name #t)))
 
        (define all-nts-from-input (apply append namess))
-
-       (define nt-identifiers (build-nt-identifiers-table #'name all-nts-from-input))
+       (define nt-identifiers
+         (build-nt-identifiers-table
+          #'name all-nts-from-input
+          #:previous-table
+          (for/hash ([(k v) (in-hash (language-id-nt-identifiers #'orig-lang
+                                                                 'define-extended-language))]
+                     #:when (hash-ref names-with-extend-nt-ellipses k #f))
+            (values k v))))
 
        (with-syntax* ([((names rhs ...) ...) non-terms]
                       [new-bindings-table
                        (compile-binding-forms bf-defs unaliased-all-names
                                               #'form-name aliases nt-identifiers)]
                       [(define-language-name) (generate-temporaries #'(name))]
-                      [uses
-                       (record-nts-disappeared-bindings #'orig-lang
-                                                        all-nts-from-input
-                                                        'disappeared-use)]
                       [bindings
-                       (record-nts-disappeared-bindings #'name all-nts-from-input)])
+                       (record-nts-disappeared-bindings
+                        #'name
+                        all-nts-from-input)])
 
          (define nt->hole
            (hash-copy
@@ -2268,7 +2283,6 @@
           stx
           (quasisyntax/loc stx
             (begin
-              uses
               bindings
               (define define-language-name #,extended-language-stx)
               (define-syntax name
@@ -2292,6 +2306,8 @@
                                              (list #''k #'#'v)))))
                   '#,nt->hole))))))))]))
 
+(begin-for-syntax
+  (define extend-nt-ellipses '(....)))
 (define extend-nt-ellipses '(....))
 
 ;; do-extend-language : compiled-lang (listof (listof nt)) (listof (list compiled-pattern bspec)) ?

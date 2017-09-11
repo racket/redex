@@ -138,13 +138,12 @@ see also term.rkt for some restrictions/changes there
                      assignments])))))
     
     (define (record-syncheck-use stx nt)
-      (define the-use (build-disappeared-use nt-identifiers nt stx))
-      (when the-use
-        (define old (syntax-property void-stx 'disappeared-use))
-        (set! void-stx
-              (syntax-property void-stx
-                               'disappeared-use
-                               (if old (cons the-use old) the-use)))))
+      (define the-uses (build-disappeared-uses nt-identifiers nt stx))
+      (define old (syntax-property void-stx 'disappeared-use))
+      (set! void-stx
+            (syntax-property void-stx
+                             'disappeared-use
+                             (if old (cons old the-uses) the-uses))))
 
     (define ellipsis-number 0)
     
