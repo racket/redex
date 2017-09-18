@@ -45,7 +45,7 @@ up into separate sections, alternating between problems and sample solutions.
 @table-of-contents[]
 
 @; -----------------------------------------------------------------------------
-@section{Objects: Problem}
+@section{Problem: Objects}
 Design a small model of untyped objects: a language,
 scoping, an adapted substitution function, and a (standard or regular)
 reduction system. 
@@ -74,7 +74,7 @@ Start with the simplification of objects as multi-entry functions:
  treatment, the grammar includes the syntactic category of @racket[_y],
  which consists of the set @racket[_x] of variables and @racket[this]. 
 
-@section{Objects: Solution}
+@section{Solution: Objects}
 
 This solution shows how numbers are interpreted as objects and messages to
 these numbers might include symbols such as @racket[+]. Consider extending
