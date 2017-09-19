@@ -12,6 +12,7 @@
          racket/list
          racket/stxparam
          racket/dict
+         racket/function
          (only-in "pat-unify.rkt"
                   unsupported-pat-err-name
                   unsupported-pat-err)
@@ -418,12 +419,12 @@
                           (car pair-of-boxed-caches)
                           (cdr pair-of-boxed-caches)))
   (when (caching-enabled?)
-    (when (>= (hash-count (unbox boxed-cache)) cache-size)
-      (set-box! boxed-cache (make-hash))))
+    (when (>= (dict-count (unbox boxed-cache)) cache-size)
+      (set-box! boxed-cache (make-α-hash (compiled-lang-binding-table ct-lang) match-pattern))))
   (define traced (current-traced-metafunctions))
   (define cache (unbox boxed-cache))
   (define in-cache? (and (caching-enabled?)
-                         (let ([cache-value (hash-ref cache input not-in-cache)])
+                         (let ([cache-value (dict-ref cache input not-in-cache)])
                            (not (eq? cache-value not-in-cache)))))
   (define p-a-e (print-as-expression))
   (define (form-proc/cache recur input derivation-init pair-of-boxed-caches)
@@ -432,12 +433,12 @@
                    [binding-forms-opened? (if (caching-enabled?) (box #f) #f)])
       (cond
         [(caching-enabled?)
-         (define candidate (hash-ref cache input not-in-cache))
+         (define candidate (dict-ref cache input not-in-cache))
          (cond
-           [(equal? candidate not-in-cache)
+           [(eq? candidate not-in-cache)
             (define computed-ans (form-proc recur input derivation-init pair-of-boxed-caches))
             (unless (unbox (binding-forms-opened?))
-              (hash-set! cache input computed-ans))
+              (dict-set! cache input computed-ans))
             computed-ans]
            [else
             candidate])]
@@ -475,8 +476,10 @@
           outputs)
         (form-proc/cache form-proc/cache input derivation-init pair-of-boxed-caches)))
   
-  (define without-exact-duplicates-vec (apply vector (remove-duplicates dwoos)))
-  (define ht (make-α-hash (compiled-lang-binding-table ct-lang) match-pattern))
+  (define btable (compiled-lang-binding-table ct-lang))
+  (define without-exact-duplicates-vec
+    (apply vector (remove-duplicates dwoos (curry α-equal? btable match-pattern))))
+  (define ht (make-α-hash btable match-pattern))
   (for ([d (in-vector without-exact-duplicates-vec)]
         [i (in-naturals)])
     (define t (derivation-with-output-only-output d))
@@ -791,7 +794,8 @@
           (define jf-lws (compiled-judgment-form-lws #,clauses #,judgment-form-name #,stx))
           (define judgment-runtime-gen-clauses (mk-judgment-gen-clauses #,lang (λ () (judgment-runtime-gen-clauses))))
           (define jf-term-proc (make-jf-term-proc #,judgment-form-name #,syn-err-name #,lang #,nts #,mode-stx))
-          (define jf-cache (cons (box (make-hash)) (box (make-hash))))
+          (define jf-cache (cons (box (make-α-hash (compiled-lang-binding-table #,lang) match-pattern))
+                                 (box (make-α-hash (compiled-lang-binding-table #,lang) match-pattern))))
           (define the-runtime-judgment-form
             (runtime-judgment-form '#,judgment-form-name
                                    judgment-form-runtime-proc

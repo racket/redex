@@ -353,9 +353,7 @@
       [(IO-judgment-form? reductions) (runtime-judgment-form-lang reductions)]))
 
   (define snip-cache
-    (let* ([term-equal? (lambda (x y) (α-equal? (compiled-lang-binding-table reductions-lang) match-pattern x y))]
-           [term-hash (lambda (x) (α-equal-hash-code (compiled-lang-binding-table reductions-lang) match-pattern x))])
-      (make-custom-hash term-equal? term-hash)))
+    (make-α-hash (compiled-lang-binding-table reductions-lang) match-pattern))
 
   ;; call-on-eventspace-main-thread : (-> any) -> any
   ;; =reduction thread=
