@@ -12,7 +12,7 @@
          "lang-struct.rkt"
          "enum.rkt"
          (only-in "binding-forms.rkt"
-                  α-equal? safe-subst binding-forms-opened?)
+                  α-equal? safe-subst binding-forms-opened? make-immutable-α-hash)
          (only-in "binding-forms-definitions.rkt"
                   shadow nothing bf-table-entry-pat bf-table-entry-bspec)
          racket/trace
@@ -20,6 +20,7 @@
          racket/list
          racket/set
          racket/pretty
+         racket/dict
          rackunit/log
          (rename-in racket/match (match match:)))
 
@@ -2588,12 +2589,14 @@
                ;; in commit
                ;;    152084d5ce6ef49df3ec25c18e40069950146041
                ;; suggest that a hash works better than a trie.
-               [path (make-immutable-hash '())]
+               [path (make-immutable-α-hash (compiled-lang-binding-table
+                                             (reduction-relation-lang reductions))
+                                            match-pattern)]
                [more-steps steps])
       (if (and goal? (goal? term))
           (return (search-success))
           (cond
-            [(hash-ref path term #f)
+            [(dict-ref path term #f)
              (set! cycle? #t)]
             [else
              (visit term)
@@ -2616,7 +2619,7 @@
                                         (not (hash-ref visited next #f)))
                                 (when visited (hash-set! visited next #t))
                                 (loop next 
-                                      (hash-set path term #t) 
+                                      (dict-set path term #t) 
                                       (sub1 more-steps)))))])])])))
     (if goal?
         (search-failure cutoff?)

@@ -298,4 +298,24 @@
    #:blaming "tl-test"
    #:message "steps expression"))
 
+(let ()
+  (define-language L
+    (e ::= (e e) (λ (x) e) x (fix e))
+    (x ::= variable-not-otherwise-mentioned)
+    #:binding-forms
+    (λ (x) e #:refers-to x))
+
+  (define red
+    (reduction-relation
+     L
+     (--> (fix (λ (x) e))
+          (mf-apply substitute e x (fix (λ (x) e)))
+          "fix")))
+
+  (test-->> red
+            #:cycles-ok
+            (term (fix (λ (x) x))))
+  (test (capture-output (test-results))
+        "One test passed.\n"))
+
 (print-tests-passed 'tl-test.rkt)
