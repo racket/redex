@@ -156,7 +156,6 @@
   (with-syntax* ([(syncheck-exp pattern (names ...) (names/ellipses ...))
                   (rewrite-side-conditions/check-errs lang 'redex-check #t args-stx)]
                  [show (show-message orig-stx)]
-                 [res-term-stx #`(#,jf-id #,@args-stx)]
                  [property #`(bind-prop
                                (λ (bindings)
                                  #,(bind-pattern-names 'redex-check
@@ -165,7 +164,7 @@
                                                        property)))])
                 (quasisyntax/loc orig-stx
                   (let ([term-match (λ (generated)
-                                      (cond [(test-match #,lang res-term-stx generated) => values]
+                                      (cond [(test-match #,lang #,args-stx (cdr generated)) => values]
                                             [else (give-up-match-result)]))])
                     syncheck-exp
                     (let ([default-attempt-size (λ (s) (add1 (default-attempt-size s)))])
@@ -192,7 +191,6 @@
                   (rewrite-side-conditions/check-errs lang 'redex-check #t args-stx)]
                  [(rhs-syncheck-exp rhs-pat (rhs-names ...) (rhs-names/ellipses ...))
                   (rewrite-side-conditions/check-errs lang 'redex-check #t res-stx)]
-                 [res-term-stx #`((#,mf-id #,@args-stx) = #,res-stx)]
                  [mf-id (term-fn-get-id mf)]
                  [show (show-message orig-stx)]
                  [property #`(bind-prop
@@ -205,7 +203,10 @@
                                                        property)))])
                 (quasisyntax/loc orig-stx
                   (let ([term-match (λ (generated)
-                                      (cond [(test-match #,lang res-term-stx generated) => values]
+                                      (cond [(test-match #,lang (#,args-stx #,res-stx)
+                                                         (list (cdr (list-ref generated 0))
+                                                               (list-ref generated 2)))
+                                             => values]
                                             [else (give-up-match-result)]))])
                     lhs-syncheck-exp
                     rhs-syncheck-exp

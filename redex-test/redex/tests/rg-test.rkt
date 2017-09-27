@@ -1422,6 +1422,29 @@
            "no exn raised"))
         #t))
 
+(let ()
+  (define-language L)
+  (define-metafunction L
+    [(f_1 any) any])
+  (define ans #f)
+  (redex-check L
+               #:satisfying (f_1 0) = any_1
+               (set! ans (term any_1))
+               #:print? #f)
+  (test ans 0))
+
+(let ()
+  (define-language L)
+  (define-judgment-form L
+    #:mode (⊢_e I)
+
+    [-------
+     (⊢_e 0)])
+  (define ans #f)
+  (redex-check L
+               #:satisfying (⊢_e any_1) (set! ans (term any_1))
+               #:print? #f)
+  (test ans 0))
 
 ;; redex-test-seed
 (let ([seed 0])
