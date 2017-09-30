@@ -554,6 +554,29 @@
           "didn't raise an exception")
         #rx".*generate-term:.*repeat.*"))
 
+(let ()
+  (define-language linear-logic
+    (p ::=
+       (const x)
+       (lolli p p)
+       (tensor p p)
+       (with p p)
+       (xor p p))
+    (x ::= A B C D E))
+
+  (define-judgment-form linear-logic
+    #:mode (rule I I)
+    #:contract (rule (p ...) p)
+    [------------------------
+     (rule ((const x)) (const x))])
+
+  (test (with-handlers ([exn:fail? exn-message])
+          (generate-term linear-logic #:satisfying
+                         (rule (p_1 ...) p)
+                         5)
+          "didn't raise an exception")
+        #rx".*generate-term:.*repeat.*"))
+
 ;; errors for define-metafunction/extension with a syntax transformer
 ;;  (as opposed to a metafunction, a term-fn?)
 (let ()

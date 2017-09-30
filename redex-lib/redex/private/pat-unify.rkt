@@ -40,7 +40,8 @@
          make-uid
          p*e-eqs
          unsupported-pat-err-name
-         unsupported-pat-err)
+         unsupported-pat-err
+         validate-pat)
 
 
 ;;
@@ -868,59 +869,67 @@
                     (hash-set! memo (list nt clang npat) pat-ok?)
                     pat-ok?))))))
 
-(define (normalize-pat lang e pat)
+(define (validate-pat lang pat)
+  (normalize-pat lang
+                 'this-argument-is-ignored-when-just-validate-is-true
+                 pat
+                 #:just-validate? #t))
+
+(define (normalize-pat lang e pat #:just-validate? [just-validate? #f])
   (define err unsupported-pat-err)
   (let loop ([pat pat]
              [depth 5])
     (cond
       [(depth . <= . 0) 'any]
       [else
-       (match-a-pattern #:allow-else pat
-                        [`any pat]
-                        [`number pat]
-                        [`string pat]
-                        [`natural pat]
-                        [`integer pat]
-                        [`real pat]
-                        [`boolean pat]
-                        [`variable pat]
-                        [`(variable-except ,s ...) pat]
-                        [`(variable-prefix ,s) pat]
-                        [`variable-not-otherwise-mentioned pat]
-                        [`hole (err pat)]
-                        [`(nt ,id)
-                         (cond 
-                           [(and (normalizing-nt)
-                                 (eq? (normalizing-nt) id)) 'any]
-                           [(hash-has-key? (compiled-lang-collapsible-nts lang) id)
-                            (loop (hash-ref (compiled-lang-collapsible-nts lang) id) (sub1 depth))]
-                           [else pat])]
-                        [`(name ,name ,npat)
-                         (if (bound? npat)
-                             (match-let ([(p*e `(name ,n ,(bound)) e-new) (resolve pat e)])
-                               (loop (hash-ref (env-eqs e) (lvar n)) depth))
-                             `(name ,name ,(loop npat (sub1 depth))))]
-                        [`(mismatch-name ,name ,pat) (loop pat (sub1 depth))]
-                        [`(in-hole ,p1 ,p2) (err pat)]
-                        [`(hide-hole ,p) (loop p (sub1 depth))]
-                        [`(side-condition ,p ,g ,e)
-                         (err pat)]
-                        [`(cross ,s) (err pat)]
-                        [`(list ,sub-pats ...)
-                         `(list ,@(for/list ([sub-pat (in-list sub-pats)])
-                                    (match sub-pat
-                                      [`(repeat ,pat ,name ,mismatch)
-                                       (err sub-pat)]
-                                      [_
-                                       (loop sub-pat (sub1 depth))])))]
-                        [(? (compose not pair?)) 
-                         pat]
-                        [_
-                         (match pat
-                           [`(cstr ,cs ,p)
-                            (loop p (sub1 depth))]
-                           [`(variable-not-in ,p ,s)
-                            `variable])])])))
+       (match-a-pattern
+        #:allow-else pat
+        [`any pat]
+        [`number pat]
+        [`string pat]
+        [`natural pat]
+        [`integer pat]
+        [`real pat]
+        [`boolean pat]
+        [`variable pat]
+        [`(variable-except ,s ...) pat]
+        [`(variable-prefix ,s) pat]
+        [`variable-not-otherwise-mentioned pat]
+        [`hole (err pat)]
+        [`(nt ,id)
+         (cond
+           [just-validate? pat]
+           [(and (normalizing-nt)
+                 (eq? (normalizing-nt) id)) 'any]
+           [(hash-has-key? (compiled-lang-collapsible-nts lang) id)
+            (loop (hash-ref (compiled-lang-collapsible-nts lang) id) (sub1 depth))]
+           [else pat])]
+        [`(name ,name ,npat)
+         (if (and (not just-validate?) (bound? npat))
+             (match-let ([(p*e `(name ,n ,(bound)) e-new) (resolve pat e)])
+               (loop (hash-ref (env-eqs e) (lvar n)) depth))
+             `(name ,name ,(loop npat (sub1 depth))))]
+        [`(mismatch-name ,name ,pat) (loop pat (sub1 depth))]
+        [`(in-hole ,p1 ,p2) (err pat)]
+        [`(hide-hole ,p) (loop p (sub1 depth))]
+        [`(side-condition ,p ,g ,e)
+         (err pat)]
+        [`(cross ,s) (err pat)]
+        [`(list ,sub-pats ...)
+         `(list ,@(for/list ([sub-pat (in-list sub-pats)])
+                    (match sub-pat
+                      [`(repeat ,pat ,name ,mismatch)
+                       (err sub-pat)]
+                      [_
+                       (loop sub-pat (sub1 depth))])))]
+        [(? (compose not pair?))
+         pat]
+        [_
+         (match pat
+           [`(cstr ,cs ,p)
+            (loop p (sub1 depth))]
+           [`(variable-not-in ,p ,s)
+            `variable])])])))
 
 (define (nt-pats nt lang)
   (define this-rhs

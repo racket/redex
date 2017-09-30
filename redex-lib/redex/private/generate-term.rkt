@@ -907,6 +907,12 @@
                          #'not-lang-id)]))
 
 (define (make-jf-gen/proc jf-id mk-clauses lang pat size)
+
+  ;; this raises an error if there is an ellipsis, etc. in the pattern
+  ;; not sure why, but the result of this is not the right thing to pass
+  ;; to search/next
+  (validate-pat lang pat)
+  
   (define gen (search/next (mk-clauses) pat size lang))
   (define (termify search-res)
     (cond
