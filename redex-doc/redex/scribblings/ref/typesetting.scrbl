@@ -65,8 +65,8 @@ using with Slideshow (see the @racketmodname[pict]
 library).
 
 For producing papers with Scribble, just include the
-picts inline in the paper and pass the the @DFlag{dvipdf} 
-flag generate the @filepath{.pdf} file. For producing
+picts inline in the paper and pass the @DFlag{dvipdf} 
+flag to generate the @filepath{.pdf} file. For producing
 papers with LaTeX, create @filepath{.ps} files from Redex and use
 @tt{latex} and @tt{dvipdf} to create @filepath{.pdf} files
 (using @tt{pdflatex} with @filepath{.pdf} files will 
