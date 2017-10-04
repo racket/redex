@@ -477,7 +477,7 @@ variant, the side-conditions don't contribute to the width of the
 pict, but are just overlaid on the second line of each rule.  The
 @racket['horizontal-left-align] style is like the @racket['horizontal]
 style, but the left-hand sides of the rules are aligned on the left,
-instead of on the right. The @racket[''horizontal-side-conditions-same-line]
+instead of on the right. The @racket['horizontal-side-conditions-same-line]
 is like @racket['horizontal], except that side-conditions
 are on the same lines as the rule, instead of on their own line below.
 
