@@ -254,7 +254,8 @@
                         (pair? (cdr rewritten))
                         (eq? (cadr rewritten) 
                              (cadr e)))
-               (error 'apply-rewrites "rewritten version still has symbol of the same name as original: ~s" 
+               (error 'apply-rewrites
+                      "rewritten version still has symbol of the same name as original: ~s" 
                       (cadr rewritten)))
              (let ([adjusted 
                     (adjust-spacing rewritten 
@@ -378,12 +379,17 @@
         (cond
           [(= line next-lw-line)
            (when (next-lw-column . < . column)
-             (error 'adjust-spacing "for ~a; loc-wrapper takes up too many columns. Expected it to not pass ~a, but it went to ~a"
+             (error 'adjust-spacing
+                    (string-append "for ~a; loc-wrapper takes up too many columns."
+                                   " Expected it to not pass ~a, but it went to ~a")
                     who
                     next-lw-column
                     column))]
           [(next-lw-line . < . line)
-           (error 'adjust-spacing "for ~a; last loc-wrapper takes up too many lines. Expected it to not pass line ~a, but it went to ~a"
+           (error 'adjust-spacing
+                  (string-append
+                   "for ~a; last loc-wrapper takes up too many lines."
+                   " Expected it to not pass line ~a, but it went to ~a")
                   who
                   next-lw-line
                   line)])
@@ -495,8 +501,8 @@
            
            (cond [last-token-spring? 
                   ;; gobble up empty lines
-                  ;; we gobble up lines so that we continue on the line we were
-                  ;; on before (which is actually now split into two different elements of the line list)
+                  ;; we gobble up lines so that we continue on the previous line
+                  ;; (which is actually now split into two different elements of the line list)
                   (set! gobbled-lines (+ gobbled-lines lines-to-end))]
                  [else 
                   ;; insert a bunch of blank lines
@@ -535,7 +541,9 @@
           (make-pict-token col col-span (blank))
           (let ([str (apply string (build-list col-span (λ (x) #\space)))])
             (if unquoted?
-                (make-pict-token col col-span (pink-background ((current-text) str pink-code-font (default-font-size))))
+                (make-pict-token col col-span
+                                 (pink-background
+                                  ((current-text) str pink-code-font (default-font-size))))
                 (make-string-token col col-span str (default-style))))))
     
     (define (handle-loc-wrapped lw)
@@ -587,7 +595,8 @@
                          (let ([rst (split-out (token-span (car line-content))
                                                pict
                                                rst)])
-                           (cons (make-line line-num (cons (make-align-token pict) (cdr line-content)))
+                           (cons (make-line line-num
+                                            (cons (make-align-token pict) (cdr line-content)))
                                  (loop rst)))))
                    (cons line (loop (cdr lines))))))])))
 
@@ -607,7 +616,10 @@
                         (cond
                           [(not (spacer-token? spacer))
                            (cons (make-line (line-n line)
-                                            (insert-new-token col new-token (token-column spacer) tokens))
+                                            (insert-new-token col
+                                                              new-token
+                                                              (token-column spacer)
+                                                              tokens))
                                  (cdr lines))]
                           [(= (token-span spacer)
                               col)
@@ -618,7 +630,11 @@
                            (cons line (loop (cdr lines)))]
                           [(< (token-span spacer)
                               col)
-                           (cons (make-line (line-n line) (insert-new-token col new-token (token-column spacer) tokens))
+                           (cons (make-line (line-n line)
+                                            (insert-new-token col
+                                                              new-token
+                                                              (token-column spacer)
+                                                              tokens))
                                  (cdr lines))]))))]))))
                   
   ;; insert-new-token : number token number (listof token) -> (listof token)
