@@ -133,7 +133,16 @@
   S : x v e -> e
   [(S x v e) e])
 
-(btest (render-metafunction S)
+;; a metafunction that calls another where the argument
+;; isn't on the same line as the metafunction name
+(define-metafunction lang
+  S2 : x v e -> e
+  [(S2 x v e) (S
+               x
+               v
+               e)])
+
+(btest (vc-append 10 (render-metafunction S) (render-metafunction S2))
        "metafunction.png")
 
 (let ()

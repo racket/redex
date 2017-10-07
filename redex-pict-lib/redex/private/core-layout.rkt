@@ -287,31 +287,39 @@
                             (car l))]))]))
     
   (define (rewrite-metafunction-app lst line line-span col col-span something-or-other)
-    (list* (build-lw "" line 0 col 0)
-           'spring
-           (just-after (hbl-append 
-                        (metafunction-text (symbol->string (lw-e (cadr lst))))
-                        (open-white-square-bracket))
-                       (cadr lst))
-           'spring
-           (let loop ([lst (cddr lst)])
-             (cond
-               [(null? lst) null]
-               [(null? (cdr lst))
-                (let ([last (car lst)])
-                  (list (build-lw "" (lw-line last) 0 (lw-column last) 0)
-                        'spring
-                        (just-after (close-white-square-bracket) last)))]
-               [(null? (cddr lst))
-                (cons (car lst) (loop (cdr lst)))]
-               [else 
-                (if (and (not (delimit-ellipsis-arguments?))
-                         (eq? '... (lw-e (cadr lst))))
-                    (cons (car lst)
-                          (loop (cdr lst)))
-                    (list* (car lst) 
-                           (just-after (basic-text "," (default-style)) (car lst))
-                           (loop (cdr lst))))]))))
+    (define first-argument (and (pair? (cddr lst)) (caddr lst)))
+    (define mf-name (cadr lst))
+    (define first-argument-on-same-line-as-mf-name?
+      (or (not first-argument)
+          (= (lw-line first-argument)
+             (lw-line mf-name))))
+    (append (list (build-lw "" line 0 col 0)
+                  'spring
+                  (just-after (hbl-append 
+                               (metafunction-text (symbol->string (lw-e mf-name)))
+                               (open-white-square-bracket))
+                              mf-name))
+            (if first-argument-on-same-line-as-mf-name? '(spring) '())
+            (let loop ([lst (cddr lst)]
+                       [first? #t])
+              (cond
+                [(null? lst) null]
+                [(null? (cdr lst))
+                 (define last (car lst))
+                 (list (build-lw "" (lw-line last) 0 (lw-column last) 0)
+                       'spring
+                       (just-after (close-white-square-bracket) last))]
+                [(null? (cddr lst))
+                 (cons (car lst)
+                       (loop (cdr lst) #f))]
+                [else 
+                 (if (and (not (delimit-ellipsis-arguments?))
+                          (eq? '... (lw-e (cadr lst))))
+                     (cons (car lst)
+                           (loop (cdr lst) #f))
+                     (list* (car lst)
+                            (just-after (basic-text "," (default-style)) (car lst))
+                            (loop (cdr lst) #f)))]))))
   
   (define (just-before what lw)
     (build-lw (if (symbol? what)
