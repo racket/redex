@@ -18,10 +18,11 @@
 
 @defform/subs[#:literals (--> fresh side-condition side-condition/hidden computed-name
                           where where/hidden where/error bind bind/hidden judgment-holds with)
-              (reduction-relation language domain base-arrow
+              (reduction-relation language domain codomain base-arrow
                                   reduction-case ...
                                   shortcuts)
               ([domain (code:line) (code:line #:domain @#,ttpattern)]
+               [codomain (code:line) (code:line #:codomain @#,ttpattern)]
                [base-arrow (code:line) (code:line #:arrow base-arrow-name)]
                [reduction-case (arrow-name @#,ttpattern @#,tttterm red-extras ...)]
                [red-extras rule-name
@@ -48,9 +49,10 @@
 Defines a reduction relation case-wise, one case for each of the
 @racket[reduction-case] clauses. 
 
-The optional @racket[domain] clause provides a contract for the
-relation, in the form of a pattern that defines the relation's 
-domain and codomain.
+The optional @racket[domain] and @racket[codomain] clauses
+provide contracts for the relation. If the @racket[codomain]
+is not present, but the @racket[domain] is, then the
+codomain is expected to be the same as the domain.
 
 The @racket[arrow-name] in each @racket[reduction-case] clause is either 
 @racket[base-arrow-name] (default @racket[-->]) or an arrow name

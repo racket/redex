@@ -9,7 +9,10 @@
          reduction-relation-lws
          reduction-relation-procs
          reduction-relation-domain-pat
+         reduction-relation-codomain-pat
+         reduction-relation-compiled-domain-pat
          build-reduction-relation make-reduction-relation
+         no-codomain-pattern no-codomain-pattern?
          reduction-relation?
          empty-reduction-relation
          make-rewrite-proc rewrite-proc? rewrite-proc-name 
@@ -59,16 +62,34 @@
 ;; make-procs = (listof (compiled-lang -> proc))
 ;; rule-names : (listof sym)
 ;; procs : (listof proc)
-(define-struct reduction-relation (lang make-procs rule-names lws procs domain-pat))
+;; codomain-pat : (or/c #f pattern[uncompiled])
+(define-struct reduction-relation (lang make-procs rule-names lws procs
+                                        domain-pat
+
+                                        ;; (or/c no-codomain-pattern? <pat>)
+                                        codomain-pat
+                                        
+                                        ;; (or/c #f compiled-pat)
+                                        ;; -- this is #f when there is no codomain pattern,
+                                        ;;    and the compiled version of the domain-pattern
+                                        ;;    when there is a codomain pattern
+                                        compiled-domain-pat))
+
+(define-values (no-codomain-pattern no-codomain-pattern?)
+  (let ()
+    (define-struct no-codomain-pattern ())
+    (values (no-codomain-pattern) no-codomain-pattern?)))
 
 (define empty-reduction-relation (make-reduction-relation 'empty-reduction-relations-language
                                                           '()
                                                           '()
                                                           '()
                                                           '()
+                                                          #f
+                                                          no-codomain-pattern
                                                           #f))
 
-(define (build-reduction-relation original language rules rule-names lws domain)
+(define (build-reduction-relation original language rules rule-names lws domain-pat codomain-pat)
   (define combined-rules
     (if original
         (append 
@@ -82,27 +103,37 @@
     (if original
         (remove-duplicates (append rule-names (reduction-relation-rule-names original)))
         rule-names))
-  (define compiled-domain (compile-pattern language domain #f))
+  (define compiled-domain (compile-pattern language domain-pat #f))
+  (define compiled-input-check
+    (if (no-codomain-pattern? codomain-pat)
+        compiled-domain
+        (compile-pattern language codomain-pat #f)))
   (make-reduction-relation
    language combined-rules combined-rule-names lws
-   (map (λ (rule)
-          (define specialized (rule language))
-          (define (checked-rewrite t)
-            (unless (match-pattern compiled-domain t)
-              (error 'reduction-relation "relation reduced to ~s via ~a, which is outside its domain"
-                     t
-                     (let ([name (rewrite-proc-name rule)])
-                       (if name
-                           (format "the rule named ~a" name)
-                           "an unnamed rule"))))
-            t)
-          (λ (exp acc)
-            (unless (match-pattern compiled-domain exp)
-              (error 'reduction-relation "relation not defined for ~s" exp))
-            (specialized exp exp checked-rewrite acc)))
-        combined-rules)
-   domain))
-
+   (for/list ([rule (in-list combined-rules)])
+     (define specialized (rule language))
+     (define (checked-rewrite t)
+       (unless (match-pattern compiled-input-check t)
+         (error 'reduction-relation
+                "relation reduced to ~s via ~a, which is outside its ~a"
+                t
+                (let ([name (rewrite-proc-name rule)])
+                  (if name
+                      (format "the rule named ~a" name)
+                      "an unnamed rule"))
+                (if (no-codomain-pattern? codomain-pat)
+                    "domain"
+                    "codomain")))
+       t)
+     (λ (exp acc)
+       (unless (match-pattern compiled-domain exp)
+         (error 'reduction-relation "relation not defined for ~s" exp))
+       (specialized exp exp checked-rewrite acc)))
+   domain-pat
+   codomain-pat
+   (if (no-codomain-pattern? codomain-pat)
+       #f
+       compiled-domain)))
 
 (define-values (struct:metafunc-proc
                 make-metafunc-proc

@@ -849,6 +849,17 @@
   (test (judgment-holds (J any) any)
         (list result)))
 
+(let ()
+  (define-language L0 (K ::= number))
+  (define r (reduction-relation L0 #:domain natural (--> 5 6)))
+  (define r0 (context-closure r L0 (hole K)))
+  (test (apply-reduction-relation r0  (term (5 11))) (list (term (6 11)))))
+
+(let ()
+  (define-language L0 (K ::= number))
+  (define r (reduction-relation L0 #:domain 5 #:codomain 6 (--> 5 6)))
+  (define r0 (context-closure r L0 (hole K)))
+  (test (apply-reduction-relation r0  (term (5 11))) (list (term (6 11)))))
 
 ;; this tests that context-closure (and thus compatible-closure)
 ;; play along properly with way extend-reduction-relation handles
@@ -1131,6 +1142,17 @@
           (list (term (I (I I)))
                 (term (I I))
                 (term I))))
+
+  (let ()
+    (define-language L)
+    (define red
+      (reduction-relation
+       L
+       #:domain (any)
+       #:codomain any
+       (--> (any) any)))
+    (test (apply-reduction-relation* red (term (((0)))))
+          (list (term 0))))
   
   (let* ([S (reduction-relation
              empty-language
