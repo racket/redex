@@ -956,3 +956,21 @@
      (J x_a x_b x)])
 
   (is-not-false (generate-term L #:satisfying (J any_1 any_2 any_3) 4)))
+
+(let ()
+  (define-language let-nl
+    (e ::= number)
+    (v ::= number))
+
+  (define-extended-language let-nl/env let-nl
+    (ρ ::=
+       •
+       (extend ρ x v)))
+
+  (define-metafunction let-nl/env
+    eval : ρ e -> v
+    [(eval ρ e) 0])
+
+  (test (with-handlers ([exn:fail? exn-message])
+          (redex-check let-nl e #t #:source eval))
+        #rx"language of the metafunction does not"))

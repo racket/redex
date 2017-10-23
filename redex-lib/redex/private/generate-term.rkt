@@ -516,19 +516,26 @@
 (define (check-lhs-pats lang mf/rr prop attempts retries what show term-fix keep-going?
                         #:term-match [term-match #f])
   (define lang-gen (compile lang what))
-  (define-values (pats srcs skip-term?)
+  (define-values (pats srcs skip-term? mf/rr-lang)
     (cond [(metafunc-proc? mf/rr)
            (values (map metafunc-case-lhs-pat
                         (metafunc-proc-cases mf/rr))
                    (metafunction-srcs mf/rr)
-                   (compose not (metafunc-proc-in-dom? mf/rr)))]
+                   (compose not (metafunc-proc-in-dom? mf/rr))
+                   (metafunc-proc-lang mf/rr))]
           [(reduction-relation? mf/rr)
            (values (map rewrite-proc-side-conditions-rewritten (reduction-relation-make-procs mf/rr))
                    (reduction-relation-srcs mf/rr)
                    (let ([pat (compile-pattern (reduction-relation-lang mf/rr)
                                                (reduction-relation-domain-pat mf/rr)
                                                #f)])
-                     (λ (x) (not (match-pattern? pat x)))))]))
+                     (λ (x) (not (match-pattern? pat x))))
+                   (reduction-relation-lang mf/rr))]))
+  (unless (equal? lang mf/rr-lang)
+    (error what "language of the ~a does not match the lang argument"
+           (if (metafunc-proc? mf/rr)
+               "metafunction"
+               "reduction relation")))
   (let loop ([pats pats] [srcs srcs] [overall-actual-attempts 0])
     (cond
       [(and (null? pats) (null? srcs))
