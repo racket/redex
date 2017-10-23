@@ -480,38 +480,49 @@
           (define term (with-handlers ([exn:fail? (handler "fixing" raw-term)])
                          (if term-fix (term-fix raw-term) raw-term)))
           (cond
-            [(skip-term? term) (loop (- remaining 1) actual-attempts)]
-            [(cond
-               [term-match
-                (define match-result (term-match term))
-                (cond
-                  [(give-up-match-result? match-result) #t]
-                  [else
-                   (define bindings
-                     (make-bindings 
-                      (match-bindings
-                       (pick-from-list match-result))))
-                   (with-handlers ([exn:fail? (handler "checking" term)])
-                     (match property
-                       [(term-prop pred) (pred term)]
-                       [(bind-prop pred) (pred bindings)]))])]
-               [else
-                (with-handlers ([exn:fail? (handler "checking" term)])
-                  (match (cons property term-fix)
-                    [(cons (term-prop pred) _) (pred term)]
-                    [(cons (bind-prop pred) #f) (pred bindings)]))])
-             (loop (sub1 remaining) (+ actual-attempts 1))]
+            [(skip-term? term)
+             (loop (- remaining 1) actual-attempts)]
             [else
-             (when show
-               (show
-                #t
-                (format "counterexample found after ~a~a:\n"
-                        (format-attempts (+ actual-attempts 1))
-                        (if source (format " with ~a" source) "")))
-               (pretty-write term (current-error-port)))
-             (if keep-going?
-                 (loop (sub1 remaining) (+ actual-attempts 1))
-                 (values (make-counterexample term) (+ actual-attempts 1)))])])])))
+             (define-values (this-test-passed? was-actual-attempt?)
+               (cond
+                 [term-match
+                  (define match-result (term-match term))
+                  (cond
+                    [(give-up-match-result? match-result)
+                     (values #t #f)]
+                    [else
+                     (define bindings
+                       (make-bindings
+                        (match-bindings
+                         (pick-from-list match-result))))
+                     (with-handlers ([exn:fail? (handler "checking" term)])
+                       (values (match property
+                                 [(term-prop pred) (pred term)]
+                                 [(bind-prop pred) (pred bindings)])
+                               #t))])]
+                 [else
+                  (with-handlers ([exn:fail? (handler "checking" term)])
+                    (values (match (cons property term-fix)
+                              [(cons (term-prop pred) _) (pred term)]
+                              [(cons (bind-prop pred) #f) (pred bindings)])
+                            #t))]))
+             (cond
+               [this-test-passed?
+                (loop (sub1 remaining)
+                      (if was-actual-attempt?
+                          (+ actual-attempts 1)
+                          actual-attempts))]
+               [else
+                (when show
+                  (show
+                   #t
+                   (format "counterexample found after ~a~a:\n"
+                           (format-attempts (+ actual-attempts 1))
+                           (if source (format " with ~a" source) "")))
+                  (pretty-write term (current-error-port)))
+                (if keep-going?
+                    (loop (sub1 remaining) (+ actual-attempts 1))
+                    (values (make-counterexample term) (+ actual-attempts 1)))])])])])))
 
 (define (check-lhs-pats lang mf/rr prop attempts retries what show term-fix keep-going?
                         #:term-match [term-match #f])

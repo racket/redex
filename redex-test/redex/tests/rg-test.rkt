@@ -1464,4 +1464,19 @@
     (test (seed-effect-generate void)
           (seed-effect-generate random))))
 
+(let ()
+  (define-language let-nl
+    (e ::= number)
+    (v ::= number)
+    (ρ ::= • (extend ρ x v)))
+
+  (define-metafunction let-nl
+    eval : ρ e -> v
+    [(eval ρ e) 0])
+
+  (test (output
+         (λ ()
+           (redex-check let-nl e #t #:source eval #:attempts 10)))
+        #rx"no counterexamples in 0 attempts \\(tried 10 attempts"))
+
 (print-tests-passed 'rg-test.rkt)
