@@ -18,8 +18,9 @@
 ;; STOP mod-test
 
 
+(module+ main
 ;; START mod-traces
 (traces mod3 (term (+ (+ 1 1) (+ 2 1))) 
         #:pred (redex-match mod-lang A))
 ;; STOP mod-traces
-
+)

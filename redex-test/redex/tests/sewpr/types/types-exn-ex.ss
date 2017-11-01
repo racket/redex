@@ -14,6 +14,7 @@
     (term (TC () ,x))))
 ;; STOP stexn
 
+(module+ main
 (traces t-iswim-red
         (term (((λ x num (λ y num x)) 
                 2)
@@ -27,3 +28,4 @@
         #:pred
         simply-typed?)
 ;; STOP traces-pred
+)

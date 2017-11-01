@@ -7,16 +7,16 @@
                  [light-text-color "black"])
     (t)))
 
-(require texpict/mrpict "../redex-latex-config/pict-config-setup.ss")
+(require texpict/mrpict #;"../redex-latex-config/pict-config-setup.ss")
 (send (current-ps-setup) set-file "junk.ps")
 (dc-for-text-size (new post-script-dc% [interactive #f]))
-(pict-config-setup)
+#;(pict-config-setup)
 
 (define edge-label-font
   (send the-font-list find-or-create-font
         (label-font-size) 
         (default-style) ;; expected to be just a string
-        'default
+        #;'default        
         'normal
         'normal))
 

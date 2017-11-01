@@ -3,10 +3,12 @@
 
 ;; ENDDEFS
 
+(module+ main
 ;; START lang-traces
 (traces bool-any-red
         (term (∨ (∨ true false) (∨ true true))))
 ;; STOP lang-traces
+)
 
 ;; EXAMPLE test-B
 (redex-match bool-any-lang 
@@ -26,7 +28,9 @@
              (term (∨ (∨ true (∨ false true)) false)))
 ;; STOP test-red
 
+(module+ main
 ;; START traces
 (traces bool-standard-red
         (term (∨ (∨ true false) (∨ true true))))
 ;; STOP traces
+)

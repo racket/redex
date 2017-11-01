@@ -21,7 +21,12 @@
         (in-hole C B)
         ∨-true)))
 
+;; STOP all
+(module+ main
+;; START all
 (traces bool-red
         (term (∨ (∨ true false) (∨ true true))))
 ;; STOP all
+)
+
 (provide bool-red)

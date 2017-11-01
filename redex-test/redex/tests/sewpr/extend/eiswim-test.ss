@@ -5,12 +5,14 @@
 ;; ENDDEFS
 
 (require redex)
+(module+ main
 ;; START ex0
 (traces e-iswim-red-first-try
         (term
          (/ ((λ x (/ 1 x)) 7)
             2)))
 ;; STOP ex0
+)
 
 ;; EXAMPLE ex1
 (redex-match e-iswim 

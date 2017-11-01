@@ -62,6 +62,7 @@
 (test-results)
 ;; STOP ex
 
+(module+ main
 ;; START traces-bad
 (traces t-iswim-red
         (term (((λ x num (λ y num x)) 2) 3))
@@ -75,3 +76,4 @@
         #:pred
         (λ (x) (term (TC () ,x))))
 ;; STOP traces-pred
+)
