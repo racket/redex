@@ -14,7 +14,8 @@
                "data-enumerate-lib"
                "data-lib"))
 (define build-deps '("racket-index"
-                     "scheme-lib"))
+                     "scheme-lib"
+                     "slideshow-lib"))
 
 (define pkg-desc "tests for \"redex\"")
 
