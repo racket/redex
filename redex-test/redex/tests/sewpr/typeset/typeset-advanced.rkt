@@ -1,7 +1,7 @@
-#lang scheme
+#lang racket/base
 (require "../iswim/iswim.rkt")
 (require redex)
-(require slideshow/pict scheme/class)
+(require slideshow/pict racket/class)
 
 ;; START subst-rw
 ;; subst-rw : (Listof lw) -> (Listof (U String lw))

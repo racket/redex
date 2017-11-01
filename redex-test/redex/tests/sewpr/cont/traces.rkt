@@ -1,4 +1,4 @@
-#lang scheme
+#lang racket/base
 (require redex
          "../traces-colors.rkt"
          "../space-snip.rkt"
@@ -8,7 +8,6 @@
 
 (with-colors
  (λ ()
-   
    (parameterize ([initial-char-width 20])
      (traces/ps c-iswim-red
                 ex

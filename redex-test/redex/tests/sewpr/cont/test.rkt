@@ -1,6 +1,5 @@
-#lang scheme
-(require redex "cont.rkt")
-
+#lang racket/base
+(require redex/reduction-semantics "cont.rkt")
 
 (test-equal (with-handlers ((exn? (λ (x) 'err)))
               (apply-reduction-relation* ☠-iswim-red (term (+ 42 (call/cc (λ k (k 1)))))))

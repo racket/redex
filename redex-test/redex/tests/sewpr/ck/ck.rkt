@@ -1,6 +1,5 @@
-#lang scheme
-
-(require redex "../iswim/iswim.rkt")
+#lang racket/base
+(require redex/reduction-semantics racket/list "../iswim/iswim.rkt")
 (provide ck ck-fix same-ck-stdred? same-fixed-answer?)
 
 ;; START lang

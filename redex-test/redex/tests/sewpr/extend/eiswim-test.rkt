@@ -1,6 +1,5 @@
-#lang scheme
-
-(require redex "../iswim/iswim.rkt" "eiswim.rkt")
+#lang racket/base
+(require "../iswim/iswim.rkt" "eiswim.rkt")
 
 ;; ENDDEFS
 

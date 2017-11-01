@@ -1,4 +1,4 @@
-#lang scheme
+#lang racket/base
 (require redex "iswim.rkt" "../traces-colors.rkt" "../space-snip.rkt")
 
 ;; has-y? : sexp -> boolean

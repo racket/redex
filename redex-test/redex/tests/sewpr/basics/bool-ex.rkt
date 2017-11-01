@@ -1,4 +1,4 @@
-#lang scheme
+#lang racket/base
 (require redex "bool-standard.rkt" "bool-any.rkt")
 
 ;; ENDDEFS

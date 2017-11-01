@@ -1,6 +1,5 @@
-#lang scheme
-
-(require redex "../iswim/iswim.rkt")
+#lang racket/base
+(require redex/reduction-semantics "../iswim/iswim.rkt")
 (provide c-iswim-red ☺-iswim-red ☠-iswim-red ☠-iswim)
 
 ;; START lang

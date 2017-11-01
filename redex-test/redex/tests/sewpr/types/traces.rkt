@@ -1,4 +1,4 @@
-#lang scheme
+#lang racket/base
 (require "1.rkt" 
          "types.rkt"
          "../traces-colors.rkt"
@@ -13,7 +13,6 @@
 
 (with-colors
  (λ ()
-   
    (traces/ps mod3 
               (term (+ (+ 1 1) (+ 2 1))) 
               "1.ps"

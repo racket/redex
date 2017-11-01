@@ -1,5 +1,4 @@
-#lang scheme
-
+#lang racket/base
 (require redex "types-exn.rkt")
 
 ;; ENDDEFS

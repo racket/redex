@@ -1,5 +1,5 @@
-#lang scheme
-(require redex "../iswim/iswim.rkt")
+#lang racket/base
+(require redex/reduction-semantics "../iswim/iswim.rkt")
 (provide main-example red! C-red sch sch1-red sch2-red sch3-red)
 
 ;; START bang

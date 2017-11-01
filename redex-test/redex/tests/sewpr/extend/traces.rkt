@@ -1,4 +1,4 @@
-#lang scheme
+#lang racket/base
 (require redex "eiswim.rkt" "../traces-colors.rkt" "../space-snip.rkt")
 (define err0
   (term (/ ((λ x (/ 1 x)) 7) 2)))

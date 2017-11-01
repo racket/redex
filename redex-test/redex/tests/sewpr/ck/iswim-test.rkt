@@ -1,4 +1,4 @@
-#lang scheme
+#lang racket/base
 
 #|
 
@@ -18,8 +18,8 @@ Don't add things to this file unless they need to fit into that hack somehow.
 |#
 
 
-(require scheme/port)
-(require "../iswim/iswim.rkt" redex)
+(require racket/port)
+(require "../iswim/iswim.rkt" redex/reduction-semantics)
 
 
 (parameterize ([current-output-port (open-output-nowhere)])

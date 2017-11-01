@@ -1,6 +1,5 @@
 ;; START all
-#lang scheme
-
+#lang racket/base
 (require redex)
 
 (define-language bool-lang

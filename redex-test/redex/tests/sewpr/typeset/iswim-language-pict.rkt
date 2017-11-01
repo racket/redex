@@ -1,4 +1,4 @@
-#lang scheme/gui
+#lang racket/base
 (require redex 
          texpict/mrpict
          "../iswim/iswim.rkt")

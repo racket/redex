@@ -1,4 +1,4 @@
-#lang scheme
+#lang racket/base
 
 #|
 
@@ -8,7 +8,7 @@ eiswim-test.rkt
 
 |#
 
-(require redex "../iswim/iswim.rkt")
+(require redex/reduction-semantics "../iswim/iswim.rkt")
 
 (provide e-iswim δ/ e-iswim-red-first-try e-iswim-red e-iswim-red2)
 

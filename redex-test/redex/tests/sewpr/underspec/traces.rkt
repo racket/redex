@@ -1,5 +1,4 @@
-#lang scheme/gui
-
+#lang racket/gui
 (require redex "oo.rkt" "../traces-colors.rkt" "../space-snip.rkt")
 
 (define first/second-attempt-terms

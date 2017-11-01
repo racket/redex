@@ -1,6 +1,5 @@
-#lang scheme/base
-
-(require redex)
+#lang racket/base
+(require redex/reduction-semantics)
 
 ;; START lang
 (define-language bool-standard-lang

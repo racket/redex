@@ -1,10 +1,9 @@
-#lang scheme
-
+#lang racket/base
 (require redex "../traces-colors.rkt" "ck.rkt" "../space-snip.rkt")
 
 (define ex (term (((λ x (- x 1)) 2) mt)))
 #|
-(require scheme/pretty)
+(require racket/pretty)
 (parameterize ([pretty-print-columns 40])
   (pretty-print ex))
 

@@ -1,5 +1,5 @@
-#lang scheme
-(require redex "../iswim/iswim.rkt")
+#lang racket/base
+(require racket/list redex/reduction-semantics "../iswim/iswim.rkt")
 (provide test-suite iswim-> abstract-test-suite same-answer? stdred-test-suite)
 
 ;; START suite

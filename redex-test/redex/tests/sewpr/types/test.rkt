@@ -1,5 +1,5 @@
-#lang scheme
-(require redex "types.rkt")
+#lang racket/base
+(require redex/reduction-semantics "types.rkt")
 
 (test-equal (term (TC () 1))
             (term num))

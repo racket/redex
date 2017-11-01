@@ -1,6 +1,5 @@
-#lang scheme
-
-(require redex "../iswim/iswim.rkt")
+#lang racket/base
+(require redex/reduction-semantics "../iswim/iswim.rkt")
 
 ;; START lang
 (define-extended-language t-iswim iswim

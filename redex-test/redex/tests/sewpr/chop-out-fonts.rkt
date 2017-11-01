@@ -1,6 +1,6 @@
-#lang scheme
-
-(require scheme/system)
+#lang racket/base
+(require racket/system
+         racket/cmdline)
 
 (define (rewrite/copy orig tmp-file)
   (fprintf (current-error-port) "chopping out fonts from ~a\n" orig)

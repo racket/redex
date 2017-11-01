@@ -1,5 +1,5 @@
-#lang scheme
-(require redex "oo.rkt")
+#lang racket/base
+(require redex/reduction-semantics "oo.rkt")
 
 
 ;; ENDDEFS

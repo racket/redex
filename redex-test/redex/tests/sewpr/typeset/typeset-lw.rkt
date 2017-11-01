@@ -1,4 +1,4 @@
-#lang scheme
+#lang racket/base
 
 
 
@@ -60,7 +60,7 @@
 WARNING: Do not reindent this file!
 
 There are some examples whose indentation does not match
-the standard indentation that DrScheme provides, in order
+the standard indentation that DrRacket provides, in order
 to illustrate various points. If you reindent the file, this
 will break those examples.
 
@@ -69,11 +69,11 @@ will break those examples.
 (require "../iswim/iswim.rkt"
          "../types/types.rkt")
 (require redex)
-(require texpict/mrpict scheme/class)
+(require texpict/mrpict racket/class)
 
 ;; ENDDEFS
 
-(require scheme/gui/base)
+(require racket/gui/base)
 (dc-for-text-size (make-object bitmap-dc% (make-object bitmap% 1 1)))
 
 ;; EXAMPLE 1 "5.2cm"

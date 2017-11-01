@@ -1,7 +1,6 @@
-#lang scheme
-
+#lang racket/base
 (require "iswim.rkt")
-(require redex)
+(require redex/reduction-semantics)
 
 ;; ENDDEFS
 
@@ -32,6 +31,5 @@
 ;; EXAMPLE subst-rename
 (term (subst (λ f (f z)) z (λ y f)))
 ;; STOP subst-rename
-
 
 (provide iswim-red)

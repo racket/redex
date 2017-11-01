@@ -1,6 +1,5 @@
-#lang scheme
-
-(require redex 
+#lang racket/base
+(require redex/reduction-semantics
          "ck.rkt"
          "iswim-test2.rkt"
          "../iswim/iswim.rkt")

@@ -1,4 +1,4 @@
-#lang scheme/gui
+#lang racket/gui
 (require "../iswim/iswim.rkt")
 (require redex)
 

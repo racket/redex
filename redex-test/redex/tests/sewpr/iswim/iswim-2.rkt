@@ -1,6 +1,5 @@
-#lang scheme
-
-(require redex)
+#lang racket/base
+(require redex/reduction-semantics)
 
 ;                                     
 ;                                     

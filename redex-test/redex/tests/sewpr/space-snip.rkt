@@ -1,4 +1,5 @@
-#lang scheme/gui
+#lang racket/base
+(require racket/gui)
 
 (provide rewrite-pb)
 
