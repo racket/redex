@@ -94,6 +94,9 @@ eiswim-test.ss
         (err b)
         (side-condition 
          (not (equal? (term E) (term hole)))))
-   with 
-   [(--> (in-hole E a) (in-hole E b)) (ē a b)]))
+   with
+   ;; ORIGINAL
+   ;;; [(--> (in-hole E a) (in-hole E b)) (ē a b)]))
+   ;; ERRATA from https://github.com/racket/redex/commit/cbb2d88b98fb814325f0d4ee468e1abaf4f6c3a7 on Dec 12, 2015 --- needed for v6.4+
+   [(--> (in-hole E x) (in-hole E y)) (ē x y)]))
 ;; STOP red2

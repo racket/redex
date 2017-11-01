@@ -43,8 +43,11 @@
    iswim
    (v ((λ X M) V) (subst M X V) βv)
    (v (o b ...) (δ (o b ...)) δ)
-   with 
-   [(--> (in-hole E M) (in-hole E N)) (v M N)]))
+   with
+   ;; ORIGINAL
+   ;;; [(--> (in-hole E M) (in-hole E N)) (v M N)]))
+   ;; ERRATA from https://github.com/racket/redex/commit/cbb2d88b98fb814325f0d4ee468e1abaf4f6c3a7 on Dec 12, 2015 --- needed for v6.4+
+   [(--> (in-hole E m) (in-hole E n)) (v m n)]))
 ;; STOP red
 
 (define iswim-standard0
