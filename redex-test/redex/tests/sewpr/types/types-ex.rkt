@@ -76,3 +76,7 @@
         (λ (x) (term (TC () ,x))))
 ;; STOP traces-pred
 )
+
+;; ensure drdr only compiles this,
+;; as it intentionally errors
+(module test racket/base)

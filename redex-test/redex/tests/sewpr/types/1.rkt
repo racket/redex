@@ -26,3 +26,6 @@
     (--> (in-hole C (+ 2 2)) (in-hole C 1) 2-2)))
 ;; STOP mod-red
 
+;; ensure drdr only compiles this,
+;; as it intentionally errors
+(module test racket/base)

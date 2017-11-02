@@ -53,3 +53,6 @@ Don't add things to this file unless they need to fit into that hack somehow.
 (test-results)
 ;; STOP results
 
+;; ensure drdr only compiles this,
+;; as it intentionally errors
+(module test racket/base)

@@ -13,3 +13,7 @@
 (test-predicate same-ck-stdred? (term ((λ x (- x 1)) 2)))
 ;; STOP sub-test
 
+
+;; ensure drdr only compiles this,
+;; as it intentionally errors
+(module test racket/base)
