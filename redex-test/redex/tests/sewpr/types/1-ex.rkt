@@ -24,3 +24,7 @@
         #:pred (redex-match mod-lang A))
 ;; STOP mod-traces
 )
+
+;; ensure drdr only compiles this,
+;; as it intentionally errors
+(module test racket/base)
