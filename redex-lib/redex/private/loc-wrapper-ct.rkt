@@ -79,9 +79,18 @@
     [x 
      #`#(#,init-loc-wrapper/q?
          #,(let ([base (syntax-e #'x)])
-             (if (string? base)
-                 #`#(rewrite-quotes #,(format "~s" base))
-                 (format "~s" (syntax-e #'x))))
+             (cond
+               [(string? base)
+                #`#(rewrite-quotes #,(format "~s" base))]
+               [(boolean? base)
+                (cond
+                  [(and base (equal? (syntax-span #'x) 5))
+                   "#true"]
+                  [(and (not base) (equal? (syntax-span #'x) 6))
+                   "#false"]
+                  [else (format "~s" base)])]
+               [else
+                (format "~s" (syntax-e #'x))]))
          #,(syntax-line stx) 
          #,(syntax-column stx))]))
 

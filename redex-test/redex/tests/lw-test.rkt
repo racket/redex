@@ -286,6 +286,9 @@
            0 0 1 2
            #t #f))
          0 0 0 3))
+
+  (test (map lw-e (lw-e (to-lw (#t #true #f #false))))
+        '("(" "#t" "#true" "#f" "#false" ")"))
   
   (let ([from-str (λ (str) 
                     (define p (open-input-string str))
