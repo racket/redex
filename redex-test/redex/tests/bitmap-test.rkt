@@ -280,15 +280,15 @@
 (btest (render-metafunction multi-arg) "metafunction-multi-arg.png")
 
 ;; makes sure that the LHS and RHS of metafunctions are appropriately
-;; rewritten
+;; rewritten; also tests the prime typesetting
 
 (define-metafunction lang
   subst : e x e -> e
   [(subst x x e) e]
   [(subst number x e) number]
   [(subst x_1 x_2 e) x_1]
-  [(subst (e_1 e_2) x e)
-   ((subst e_1 x e) (subst e_2 x e))]
+  [(subst (e_′ e_′′) x e_′′′)
+   ((subst e_′ x e_′′′) (subst e_′′ x e_′′′))]
   [(subst (λ (x) e_b) x e)
    (λ (x) e)]
   [(subst (λ (x_f) e_f) x_a e_a)

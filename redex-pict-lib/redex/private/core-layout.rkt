@@ -780,7 +780,7 @@
        =>
        (match-lambda
            [(list _ nt sub sup)
-            (let* ([sub-pict (if (equal? sub "′")
+            (let* ([sub-pict (if (regexp-match? #rx"^′+$" sub)
                                  (basic-text sub (non-terminal-style))
                                  (basic-text sub (non-terminal-subscript-style)))]
                    [sup-pict (basic-text sup (non-terminal-superscript-style))]
