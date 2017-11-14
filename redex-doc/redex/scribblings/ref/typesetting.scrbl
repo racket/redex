@@ -733,7 +733,7 @@ reference @racket[x_y^z], @racket[x] has style @racket[non-terminal-style],
 @racket[y] has style @racket[non-terminal-subscript-style], and @racket[z]
 has style @racket[non-terminal-superscript-style]. The only exception to this
 is when the subscript section consists only of the unicode prime character
-(@litchars{′}), in which case the @racket[non-terminal-style] is used instead
+(@litchar{′}), in which case the @racket[non-terminal-style] is used instead
 of the @racket[non-terminal-subscript-style].
 
 The @racket[default-style] parameter is used for parenthesis, the dot in dotted
