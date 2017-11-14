@@ -154,7 +154,6 @@ sets @racket[dc-for-text-size] and the latter does not.
 
 @defproc[(term->pict/pretty-write [lang compiled-lang?] 
                                   [term any/c]
-                                  [filename (or/c path-string? #f)]
                                   [#:width width #f])
          pict?]{
   Like @racket[term->pict], but with the same change that
