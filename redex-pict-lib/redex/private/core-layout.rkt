@@ -780,7 +780,9 @@
        =>
        (match-lambda
            [(list _ nt sub sup)
-            (let* ([sub-pict (basic-text sub (non-terminal-subscript-style))]
+            (let* ([sub-pict (if (equal? sub "′")
+                                 (basic-text sub (non-terminal-style))
+                                 (basic-text sub (non-terminal-subscript-style)))]
                    [sup-pict (basic-text sup (non-terminal-superscript-style))]
                    [sub+sup (lbl-superimpose sub-pict sup-pict)])
               (list (non-terminal->token col span nt)
