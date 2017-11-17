@@ -2330,13 +2330,16 @@
            (hash-set! names-with-extend-nt-ellipses the-name #t)))
 
        (define all-nts-from-input (apply append namess))
+       (define (nt-defined-in-current-language? nt)
+         (for/and ([nt-from-input (in-list all-nts-from-input)])
+           (equal? (syntax-e nt-from-input) nt)))
+
        (define nt-identifiers
          (build-nt-identifiers-table
           #'name all-nts-from-input
           #:previous-table
           (for/hash ([(k v) (in-hash (language-id-nt-identifiers #'orig-lang
-                                                                 'define-extended-language))]
-                     #:when (hash-ref names-with-extend-nt-ellipses k #f))
+                                                                 'define-extended-language))])
             (values k v))))
 
        (with-syntax* ([((names rhs ...) ...) non-terms]
