@@ -779,6 +779,7 @@
                                     'undefined-error-name
                                     (syntax-e judgment-form-name))])
       #`(begin
+          #,@(if (identifier? orig) (list #`(void (λ () #,orig))) (list)) ;; for check syntax
           (define-syntax #,judgment-form-name 
             (judgment-form '#,judgment-form-name '#,(and mode (cdr mode)) #'judgment-form-runtime-proc
                            #'mk-judgment-form-proc #'#,lang #'jf-lws

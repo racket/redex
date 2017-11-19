@@ -353,7 +353,46 @@
                (list (source L2-def) (source L2-ref))
                (list (source L1-def) (source L1-ref))
                (list (source nt1-def) (source nt1-ref))
-               (list (source nt2-def) (source nt2-ref))))))
+               (list (source nt2-def) (source nt2-ref)))))
+
+  (let ([annotations (new collector%)])
+    (define-values (add-syntax done)
+      (make-traversal module-namespace #f))
+
+    (define L-def  (identifier L))
+    (define L-ref1 (identifier L))
+    (define L-ref2 (identifier L))
+
+    (define J1-def  (identifier J1))
+    (define J1-ref1 (identifier J1))
+    (define J1-ref2 (identifier J1))
+    (define J2-def  (identifier J2))
+    (define J2-ref  (identifier J2))
+
+    (parameterize ([current-annotations annotations]
+                   [current-namespace module-namespace])
+      (add-syntax
+       (expand #`(let ()
+                   (define-language #,L-def)
+
+                   (define-judgment-form #,L-ref1
+                     #:mode (#,J1-def I)
+                     [-------
+                      (#,J1-ref1 1)])
+                   (define-extended-judgment-form #,L-ref2 #,J1-ref2
+                     #:mode (#,J2-def I)
+                     [-------
+                      (#,J2-ref 2)])
+
+                   (void))))
+      (done))
+
+    (test (send annotations collected-arrows)
+          (set (list (source L-def) (source L-ref1))
+               (list (source L-def) (source L-ref2))
+               (list (source J1-def) (source J1-ref1))
+               (list (source J1-def) (source J1-ref2))
+               (list (source J2-def) (source J2-ref))))))
   
     
 
