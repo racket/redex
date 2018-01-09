@@ -67,8 +67,12 @@ todo:
 
     (define all-nodes-ht
       (let* ([lang (reduction-relation-lang red)]
-             [term-equal? (lambda (x y) (α-equal? (compiled-lang-binding-table lang) match-pattern x y))]
-             [term-hash (lambda (x) (α-equal-hash-code (compiled-lang-binding-table lang) match-pattern x))])
+             [term-equal? (lambda (x y) (α-equal? (compiled-lang-binding-table lang)
+                                                  (compiled-lang-literals lang)
+                                                  match-pattern x y))]
+             [term-hash (lambda (x) (α-equal-hash-code (compiled-lang-binding-table lang)
+                                                       (compiled-lang-literals lang)
+                                                       match-pattern x))])
       (make-custom-hash term-equal? term-hash)))
     
     (define root (new node%
