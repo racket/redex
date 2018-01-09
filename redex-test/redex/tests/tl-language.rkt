@@ -1034,5 +1034,19 @@
   (test (redex-match? L v example-v) #t)
   (test (redex-match? L (clo [x v_0] v_1) example-v) #t))
 
+(let ()
+  (define-language L
+    [x ::= variable-not-otherwise-mentioned]
+    [e ::= x null (cons e e) (λ p e)]
+    [p ::= x null (cons p p)]
+    #:binding-forms
+    (λ p e #:refers-to p)
+    (cons p_1 p_2) #:exports (shadow p_1 p_2))
+
+  (test (term (substitute (λ null null) x y) #:lang L)
+        '(λ null null)))
+
+
+
 
 (print-tests-passed 'tl-language.rkt)

@@ -166,7 +166,9 @@
                              "compiled-lang?"
                              0
                              lang lhs rhs))
-     (α-equal? (compiled-lang-binding-table lang) match-pattern lhs rhs)]
+     (α-equal? (compiled-lang-binding-table lang)
+               (compiled-lang-literals lang)
+               match-pattern lhs rhs)]
     [(lhs rhs)
      (define l (default-language))
      (unless l
@@ -476,7 +478,9 @@
         (form-proc/cache form-proc/cache input derivation-init pair-of-boxed-caches)))
   
   (define without-exact-duplicates-vec (apply vector (remove-duplicates dwoos)))
-  (define ht (make-α-hash (compiled-lang-binding-table ct-lang) match-pattern))
+  (define ht (make-α-hash (compiled-lang-binding-table ct-lang)
+                          (compiled-lang-literals ct-lang)
+                          match-pattern))
   (for ([d (in-vector without-exact-duplicates-vec)]
         [i (in-naturals)])
     (define t (derivation-with-output-only-output d))

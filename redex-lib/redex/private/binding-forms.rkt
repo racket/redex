@@ -101,6 +101,8 @@ to traverse the whole value at once, rather than one binding form at a time.
 (define pattern-matcher (make-parameter "pattern matcher not defined"))
 ;; Sometimes we want fresh names, sometimes we want canonical names
 (define name-generator (make-parameter "name generator not defined"))
+;; These tell us which symbols are not renamable (when set, should be (listof symbol?))
+(define literals-in-language (make-parameter "language-literals not defined"))
 ;; For α-equivalence testing, we walk the whole term at once.
 (define all-the-way-down? (make-parameter "all-the-way-downness not defined"))
 
@@ -117,36 +119,37 @@ to traverse the whole value at once, rather than one binding form at a time.
 
 ;; freshen : (listof (list compiled-pattern bspec))
 ;; (compiled-pattern redex-val -> (union #f mtch)) redex-val -> redex-val bool
-(define (freshen language-bf-table match-pattern redex-val)
+(define (freshen language-bf-table language-literals match-pattern redex-val)
   (parameterize ([current-bf-table language-bf-table]
                  [pattern-matcher match-pattern]
                  [name-generator generate-readable-fresh-name]
+                 [literals-in-language language-literals]
                  [all-the-way-down? #f])
     (first (rec-freshen redex-val #f #t #f))))
 
 
 ;; α-equal-hash-code : (listof (list compiled-pattern bspec))
 ;; (compiled-pattern redex-val -> (union #f mtch)) redex-val -> exact-integer
-(define (α-equal-hash-code language-bf-table match-pattern redex-val)
-  (equal-hash-code (canonicalize language-bf-table match-pattern redex-val)))
+(define (α-equal-hash-code language-bf-table language-literals match-pattern redex-val)
+  (equal-hash-code (canonicalize language-bf-table language-literals match-pattern redex-val)))
 
-(define (α-equal-secondary-hash-code language-bf-table match-pattern redex-val)
-  (equal-secondary-hash-code (canonicalize language-bf-table match-pattern redex-val)))
+(define (α-equal-secondary-hash-code language-bf-table language-literals match-pattern redex-val)
+  (equal-secondary-hash-code (canonicalize language-bf-table language-literals match-pattern redex-val)))
 
-(define (make-α-hash language-bf-table match-pattern)
-  (make-custom-hash (λ (x y) (α-equal? language-bf-table match-pattern x y))
-                    (λ (x) (α-equal-hash-code language-bf-table match-pattern x))
-                    (λ (x) (α-equal-secondary-hash-code language-bf-table match-pattern x))))
+(define (make-α-hash language-bf-table language-literals match-pattern)
+  (make-custom-hash (λ (x y) (α-equal? language-bf-table language-literals match-pattern x y))
+                    (λ (x) (α-equal-hash-code language-bf-table language-literals match-pattern x))
+                    (λ (x) (α-equal-secondary-hash-code language-bf-table language-literals match-pattern x))))
 
-(define (make-immutable-α-hash language-bf-table match-pattern)
+(define (make-immutable-α-hash language-bf-table language-literals match-pattern)
   (make-immutable-custom-hash
-   (λ (x y) (α-equal? language-bf-table match-pattern x y))
-   (λ (x) (α-equal-hash-code language-bf-table match-pattern x))
-   (λ (x) (α-equal-secondary-hash-code language-bf-table match-pattern x))))
+   (λ (x y) (α-equal? language-bf-table language-literals match-pattern x y))
+   (λ (x) (α-equal-hash-code language-bf-table language-literals match-pattern x))
+   (λ (x) (α-equal-secondary-hash-code language-bf-table language-literals match-pattern x))))
 
 ;; α-equal? : (listof (list compiled-pattern bspec))
 ;; (compiled-pattern redex-val -> (union #f mtch)) redex-val -> boolean
-(define (α-equal? language-bf-table match-pattern redex-val-lhs redex-val-rhs)
+(define (α-equal? language-bf-table language-literals match-pattern redex-val-lhs redex-val-rhs)
   (cond
    ;; short-circuit on some easy cases:
    [(eq? redex-val-lhs redex-val-rhs) #t]
@@ -157,15 +160,16 @@ to traverse the whole value at once, rather than one binding form at a time.
              (list? redex-val-rhs))) #f]
    [(not (list? redex-val-lhs)) (equal? redex-val-lhs redex-val-rhs)]
    [else
-    (equal? (canonicalize language-bf-table match-pattern redex-val-lhs)
-            (canonicalize language-bf-table match-pattern redex-val-rhs))]))
+    (equal? (canonicalize language-bf-table language-literals match-pattern redex-val-lhs)
+            (canonicalize language-bf-table language-literals match-pattern redex-val-rhs))]))
 
 ;; Perform a capture-avoiding substitution
-(define (safe-subst language-bf-table match-pattern redex-val redex-val-old-var redex-val-new-val)
+(define (safe-subst language-bf-table language-literals match-pattern redex-val redex-val-old-var redex-val-new-val)
   (parameterize
    ([current-bf-table language-bf-table]
     [pattern-matcher match-pattern]
     [name-generator generate-readable-fresh-name]
+    [literals-in-language language-literals]
     [all-the-way-down? #t])
 
    (let loop [(v (first (rec-freshen redex-val #f #t #f)))]
@@ -177,7 +181,7 @@ to traverse the whole value at once, rather than one binding form at a time.
 (define canonical-name-marker (gensym))
 
 ;; not exported, but useful here:
-(define (canonicalize language-bf-table match-pattern redex-val)
+(define (canonicalize language-bf-table language-literals match-pattern redex-val)
   (define current-name-id 0)
 
   (parameterize
@@ -186,7 +190,8 @@ to traverse the whole value at once, rather than one binding form at a time.
     [all-the-way-down? #t]
     [name-generator (λ (orig)
                        (set! current-name-id (add1 current-name-id))
-                       `(,canonical-name-marker ,current-name-id))])
+                       `(,canonical-name-marker ,current-name-id))]
+    [literals-in-language language-literals])
    
    (first (rec-freshen redex-val #f #t #f))))
 
@@ -583,7 +588,9 @@ to traverse the whole value at once, rather than one binding form at a time.
                ;; `noop?` is true because unused exports are treated as free
                (map (λ (elt) (car (rec-freshen elt #f #t #f))) redex-val)
                redex-val) ())]
-       [(and (symbol? redex-val) assume-binder?)
+       [(and (symbol? redex-val)
+             assume-binder?
+             (not (member redex-val (literals-in-language))))
         (if (or noop? (and top-level? (all-the-way-down?)))
             `(,redex-val ((,redex-val ,redex-val)))
             (redex-error
@@ -626,7 +633,8 @@ to traverse the whole value at once, rather than one binding form at a time.
            nt-name
            (let handle-... ([...-depth (second trscr-depth)] [exp (bind-exp b)])
              (if (= ...-depth 0)
-                 (if (symbol? exp)
+                 (if (and (symbol? exp)
+                          (not (member exp (literals-in-language))))
                      (let ([new-name
                             ;; Is it a binder, and should we freshen it?
                             (if (and sub-ported? (not sub-noop?))
@@ -750,6 +758,7 @@ to traverse the whole value at once, rather than one binding form at a time.
   (parameterize ([current-bf-table `()]
                  [pattern-matcher #f]
                  [name-generator gensym]
+                 [literals-in-language '()]
                  [all-the-way-down? #f])
 
     (check-equal?

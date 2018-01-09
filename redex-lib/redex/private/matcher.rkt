@@ -691,7 +691,9 @@ See match-a-pattern.rkt for more details
      names
      (if (empty? (compiled-lang-binding-table clang))
          equal?
-         (λ (lhs rhs) (α-equal? (compiled-lang-binding-table clang) match-pattern lhs rhs))))))
+         (λ (lhs rhs) (α-equal? (compiled-lang-binding-table clang)
+                                (compiled-lang-literals clang)
+                                match-pattern lhs rhs))))))
 
 (define (build-compiled-pattern proc names lang-α-equal?)
   (make-compiled-pattern
@@ -737,9 +739,10 @@ See match-a-pattern.rkt for more details
   (define clang-list-ht (compiled-lang-list-ht clang))
   (define has-hole-or-hide-hole-ht (compiled-lang-has-hole-or-hide-hole-ht clang))
   (define binding-forms (compiled-lang-binding-table clang))
+  (define literals (compiled-lang-literals clang))
 
   (define lang-α-equal?
-    (λ (lhs rhs) (α-equal? binding-forms match-pattern lhs rhs)))
+    (λ (lhs rhs) (α-equal? binding-forms literals match-pattern lhs rhs)))
 
   ;; Note that `bind-names?` means that identical names must match identical values, and
   ;; binding forms specify alpha-equivalence behavior in the user-defined language.
@@ -774,7 +777,7 @@ See match-a-pattern.rkt for more details
             [(equal? (procedure-arity compiled-pattern-without-freshening) 3)
              (lambda (exp hole-info nesting-depth)
                      (compiled-pattern-without-freshening
-                      (freshen binding-forms match-pattern exp)
+                      (freshen binding-forms literals match-pattern exp)
                       hole-info nesting-depth))]
             ;; only returns a boolean, no need to freshen
             [else compiled-pattern-without-freshening]))

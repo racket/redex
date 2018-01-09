@@ -12,7 +12,7 @@
          "lang-struct.rkt"
          "enum.rkt"
          (only-in "binding-forms.rkt"
-                  α-equal? safe-subst binding-forms-opened? make-immutable-α-hash)
+                  safe-subst binding-forms-opened? make-immutable-α-hash)
          (only-in "binding-forms-definitions.rkt"
                   shadow nothing bf-table-entry-pat bf-table-entry-bspec)
          racket/trace
@@ -2709,9 +2709,11 @@
                ;; in commit
                ;;    152084d5ce6ef49df3ec25c18e40069950146041
                ;; suggest that a hash works better than a trie.
-               [path (make-immutable-α-hash (compiled-lang-binding-table
-                                             (reduction-relation-lang reductions))
-                                            match-pattern)]
+               [path
+                (let ([lang (reduction-relation-lang reductions)])
+                  (make-immutable-α-hash (compiled-lang-binding-table lang)
+                                         (compiled-lang-literals lang)
+                                         match-pattern))]
                [more-steps steps])
       (if (and goal? (goal? term))
           (return (search-success))
@@ -3084,6 +3086,7 @@
       (define lang (default-language))
       (unless lang (error 'substitute "unable to determine the language to use"))
       (safe-subst (compiled-lang-binding-table lang)
+                  (compiled-lang-literals lang)
                   match-pattern
                   (term any_body) (term variable) (term any_substitution)))])
 
