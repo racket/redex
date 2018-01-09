@@ -1047,6 +1047,40 @@
         '(λ null null)))
 
 
+(let ()
+  (define-language esterel
+    (pdotdot ::= pdot p)
 
+    (p ::= nothing)
+
+    (pdot ::= (· p))
+
+    (M (machine pdotdot bindings))
+    (bindings (s ...))
+
+    #:binding-forms
+    (machine pdotdot #:refers-to bindings
+             bindings #:refers-to pdotdot))
+
+  (test (redex-match? esterel M (term (machine nothing ())))
+        #t)
+  (test (redex-match? esterel (machine nothing ()) (term (machine nothing ())))
+        #t)
+
+  (test (redex-match? esterel (machine pdotdot bindings) (term (machine nothing ())))
+        #t))
+
+(let ()
+  (define-language typed-syndicate
+    (S hello)
+    (P ★)
+    (l (λ (P S)))
+    #:binding-forms
+    (λ (P S #:refers-to P) ...))
+
+  (test (redex-match? typed-syndicate (λ P S) (term (λ ★ hello)))
+        #t)
+  (test (redex-match? typed-syndicate (λ (P S)) (term (λ (★ hello))))
+        #t))
 
 (print-tests-passed 'tl-language.rkt)

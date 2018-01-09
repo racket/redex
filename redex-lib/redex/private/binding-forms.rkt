@@ -102,7 +102,7 @@ to traverse the whole value at once, rather than one binding form at a time.
 ;; Sometimes we want fresh names, sometimes we want canonical names
 (define name-generator (make-parameter "name generator not defined"))
 ;; These tell us which symbols are not renamable (when set, should be (listof symbol?))
-(define literals-in-language (make-parameter "language-literals not defined"))
+(define literals-in-language (make-parameter "literals-in-language not defined"))
 ;; For α-equivalence testing, we walk the whole term at once.
 (define all-the-way-down? (make-parameter "all-the-way-downness not defined"))
 
@@ -551,7 +551,8 @@ to traverse the whole value at once, rather than one binding form at a time.
 
   ;; subterms have no binding structure this way:
   (parameterize ([current-bf-table `()]
-                 [pattern-matcher #f])
+                 [pattern-matcher #f]
+                 [literals-in-language '()])
 
 
     (check-equal?
