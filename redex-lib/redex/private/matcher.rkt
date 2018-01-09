@@ -1837,7 +1837,7 @@ See match-a-pattern.rkt for more details
 ;; remove-bindings/filter : (union #f (listof mtch)) (exp exp -> boolean) -> (union #f (listof mtch))
 (define (remove-bindings/filter matches lang-α-equal?)
   (and matches
-       (let ([filtered (filter-multiples matches equal?)])
+       (let ([filtered (filter-multiples matches lang-α-equal?)])
          ;(printf ">> ~s\n=> ~s\n\n" matches filtered)
          (and (not (null? filtered))
               (map (λ (match)
