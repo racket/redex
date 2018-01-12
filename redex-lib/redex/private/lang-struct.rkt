@@ -114,7 +114,14 @@
                                    has-hole-or-hide-hole-ht cache binding-forms-absent-cache
                                    bind-names-cache pict-builder
                                    literals aliases collapsible-nts
-                                   ambiguity-cache binding-table enum-table))
+                                   ambiguity-cache binding-table enum-table
+                                   language-name)
+   #:methods gen:custom-write
+  [(define (write-proc clang port mode)
+     (define lang-name (compiled-lang-language-name clang))
+     (display "#<language: " port)
+     (display lang-name port)
+     (display ">" port))])
 
 (define (compiled-lang-cclang x) (force (compiled-lang-delayed-cclang x)))
 (define (compiled-lang-across-ht x)

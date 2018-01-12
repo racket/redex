@@ -1083,4 +1083,11 @@
   (test (redex-match? typed-syndicate (λ (P S)) (term (λ (★ hello))))
         #t))
 
+(let ()
+  (define-language L1)
+  (define-language L2)
+  (define-language L3)
+  (test (format "~a" (list L1 L2 L3))
+        "(#<language: L1> #<language: L2> #<language: L3>)"))
+
 (print-tests-passed 'tl-language.rkt)

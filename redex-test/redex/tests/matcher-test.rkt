@@ -856,9 +856,15 @@
   (define (test-empty/proc line pat exp ans)
     (run-match-test
      line
-     `(match-pattern (compile-pattern (compile-language 'pict-stuff-not-used '() no-binding-forms '()) ',pat #t) ',exp)
+     `(match-pattern
+       (compile-pattern (compile-language 'pict-stuff-not-used '()
+                                          no-binding-forms '()
+                                          'matcher-test.rkt::lang)
+                        ',pat #t) ',exp)
      (match-pattern 
-      (compile-pattern (compile-language 'pict-stuff-not-used '() no-binding-forms '()) pat #t)
+      (compile-pattern
+       (compile-language 'pict-stuff-not-used '() no-binding-forms '() 'matcher-test.rkt::lang)
+       pat #t)
       exp)
      ans))
   
@@ -867,9 +873,14 @@
 (define (test-lang line pat exp ans nts)
   (run-match-test
    line
-   `(match-pattern (compile-pattern (compile-language 'pict-stuff-not-used ',nts no-binding-forms '()) ',pat #t) ',exp)
+   `(match-pattern (compile-pattern
+                    (compile-language 'pict-stuff-not-used ',nts no-binding-forms '()
+                                      'matcher-test.rkt::lang2)
+                    ',pat #t) ',exp)
    (match-pattern 
-    (compile-pattern (compile-language 'pict-stuff-not-used nts no-binding-forms '()) pat #t)
+    (compile-pattern
+     (compile-language 'pict-stuff-not-used nts no-binding-forms '()
+                       'matcher-test.rkt::lang2) pat #t)
     exp)
    ans))
   
@@ -930,7 +941,8 @@
             (compile-language 'pict-stuff-not-used
                               nts
                               no-binding-forms
-                              '()))))
+                              '()
+                              'matcher-test.rkt::xab-lang))))
     (run-match-test
      line
      `(match-pattern (compile-pattern xab-lang ',pat #t) ',exp)
@@ -950,7 +962,8 @@
                    (make-nt 'bb
                             (list (make-rhs 'b))))
              no-binding-forms
-             '())))
+             '()
+             'matcher-test.rkt::ab-lang)))
     (run-match-test
      line
      `(match-pattern (compile-pattern ab-lang ',pat #t) ',exp)
@@ -994,7 +1007,8 @@
      (let ([mtch ((compiled-pattern-cp
                    (let ([nts (map (λ (nt-def) (nt (car nt-def) (map rhs (cdr nt-def)))) nts/sexp)])
                      (compile-pattern (compile-language 'pict-stuff-not-used nts 
-                                                        no-binding-forms '())
+                                                        no-binding-forms '()
+                                                        'matcher-test.rkt::lang3)
                                       pat #t)))
                   exp
                   #t

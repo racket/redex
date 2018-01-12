@@ -2141,7 +2141,8 @@
                             (list (list 'name rhs/lw ...) ...)
                             (list (make-nt 'first-names (list (make-rhs `r-rhs) ...)) ...)
                             binding-table
-                            '(alias-names ...)))))))))
+                            '(alias-names ...)
+                            'lang-id))))))))
 
                ;; this keeps things from breaking at the top level if `errortrace` is on
                (define errortrace-safe-language-def
@@ -2391,7 +2392,8 @@
                                   (list (make-rhs `r-rhs) ...)) ...)
                    new-bindings-table
                    (list (list '(all-names ...) rhs/lw ...) ...)
-                   '(alias-names ...)))))))
+                   '(alias-names ...)
+                   'name))))))
          (forward-errortrace-prop
           stx
           (quasisyntax/loc stx
@@ -2428,7 +2430,7 @@
 ;;    -> compiled-lang
 ;; note: the nts that come here are an abuse of the `nt' struct; they have
 ;; lists of symbols in the nt-name field.
-(define (do-extend-language old-lang new-nts new-bindings-table new-pict-infos alias-names)
+(define (do-extend-language old-lang new-nts new-bindings-table new-pict-infos alias-names lang-name)
   (unless (compiled-lang? old-lang)
     (error 'define-extended-language "expected a language as first argument, got ~e" old-lang))
   
@@ -2462,7 +2464,8 @@
                                 (list (bf-table-entry-pat bf-table-entry)
                                       (bf-table-entry-bspec bf-table-entry)))
                                 new-bindings-table)
-                      alias-names)))
+                      alias-names
+                      lang-name)))
 
 (define-syntax (define-union-language stx)
   (syntax-case stx ()
@@ -2605,7 +2608,8 @@
          #`(begin
              (define define-language-name (union-language
                                            (list (list 'prefix old-lang) ...)
-                                           '#,aliases))
+                                           '#,aliases
+                                           'name))
              (define-syntax name
                (make-set!-transformer
                 (make-language-id
@@ -2624,7 +2628,7 @@
                                             (list #''k #'#'v)))))
                  '#,nt->hole))))))]))
 
-(define (union-language old-langs/prefixes aliases)
+(define (union-language old-langs/prefixes aliases union-langs-name)
   (define (add-prefix prefix sym)
     (if prefix
         (string->symbol
@@ -2671,8 +2675,8 @@
   (compile-language #f
                     (hash-map names-table (λ (name set) (make-nt name (set->list set))))
                     binding-table
-                    (hash-keys aliases)))
-
+                    (hash-keys aliases)
+                    union-langs-name))
 
 (define (apply-reduction-relation* reductions exp
                                    #:all? [return-all? #f]

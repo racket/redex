@@ -953,7 +953,8 @@
            (error 'pat-unify.rkt "this shouldn't be called, but it was ~s" args))])
     (compiled-lang
      #f #f #f #f #f #f #f #f #f #f #f #f '() '() (hash) (make-hash) '()
-     (lang-enumerators '() (make-hash) (delay '()) pat-unify.rkt::die))))
+     (lang-enumerators '() (make-hash) (delay '()) pat-unify.rkt::die)
+     'pat-unify.rkt::empty-lang)))
 
 (define unique-name-nums (make-parameter 0))
 

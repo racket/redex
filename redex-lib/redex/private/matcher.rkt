@@ -90,7 +90,7 @@ See match-a-pattern.rkt for more details
 
 ;; compile-language : language-pict-info[see pict.rkt] (listof nt) (listof (uf-set/c symbol?))
 ;; (listof (list rewritten-pattern bspec)) -> compiled-lang
-(define (compile-language pict-info lang binding-info aliases)
+(define (compile-language pict-info lang binding-info aliases language-name)
   (let* ([clang-ht (make-hasheq)]
          [clang-list-ht (make-hasheq)]
          [clang-all-ht (make-hasheq)]
@@ -113,7 +113,8 @@ See match-a-pattern.rkt for more details
                                     collapsible-nts
                                     'uninitialized-ambiguity-info
                                     `() ;; internal patterns don't need freshening
-                                    #f)]
+                                    #f
+                                    language-name)]
          [binders (map (match-lambda
                          [`(,rewritten-pattern ,bspec)
                           (bf-table-entry (compile-pattern clang rewritten-pattern #t)
@@ -2063,6 +2064,7 @@ See match-a-pattern.rkt for more details
  (compile-language (-> any/c (listof nt?)
                        (listof (list/c (not/c compiled-pattern?) bspec?))
                        (listof symbol?)
+                       symbol?
                        compiled-lang?)))
 (provide compiled-pattern? 
          print-stats)
