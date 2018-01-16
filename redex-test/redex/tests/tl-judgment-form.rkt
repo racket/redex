@@ -805,4 +805,255 @@
                      (judgment-holds (lambda?))))))
       #t)
 
+(let ()
+  
+  (define-language L
+    (e ::=
+       (cons e e)
+       (car e)
+       (cdr e)
+       nil)
+    (v ::= (cons v v) nil)
+    (e+⊥ ::= e ERROR)
+    (E ::= hole (car E) (cdr E) (cons v E) (cons E e)))
+
+  (define-judgment-form L
+    #:mode     (-> I O)
+    #:contract (-> e e+⊥)
+
+    [(-> (in-hole E (car (cons v_1 v_2)))
+         (in-hole E v_1))]
+    [(-> (in-hole E (cdr (cons v_1 v_2)))
+         (in-hole E v_2))]
+    [(-> (in-hole E (car nil))
+         ERROR)]
+    [(-> (in-hole E (cdr nil))
+         ERROR)])
+
+  (test (apply-reduction-relation* -> (term (car (cons (cons nil nil) nil))))
+        (list (term (cons nil nil))))
+  (test (apply-reduction-relation* -> (term (car (car (cons (cons nil nil) nil)))))
+        (list (term nil)))
+  (test (apply-reduction-relation* -> (term (car (car (car (cons (cons nil nil) nil))))))
+        (list (term ERROR))))
+
+(let ()
+  (define-language L
+    (e ::=
+       (cons e e)
+       (car e)
+       (cdr e)
+       nil)
+    (v ::= (cons v v) nil)
+    (e+⊥ ::= e ERROR)
+    (E ::= hole (car E) (cdr E) (cons v E) (cons E e)))
+
+  (define-judgment-form L
+    #:mode     (-> I O)
+    #:contract (-> e e+⊥)
+
+    [(-> (in-hole E (car (cons v_1 v_2)))
+         (in-hole E v_1))]
+    [(-> (in-hole E (cdr (cons v_1 v_2)))
+         (in-hole E v_2))]
+    [(-> (in-hole E (car nil))
+         ERROR)]
+    [(-> (in-hole E (cdr nil))
+         ERROR)])
+
+  (define-extended-language L++ L
+    (e ::= .... (if e e e))
+    (E ::= .... (if E e e)))
+
+  (define-extended-judgment-form L++ ->
+    #:mode (->if I O)
+    #:contract (->if e e+⊥)
+    [(->if (in-hole E (if nil e_1 e_2))
+           (in-hole E e_1))]
+    [(->if (in-hole E (if (cons v_1 v_2) e_1 e_2))
+           (in-hole E e_2))])
+
+  (test (apply-reduction-relation* ->if (term (if (if (cons nil nil) nil nil) nil nil)))
+        (list (term nil))))
+
+(let ()
+  (define-language L
+    (e ::=
+       (cons e e)
+       (car e)
+       (cdr e)
+       nil)
+    (v ::= (cons v v) nil)
+    (e+⊥ ::= e ERROR)
+    (E ::= hole (car E) (cdr E) (cons v E) (cons E e)))
+
+  (define-judgment-form L
+    #:mode     (-> I O)
+    #:contract (-> () e+⊥) ;; bad contract, should be ignored by extension
+
+    [(-> (in-hole E (car (cons v_1 v_2)))
+         (in-hole E v_1))]
+    [(-> (in-hole E (cdr (cons v_1 v_2)))
+         (in-hole E v_2))]
+    [(-> (in-hole E (car nil))
+         ERROR)]
+    [(-> (in-hole E (cdr nil))
+         ERROR)])
+
+  (define-extended-language L++ L
+    (e ::= .... (if e e e))
+    (E ::= .... (if E e e)))
+  
+  (define-extended-judgment-form L++ ->
+    #:mode (->if I O)
+    #:contract (->if e e+⊥)
+    [(->if (in-hole E (if nil e_1 e_2))
+           (in-hole E e_1))]
+    [(->if (in-hole E (if (cons v_1 v_2) e_1 e_2))
+           (in-hole E e_2))])
+
+  (test (judgment-holds (->if (if (if (cons nil nil) nil nil) nil nil)
+                              e)
+                        e)
+        (list (term (if nil nil nil)))))
+
+(let ()
+  (define-language L
+    (e ::=
+       (cons e e)
+       (car e)
+       (cdr e)
+       nil)
+    (v ::= (cons v v) nil)
+    (e+⊥ ::= e ERROR)
+    (E ::= hole (car E) (cdr E) (cons v E) (cons E e)))
+
+  (define-judgment-form L
+    #:mode     (-> I O)
+    #:contract (-> e e+⊥)
+
+    [(-> (in-hole E (car (cons v_1 v_2)))
+         (in-hole E v_1))]
+    [(-> (in-hole E (cdr (cons v_1 v_2)))
+         (in-hole E v_2))]
+    [(-> (in-hole E (car nil))
+         ERROR)]
+    [(-> (in-hole E (cdr nil))
+         ERROR)])
+
+  (define-extended-language L++ L
+    (e ::= .... (if e e e))
+    (E ::= .... (if E e e)))
+  
+  (define-extended-judgment-form L++ ->
+    #:mode (->2 I O)
+    #:contract (->2 any any)
+    [(->2 any any)])
+
+  (test (judgment-holds (->2 (car car) any) any)
+        (list (term (car car))))
+
+  (test (judgment-holds (->2 (car (cons nil nil)) any) any)
+        (list (term (car (cons nil nil)))
+              (term nil))))
+
+(let ()
+  (define-language L
+    (e ::=
+       (cons e e)
+       (car e)
+       (cdr e)
+       nil)
+    (v ::= (cons v v) nil)
+    (e+⊥ ::= e ERROR)
+    (E ::= hole (car E) (cdr E) (cons v E) (cons E e)))
+
+  (define-judgment-form L
+    #:mode     (-> I O)
+    #:contract (-> e e+⊥)
+
+    [(-> (in-hole E (car (cons v_1 v_2)))
+         (in-hole E v_1))]
+    [(-> (in-hole E (cdr (cons v_1 v_2)))
+         (in-hole E v_2))]
+    [(-> (in-hole E (car nil))
+         ERROR)]
+    [(-> (in-hole E (cdr nil))
+         ERROR)])
+
+  (test (with-handlers ([exn:fail? exn-message])
+          (judgment-holds (-> (+ 1 2) 3)))
+        (regexp
+         (regexp-quote
+          "->: judgment input values do not match its contract")))
+  
+  (define-extended-judgment-form L ->
+    #:mode (->2 I O)
+    [(->2 any any)])
+
+  (test (with-handlers ([exn:fail? exn-message])
+          (judgment-holds (->2 (+ 1 2) 3)))
+        (regexp
+         (regexp-quote
+          "->2: judgment input values do not match its contract"))))
+
+(let ()
+  (define-language STLC
+    (e (λ (x τ) e)
+       (e e)
+       x
+       i
+       add1)
+    (τ int
+       (τ → τ))
+    (Γ ([x τ] Γ)
+       •)
+    (i integer)
+    (x variable-not-otherwise-mentioned))
+
+  (define-judgment-form STLC
+    #:mode (typeof I I O)
+    #:contract (typeof Γ e τ)
+    [(typeof Γ i int)]
+    [(typeof Γ x (lookup x Γ))]
+    [(typeof Γ add1 (int → int))]
+    [(typeof Γ (λ (x τ_1) e) (τ_1 → τ_2))
+     (typeof ([x τ_1] Γ) e τ_2)]
+    [(typeof Γ (e_1 e_2) τ)
+     (typeof Γ e_1 (τ_2 → τ))
+     (typeof Γ e_2 τ_2)])
+
+  (define-metafunction STLC
+    [(lookup x ([x τ] Γ))
+     τ]
+    [(lookup x ([x_1 τ] Γ))
+     (lookup x Γ)])
+
+  (define-extended-language if-l STLC
+    (e (if0 e e e)
+       ....))
+
+  (define-extended-judgment-form if-l typeof
+    #:mode (typ-if I I O)
+    [(typ-if Γ (if0 e_1 e_2 e_3) τ)
+     (typ-if Γ e_1 int)
+     (typ-if Γ e_2 τ)
+     (typ-if Γ e_3 τ)])
+
+  (redex-match if-l
+               (Γ e τ)
+               (term (((H int) ((xG int) •))
+                      (λ (Nr (int → int))
+                        (if0 (Nr H) (Nr H) ((λ (x int) x) H)))
+                      ((int → int) → int))))
+
+  (test (judgment-holds
+         (typ-if ((H int) ((xG int) •))
+                 (λ (Nr (int → int)) (if0 (Nr H) (Nr H) H))
+                 ((int → int) → int)))
+        #t))
+
+(provide (all-defined-out))
+
+
 (print-tests-passed 'tl-judgment-form.rkt)

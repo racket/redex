@@ -272,18 +272,15 @@
     [(runtime-judgment-form? p)
      (define jf-res
        (parameterize ([include-jf-rulename tag-with-names?])
-         (call-judgment-form (runtime-judgment-form-name p)
-                             (runtime-judgment-form-proc p)
-                             (runtime-judgment-form-mode p)
-                             
-                             ;; this list is because we expect one argument
-                             ;; judgment forms, but the general API puts the
-                             ;; arguments into a list. 
-                             (list v)
-                             
-                             #f
-                             (runtime-judgment-form-cache p)
-                             (runtime-judgment-form-lang p))))
+         (call-runtime-judgment-form
+          p
+
+          ;; this list is because we expect one argument
+          ;; judgment forms, but the general API puts the
+          ;; arguments into a list.
+          (list v)
+
+          #f)))
      (apply
       append
       (for/list ([d-sub (in-list jf-res)])
@@ -2714,7 +2711,9 @@
                ;;    152084d5ce6ef49df3ec25c18e40069950146041
                ;; suggest that a hash works better than a trie.
                [path
-                (let ([lang (reduction-relation-lang reductions)])
+                (let ([lang (if (reduction-relation? reductions)
+                                (reduction-relation-lang reductions)
+                                (runtime-judgment-form-lang reductions))])
                   (make-immutable-α-hash (compiled-lang-binding-table lang)
                                          (compiled-lang-literals lang)
                                          match-pattern))]
@@ -2765,13 +2764,21 @@
 ;; nexts already has had the check that they are in the codomain (or domain
 ;; if there is one); here we remove the ones that are outside the codomain
 (define (remove-outside-domain reductions nexts)
-  (define dom-pat (reduction-relation-compiled-domain-pat reductions))
   (cond
-    [dom-pat
+    [(reduction-relation? reductions)
+     (define dom-pat (reduction-relation-compiled-domain-pat reductions))
+     (cond
+       [dom-pat
+        (for/list ([next (in-list nexts)]
+                   #:when (match-pattern? dom-pat next))
+          next)]
+       [else nexts])]
+    [else
+     (define input-pat
+       (runtime-judgment-form-compiled-input-contract-pat reductions))
      (for/list ([next (in-list nexts)]
-                #:when (match-pattern? dom-pat next))
-       next)]
-    [else nexts]))
+                #:when (match-pattern? input-pat (list next)))
+       next)]))
 
 ;; map/mt : (a -> b) (listof a) (listof b) -> (listof b)
 ;; map/mt is like map, except

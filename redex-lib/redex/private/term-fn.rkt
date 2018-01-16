@@ -41,7 +41,11 @@
 ;; mode: (or/c #f (listof (or/c 'I 'O))  -- #f means the judgment form is actually a relation
 (define-struct judgment-form (name mode proc mk-proc lang lws rule-names 
                                    gen-clauses mk-gen-clauses term-proc relation?
-                                   cache transformer)
+                                   cache runtime-judgment-form-id
+                                   original-contract-expression-id
+                                   compiled-input-contract-pat-id
+                                   compiled-output-contract-pat-id
+                                   transformer)
   #:property prop:procedure (struct-field-index transformer)
   #:transparent)
 

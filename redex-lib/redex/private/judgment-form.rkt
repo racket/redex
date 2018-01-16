@@ -50,14 +50,66 @@
 (define-struct metafunc-extra-where (lhs rhs))
 (define-struct metafunc-extra-fresh (vars))
 
-(define-struct runtime-judgment-form (name proc mode cache lang)
+(define-struct runtime-judgment-form (name proc mode cache lang
+                                           original-contract-expression
+                                           compiled-input-contract-pat
+                                           compiled-output-contract-pat
+                                           input-contract-pat
+                                           output-contract-pat)
   #:methods gen:custom-write
   [(define (write-proc rjf port _mode)
      (if (runtime-judgment-form-mode rjf)
-         (display "#<judgment-form:" port)
-         (display "#<relation:" port))
-     (display (runtime-judgment-form-name rjf) port)
+         (display "#<judgment-form: " port)
+         (display "#<relation: " port))
+     (define name+ctc
+       (if (runtime-judgment-form-original-contract-expression rjf)
+           (format "~s" (cons (runtime-judgment-form-name rjf)
+                              (runtime-judgment-form-original-contract-expression rjf)))
+           (format "~s" (runtime-judgment-form-name rjf))))
+     (define length-limit 30)
+     (cond
+       [(< (string-length name+ctc) length-limit) (display name+ctc port)]
+       [else
+        (display (substring name+ctc 0 length-limit) port)
+        (display "..." port)])
      (display ">" port))])
+(define (build-runtime-judgment-form parent-judgment-form
+                                     name proc mode lang
+                                     original-contract-expression ;; (or/c #f (listof s-exp))
+                                     input-contract-pat
+                                     output-contract-pat)
+  (define cache (cons (box (make-hash)) (box (make-hash))))
+  (make-runtime-judgment-form
+   name proc mode cache lang
+   (cond
+     [original-contract-expression
+      original-contract-expression]
+     [parent-judgment-form
+      (runtime-judgment-form-original-contract-expression
+       parent-judgment-form)]
+     [else #f])
+   (cond
+     [original-contract-expression
+      (compile-pattern lang input-contract-pat #f)]
+     [(and parent-judgment-form
+           (runtime-judgment-form-input-contract-pat parent-judgment-form))
+      =>
+      (λ (pat) (compile-pattern lang pat #f))]
+     [else #f])
+   (cond
+     [original-contract-expression
+      (compile-pattern lang output-contract-pat #f)]
+     [(and parent-judgment-form
+           (runtime-judgment-form-output-contract-pat parent-judgment-form))
+      =>
+      (λ (pat) (compile-pattern lang pat #f))]
+     [else #f])
+   (or input-contract-pat
+       (and parent-judgment-form
+            (runtime-judgment-form-input-contract-pat parent-judgment-form)))
+   (or output-contract-pat
+       (and parent-judgment-form
+            (runtime-judgment-form-output-contract-pat parent-judgment-form)))))
 
 (begin-for-syntax
   ;; pre: (judgment-form-id? stx) holds
@@ -292,7 +344,7 @@
             (define judgment-form (lookup-judgment-form-id #'form-name))
             (check-judgment-arity stx premise)
             (define mode (judgment-form-mode judgment-form))
-            (define judgment-proc (judgment-form-proc judgment-form))
+            (define runtime-judgment-form-id (judgment-form-runtime-judgment-form-id judgment-form))
             (define-values (input-template output-pre-pattern)
               (let-values ([(in out) (split-by-mode (syntax->list #'(pats ...)) mode)])
                 (if under-ellipsis?
@@ -319,10 +371,18 @@
                   (forward-errortrace-prop
                    premise
                    (quasisyntax/loc premise
-                     (call-judgment-form 'form-name #,judgment-proc '#,mode #,input
+                     (call-judgment-form 'form-name
+                                         #,(judgment-form-proc judgment-form)
+                                         '#,mode #,input
                                          #,(if jf-results-id #''() #f)
                                          #,(judgment-form-cache judgment-form)
-                                         #,ct-lang))))
+                                         #,ct-lang
+                                         #,(judgment-form-original-contract-expression-id
+                                            judgment-form)
+                                         #,(judgment-form-compiled-input-contract-pat-id
+                                            judgment-form)
+                                         #,(judgment-form-compiled-output-contract-pat-id
+                                            judgment-form)))))
                 (if under-ellipsis?
                     #`(repeated-premise-outputs #,input (λ (x) #,(make-traced #'x)))
                     (make-traced input))))
@@ -336,7 +396,7 @@
               (set! compiled-pattern-identifiers (cons #'pat-id compiled-pattern-identifiers))
               #`(begin
                   #,syncheck-exp
-                  (void #,(defined-check judgment-proc "judgment form" #:external #'form-name))
+                  (void #,(defined-check runtime-judgment-form-id "judgment form" #:external #'form-name))
                   (judgment-form-bind-withs/proc
                    #,rt-lang
                    pat-id
@@ -414,8 +474,24 @@
            (equal? (runtime-judgment-form-mode jf) '(O I)))))
 
 (define not-in-cache (gensym))
+(define (call-runtime-judgment-form a-runtime-judgment-form inputs derivation-init)
+  (call-judgment-form (runtime-judgment-form-name a-runtime-judgment-form)
+                      (runtime-judgment-form-proc a-runtime-judgment-form)
+                      (runtime-judgment-form-mode a-runtime-judgment-form)
+                      inputs
+                      #f
+                      (runtime-judgment-form-cache a-runtime-judgment-form)
+                      (runtime-judgment-form-lang a-runtime-judgment-form)
+                      (runtime-judgment-form-original-contract-expression a-runtime-judgment-form)
+                      (runtime-judgment-form-compiled-input-contract-pat a-runtime-judgment-form)
+                      (runtime-judgment-form-compiled-output-contract-pat a-runtime-judgment-form)))
+
 (define (call-judgment-form form-name form-proc mode input derivation-init
-                            pair-of-boxed-caches ct-lang)
+                            pair-of-boxed-caches ct-lang
+                            original-contract-expression
+                            compiled-input-contract-pat
+                            compiled-output-contract-pat)
+
   (define boxed-cache (if (include-entire-derivation)
                           (car pair-of-boxed-caches)
                           (cdr pair-of-boxed-caches)))
@@ -428,22 +504,59 @@
                          (let ([cache-value (hash-ref cache input not-in-cache)])
                            (not (eq? cache-value not-in-cache)))))
   (define p-a-e (print-as-expression))
-  (define (form-proc/cache recur input derivation-init pair-of-boxed-caches)
+  (define (form-proc/cache recur input derivation-init pair-of-boxed-caches
+                           original-contract-expression
+                           compiled-input-contract-pat
+                           compiled-output-contract)
+
+    (define (check-input-contract input)
+      (when compiled-input-contract-pat
+        (check-judgment-form-contract form-name input #f
+                                      compiled-input-contract-pat
+                                      original-contract-expression
+                                      'I
+                                      mode)))
+
+    (define (check-output-contract input outputs)
+      (when compiled-output-contract-pat
+        (for ([output (in-list outputs)])
+          (check-judgment-form-contract form-name input output
+                                        compiled-output-contract-pat
+                                        original-contract-expression
+                                        'O
+                                        mode))))
+
     (parameterize ([default-language ct-lang]
                    [print-as-expression p-a-e]
                    [binding-forms-opened? (if (caching-enabled?) (box #f) #f)])
+      (check-input-contract input)
       (cond
         [(caching-enabled?)
          (define candidate (hash-ref cache input not-in-cache))
          (cond
            [(equal? candidate not-in-cache)
-            (define computed-ans (form-proc recur input derivation-init pair-of-boxed-caches))
+            (define output (form-proc recur input derivation-init pair-of-boxed-caches
+                                      original-contract-expression
+                                      compiled-input-contract-pat
+                                      compiled-output-contract))
+            (check-output-contract input output)
             (unless (unbox (binding-forms-opened?))
-              (hash-set! cache input computed-ans))
-            computed-ans]
+              (hash-set! cache input output))
+            output]
            [else
             candidate])]
-        [else (form-proc recur input derivation-init pair-of-boxed-caches)])))
+        [(not compiled-output-contract-pat)
+         (form-proc recur input derivation-init pair-of-boxed-caches
+                    original-contract-expression
+                    compiled-input-contract-pat
+                    compiled-output-contract)]
+        [else
+         (define output (form-proc recur input derivation-init pair-of-boxed-caches
+                                   original-contract-expression
+                                   compiled-input-contract-pat
+                                   compiled-output-contract))
+         (check-output-contract input output)
+         output])))
   (define dwoos
     (if (or (eq? 'all traced) (memq form-name traced))
         (let ([outputs #f])
@@ -455,7 +568,13 @@
               [else
                '()]))
           (define (wrapped . _)
-            (set! outputs (form-proc/cache form-proc/cache input derivation-init pair-of-boxed-caches))
+            (set! outputs (form-proc/cache form-proc/cache
+                                           input
+                                           derivation-init
+                                           pair-of-boxed-caches
+                                           original-contract-expression
+                                           compiled-input-contract-pat
+                                           compiled-output-contract-pat))
             (for/list ([output (in-list outputs)])
               (cons form-name (assemble mode input (derivation-with-output-only-output output)))))
           (define otr (current-trace-print-results))
@@ -475,7 +594,13 @@
                               result-tracer)])
             (apply trace-call form-name wrapped (assemble mode input spacers)))
           outputs)
-        (form-proc/cache form-proc/cache input derivation-init pair-of-boxed-caches)))
+        (form-proc/cache form-proc/cache
+                         input
+                         derivation-init
+                         pair-of-boxed-caches
+                         original-contract-expression
+                         compiled-input-contract-pat
+                         compiled-output-contract-pat)))
   
   (define without-exact-duplicates-vec (apply vector (remove-duplicates dwoos)))
   (define ht (make-α-hash (compiled-lang-binding-table ct-lang)
@@ -788,21 +913,38 @@
             (judgment-form '#,judgment-form-name '#,(and mode (cdr mode)) #'judgment-form-runtime-proc
                            #'mk-judgment-form-proc #'#,lang #'jf-lws
                            '#,rule-names #'judgment-runtime-gen-clauses #'mk-judgment-gen-clauses #'jf-term-proc #,is-relation?
-                           #'jf-cache (λ (stx) (expand-to-id #'the-runtime-judgment-form stx))))
-          (define-values (mk-judgment-form-proc mk-judgment-gen-clauses)
+                           #'jf-cache #'the-runtime-judgment-form
+                           #'original-contract-expression-id
+                           #'compiled-input-contract-pat-id
+                           #'compiled-output-contract-pat-id
+                           (λ (stx) (expand-to-id #'the-runtime-judgment-form stx))))
+          (define-values (mk-judgment-form-proc
+                          mk-judgment-gen-clauses
+                          original-contract-expression
+                          judgment-form-input-contract
+                          judgment-form-output-contract)
             (compile-judgment-form #,judgment-form-name #,mode-stx #,lang #,clauses #,rule-names #,position-contracts #,invariant
                                    #,orig #,stx #,syn-err-name judgment-runtime-gen-clauses))
           (define judgment-form-runtime-proc (mk-judgment-form-proc #,lang))
           (define jf-lws (compiled-judgment-form-lws #,clauses #,judgment-form-name #,stx))
           (define judgment-runtime-gen-clauses (mk-judgment-gen-clauses #,lang (λ () (judgment-runtime-gen-clauses))))
           (define jf-term-proc (make-jf-term-proc #,judgment-form-name #,syn-err-name #,lang #,nts #,mode-stx))
-          (define jf-cache (cons (box (make-hash)) (box (make-hash))))
           (define the-runtime-judgment-form
-            (runtime-judgment-form '#,judgment-form-name
-                                   judgment-form-runtime-proc
-                                   '#,(and mode (cdr mode))
-                                   jf-cache
-                                   #,lang)))))
+            (build-runtime-judgment-form #,orig
+                                         '#,judgment-form-name
+                                         judgment-form-runtime-proc
+                                         '#,(and mode (cdr mode))
+                                         #,lang
+                                         original-contract-expression
+                                         judgment-form-input-contract
+                                         judgment-form-output-contract))
+          (define jf-cache (runtime-judgment-form-cache the-runtime-judgment-form))
+          (define original-contract-expression-id
+            (runtime-judgment-form-original-contract-expression the-runtime-judgment-form))
+          (define compiled-input-contract-pat-id
+            (runtime-judgment-form-compiled-input-contract-pat the-runtime-judgment-form))
+          (define compiled-output-contract-pat-id
+            (runtime-judgment-form-compiled-output-contract-pat the-runtime-judgment-form)))))
   (syntax-property
    (values ;prune-syntax
     (if (eq? 'top-level (syntax-local-context))
@@ -811,7 +953,11 @@
         #`(begin 
             (define-syntaxes (judgment-form-runtime-proc 
                               judgment-runtime-gen-clauses 
-                              jf-term-proc jf-lws jf-cache) 
+                              jf-term-proc jf-lws jf-cache
+                              original-contract-expression-id
+                              compiled-input-contract-pat-id
+                              compiled-output-contract-pat-id
+                              the-runtime-judgment-form)
               (values))
             #,definitions)
         definitions))
@@ -1068,13 +1214,11 @@
     [(_  jf-expr)
      #'(#%expression (judgment-holds/derivation build-derivations #t jf-expr any))]))
 
-(define-for-syntax (do-compile-judgment-form-proc name mode-stx clauses rule-names contracts orig-ctcs nts orig lang stx syn-error-name)
+(define-for-syntax (do-compile-judgment-form-proc name mode-stx clauses rule-names
+                                                  orig-ctcs nts orig lang stx syn-error-name)
   (define is-relation? (jf-is-relation? name))
   (with-syntax ([(init-jf-derivation-id) (generate-temporaries '(init-jf-derivation-id))])
     (define mode (let ([m (syntax->datum mode-stx)]) (and m (cdr m))))
-    (define-values (input-contracts output-contracts)
-      (values (first contracts)
-              (second contracts)))
     (define (compile-clause clause clause-name)
       (syntax-case clause ()
         [((_ . conc-pats) . prems)
@@ -1087,7 +1231,13 @@
                                (cons name
                                      (struct-copy judgment-form (lookup-judgment-form-id name)
                                                   [proc #'recur]
-                                                  [cache #'recur-cache]))])
+                                                  [cache #'recur-cache]
+                                                  [original-contract-expression-id
+                                                   #'original-contract-expression]
+                                                  [compiled-input-contract-pat-id
+                                                   #'compiled-input-contract-pat]
+                                                  [compiled-output-contract-pat-id
+                                                   #'compiled-output-contract-pat]))])
                  (bind-withs syn-error-name '() lang nts lang
                              (syntax->list #'prems) 
                              'flatten #`(list (derivation-with-output-only (term (#,@output-pats) #:lang #,lang)
@@ -1097,30 +1247,17 @@
                              (syntax->list #'(names/ellipses ...))
                              #f
                              #'jf-derivation-id)))
-             (with-syntax ([(compiled-lhs compiled-input-ctcs compiled-output-ctcs)
-                            (generate-temporaries '(compiled-lhs compiled-input-ctcs compiled-output-ctcs))]
+             (with-syntax ([(compiled-lhs) (generate-temporaries '(compiled-lhs))]
                            [(compiled-pattern-identifier ...) compiled-pattern-identifiers]
                            [(pattern-to-compile ...) patterns-to-compile])
                
                #`(;; pieces of a 'let' expression to be combined: first some bindings
                   ([compiled-pattern-identifier (compile-pattern lang pattern-to-compile #t)] ...
-                   [compiled-lhs (compile-pattern lang `lhs #t)]
-                   #,@(if input-contracts
-                          (list #`[compiled-input-ctcs (compile-pattern lang `#,input-contracts #f)])
-                          (list))
-                   #,@(if output-contracts
-                          (list #`[compiled-output-ctcs (compile-pattern lang `#,output-contracts #f)])
-                          (list)))
+                   [compiled-lhs (compile-pattern lang `lhs #t)])
                   ;; and then the body of the let, but expected to be behind a (λ (input) ...).
                   (let ([jf-derivation-id init-jf-derivation-id])
                     (begin
                       lhs-syncheck-exp
-                      #,@(if input-contracts
-                             (list #`(check-judgment-form-contract '#,name input #f
-                                                                   compiled-input-ctcs
-                                                                   '#,orig-ctcs 'I '#,mode
-                                                                   '#,is-relation?))
-                             (list))
                       (combine-judgment-rhses
                        compiled-lhs
                        input
@@ -1128,14 +1265,7 @@
                          #,(bind-pattern-names 'judgment-form
                                                #'(names/ellipses ...)
                                                #'((lookup-binding bnds 'names) ...)
-                                               body))
-                       #,(if output-contracts
-                             #`(λ (output)
-                                 (check-judgment-form-contract '#,name input output
-                                                               compiled-output-ctcs
-                                                               '#,orig-ctcs 'O '#,mode
-                                                               '#,is-relation?))
-                             #`void))))))))]))
+                                               body)))))))))]))
   
     (when (identifier? orig)
       (define orig-mode (judgment-form-mode (lookup-judgment-form-id orig)))
@@ -1170,15 +1300,24 @@
               #`(λ (lang)
                   (let (clause-proc-binding ... ...)
                     (let ([prev (orig-mk lang)])
-                      (λ (recur input init-jf-derivation-id recur-cache)
-                        (append (prev recur input init-jf-derivation-id recur-cache)
+                      (λ (recur input init-jf-derivation-id recur-cache
+                           original-contract-expression
+                           compiled-input-contract-pat
+                           compiled-output-contract-pat)
+                        (append (prev recur input init-jf-derivation-id recur-cache
+                                      original-contract-expression
+                                      compiled-input-contract-pat
+                                      compiled-output-contract-pat)
                                 clause-proc-body-backwards ...))))))
             #`(λ (lang)
                 (let (clause-proc-binding ... ...)
-                  (λ (recur input init-jf-derivation-id recur-cache)
+                  (λ (recur input init-jf-derivation-id recur-cache
+                       original-contract-expression
+                       compiled-input-contract-pat
+                       compiled-output-contract-pat)
                     (append clause-proc-body-backwards ...)))))))))
 
-(define (combine-judgment-rhses compiled-lhs input rhs check-output)
+(define (combine-judgment-rhses compiled-lhs input rhs)
   (define mtchs (match-pattern compiled-lhs input))
   (cond
     [mtchs
@@ -1188,10 +1327,7 @@
        (when os
          (for ([x (in-list os)])
            (hash-set! output-table x #t))))
-     (define outputs (hash-map output-table (λ (k v) k)))
-     (for ([output (in-list outputs)])
-       (check-output output))
-     outputs]
+     (hash-map output-table (λ (k v) k))]
     [else '()]))
 
 (define-for-syntax (do-compile-judgment-form-lws clauses jf-name-stx full-def)
@@ -1237,39 +1373,43 @@
           (reverse sc/wheres))))
 
 (define (check-judgment-form-contract form-name input-term output-term+trees
-                                      contracts orig-ctcs mode modes is-relation?)
-  (define o-term (and (equal? mode 'O)
+                                      contracts orig-ctcs input-or-output-contract modes)
+  (define o-term (and (equal? input-or-output-contract 'O)
                       (derivation-with-output-only-output output-term+trees)))
   (define description
-    (case mode
+    (case input-or-output-contract
       [(I) "input"]
       [(O) "output"]))
   (when contracts
-    (case mode
+    (case input-or-output-contract
       [(I)
        (cond
-         [is-relation?
-          (unless (match-pattern contracts input-term)
-            (redex-error form-name
-                         (string-append "relation values do not match the contract;\n"
-                                        "  contract: ~s\n"
-                                        "  values: ~s")
-                         (cons form-name orig-ctcs)
-                         (cons form-name input-term)))]
-         [else
+         [modes
           (unless (match-pattern contracts input-term)
             (redex-error form-name
                          (string-append "judgment input values do not match its contract;\n"
                                         " (unknown output values indicated by _)\n"
                                         "  contract: ~s\n"
-                                        "  values: ~s")
+                                        "  values:   ~s")
                          (cons form-name orig-ctcs)
                          (cons form-name (assemble modes input-term (build-list (length modes)
-                                                                                (λ (_) '_))))))])]
+                                                                                (λ (_) '_))))))]
+         [else
+          (unless (match-pattern contracts input-term)
+            (redex-error form-name
+                         (string-append "relation values do not match the contract;\n"
+                                        "  contract: ~s\n"
+                                        "  values:   ~s")
+                         (cons form-name orig-ctcs)
+                         (cons form-name input-term)))])]
       [(O)
        (define io-term (assemble modes input-term o-term))
        (unless (match-pattern contracts io-term)
-         (redex-error form-name "judgment values do not match its contract;\n  contract: ~s\n  values: ~s"
+         (redex-error form-name
+                      (string-append
+                       "judgment values do not match its contract;\n"
+                       "  contract: ~s\n"
+                       "  values:   ~s")
                       (cons form-name orig-ctcs) (cons form-name io-term)))])))
 
 (define-for-syntax (mode-check mode clauses nts syn-err-name orig-stx)
@@ -1458,15 +1598,17 @@
                                        (λ (ctc-stx)
                                          #`(side-condition #,ctc-stx (term invt)))
                                        values))
-       (define-values (i-ctc-syncheck-expr i-ctc)
+       (define-values (i-ctc-syncheck-expr i-ctc contract-original-expr)
          (syntax-case #'ctcs ()
-           [#f (values #'(void) #f)]
+           [#f (values #'(void) #f #f)]
            [(p ...)
             (let-values ([(i-ctcs o-ctcs) (split-by-mode (syntax->list #'(p ...)) mode)])
               (with-syntax* ([(i-ctcs ...) i-ctcs]
                              [(syncheck i-ctc-pat (names ...) (names/ellipses ...))
                               (rewrite-side-conditions/check-errs #'lang syn-err-name #f #'(i-ctcs ...))])
-                (values #'syncheck #'i-ctc-pat)))]))
+                (values #'syncheck
+                        #'i-ctc-pat
+                        #'(p ...))))]))
        (define-values (ctc-syncheck-expr ctc)
          (cond 
            [(not (or (syntax-e #'ctcs) 
@@ -1483,11 +1625,12 @@
             (with-syntax ([(syncheck ctc-pat (names ...) (names/ellipses ...))
                            (rewrite-side-conditions/check-errs #'lang syn-err-name #f ctc-stx)])
               (values #'syncheck #'ctc-pat))]))
+       (define-values (input-contract-id output-contract-id)
+         (apply values (generate-temporaries '(jf-input-contract-id jf-output-contract-id))))
        (define proc-stx (do-compile-judgment-form-proc #'judgment-form-name
                                                        #'mode-arg
                                                        clauses
                                                        rule-names
-                                                       (list i-ctc ctc)
                                                        #'ctcs
                                                        nts
                                                        #'orig
@@ -1511,8 +1654,14 @@
                                              (λ ()
                                                #,(check-pats
                                                   #'(list comp-clauses ...)))))))
-       #`(begin #,i-ctc-syncheck-expr #,ctc-syncheck-expr 
-                (values #,proc-stx #,gen-stx)))]))
+       #`(begin #,i-ctc-syncheck-expr #,ctc-syncheck-expr
+                (values #,proc-stx
+                        #,gen-stx
+                        #,(if i-ctc
+                              #``#,contract-original-expr
+                              #`#f)
+                        #,(and i-ctc #``#,i-ctc)
+                        #,(and ctc #``#,ctc))))]))
 
 (define-for-syntax (fix-relation-clauses name raw-clauses)
   (map (λ (clause-stx)
@@ -1824,7 +1973,7 @@
          build-derivations
          generate-lws
          IO-judgment-form?
-         call-judgment-form
+         call-runtime-judgment-form
          include-jf-rulename
          alpha-equivalent?
          (struct-out derivation-subs-acc)
