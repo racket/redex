@@ -1,3 +1,10 @@
+v6.12
+
+  * typeset prime characters better, e.g. when writing e_′,
+    don't use the subscript style for the ′ character
+
+  * various bug fixes
+
 v6.11
 
   * various bug fixes
