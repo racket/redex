@@ -27,3 +27,10 @@
 (#rx"expected production" ([not-prod ::=]) (define-language L (x ::= y not-prod z)))
 (#rx"expected non-terminal definition" ([not-def q]) (define-language L not-def))
 (#rx"expected non-terminal definition" ([not-def ()]) (define-language L not-def))
+
+(#rx"the non-terminal e is defined in terms of itself\n[^\n]*at: e\n"
+ ([e1 e]) (define-language L (e1 ::= e)))
+(#rx"the non-terminal e is defined in terms of itself\n[^\n]*at: e\n"
+ ([e1 e]) (define-language L (e1 e)))
+(#rx"found a cycle of non-terminals that doesn't consume input"
+ ([a1 a] [b1 b]) (define-language L (a1 ::= b) (b1 ::= a)))

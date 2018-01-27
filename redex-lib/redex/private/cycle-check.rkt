@@ -79,7 +79,9 @@
 
     (define full-path (cons cycle bad-path))
     (define all/backwards (for/list ([nt (in-list (reverse bad-path))])
-                            (define stx (hash-ref nt-identifiers nt))
+                            (define stx-lst (hash-ref nt-identifiers nt))
+                            (define lst (if (syntax? stx-lst) (syntax->list stx-lst) stx-lst))
+                            (define stx (car lst))
                             (datum->syntax stx nt stx)))
     (raise-syntax-error 'define-language
                         (if (= 1 (length bad-path))
