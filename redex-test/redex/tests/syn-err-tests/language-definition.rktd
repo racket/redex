@@ -34,3 +34,9 @@
  ([e1 e]) (define-language L (e1 e)))
 (#rx"found a cycle of non-terminals that doesn't consume input"
  ([a1 a] [b1 b]) (define-language L (a1 ::= b) (b1 ::= a)))
+
+(#rx"unknown name imported or exported: y"
+ ([bf (λ (x) e #:refers-to y)])
+ (define-language l
+   #:binding-forms
+   bf))
