@@ -31,7 +31,9 @@
             [_ (raise-syntax-error (syntax-e form-name) "internal error")]))
 
         (define-values (pat bspec betas+ellipses)
-          (surface-bspec->pat&bspec #`(bf-name+bf-body #:exports #,exports) form-name))
+          (surface-bspec->pat&bspec
+           (quasisyntax/loc #'bf-name+bf-body (bf-name+bf-body #:exports #,exports))
+           form-name))
         
         (with-syntax ([(syncheck-expr rewritten-pat-with-betas _ _)
                        (rewrite-side-conditions/check-errs all-nts (syntax-e form-name) #t
