@@ -138,23 +138,27 @@ sets @racket[dc-for-text-size] and the latter does not.
  @ex[(term->pict nums (+ 1 (+ 3 4)))]
 }
 
-@defproc[(render-term/pretty-write [lang compiled-lang?]
-                                   [term any/c]
-                                   [filename path-string?]
-                                   [#:width width #f])
-         void?]{
+@defproc[(render-term/pretty-write
+          [lang compiled-lang?]
+          [term any/c]
+          [filename (or/c path-string? #f) #f]
+          [#:width width (or/c exact-positive-integer? 'infinity) (pretty-print-columns)])
+         (or/c void? pict?)]{
   Like @racket[render-term], except that the @racket[term] argument is evaluated,
   and expected to return a term. Then, @racket[pretty-write] is used
   to determine where the line breaks go, using the @racket[width] argument
   as a maximum width (via @racket[pretty-print-columns]).
 
+  If @racket[filename] is provided, the pict is saved as a pdf to that file.
+
 
   @ex[(render-term/pretty-write nums '(+ (1 1 1) (1 0 1)))]
 }
 
-@defproc[(term->pict/pretty-write [lang compiled-lang?] 
-                                  [term any/c]
-                                  [#:width width #f])
+@defproc[(term->pict/pretty-write
+          [lang compiled-lang?]
+          [term any/c]
+          [#:width width (or/c exact-positive-integer? 'infinity) (pretty-print-columns)])
          pict?]{
   Like @racket[term->pict], but with the same change that
   @racket[render-term/pretty-write] has from @racket[render-term].
