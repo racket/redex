@@ -33,7 +33,7 @@
                 (code:line binding-pattern #:...bind (id beta beta))]
 	       [beta nothing
 	             symbol
-		     (shadow beta-seqence ...)]
+		     (shadow beta-sequence ...)]
 	       [beta-sequence beta
 	                      (code:line ... (code:comment "literal ellipsis"))])]{
 
