@@ -427,12 +427,12 @@ non-terminal has all of the alternatives from the original
 language's non-terminal, as well as any new ones. If a
 non-terminal occurs in both the base language and the
 extension, the extension's non-terminal replaces the
-originals. If a non-terminal only occurs in either the base
+originals. If a non-terminal only occurs in the base
 language, then it is carried forward into the
-extension. And, of course, extend-language lets you add new
+extension. And, of course, @racket[define-extended-language] lets you add new
 non-terminals to the language.
 
-If a language is has a group of multiple non-terminals
+If a language has a group of multiple non-terminals
 defined together, extending any one of those non-terminals
 extends all of them.
 }
