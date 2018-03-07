@@ -13,6 +13,10 @@
 (test (term (1 ,(+ 1 1))) (list 1 2))
 (test (term-let ([x 1]) (term (x x))) (list 1 1))
 (test (term-let ([(x ...) (list 1 2 3)]) (term ((y x) ...))) '((y 1) (y 2) (y 3)))
+(test (term #hash((a . 2))) #hash((a . 2)))
+(test (term-let ([x 1]) #hash((a . x))) #hash((a . x)))
+(test (term #s(a 2 3 4)) #s(a 2 3 4))
+(test (term-let ([x 1]) #s(a 2 x 4)) #s(a 2 x 4))
 
 (test (term (in-hole (1 hole) 2)) (term (1 2)))
 (test (term (in-hole (1 hole (hole x)) 2)) (term (1 2 (hole x))))

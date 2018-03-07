@@ -29,8 +29,7 @@ stands for repetition unless otherwise indicated):
          (in-hole term term)
          hole
          (mf-apply identifier term ...)
-         #t #f
-         string]
+         literal]
    [term-sequence 
      term
      ,@expr
@@ -64,8 +63,15 @@ them.}
 @item{A term written @racket[(mf-apply f arg ...)] asserts that @racket[f]
 is a @tech{metafunction} and produces the term @racket[(f arg ...)].}
 
-@item{A term written as a literal boolean or a string
-produces the boolean or the string.}
+ @item{A term written as a literal produces that literal.
+  Term substitution and metafunction application do not occur
+  within literal values. For example,
+
+  @racketblock[
+ (term-let ([a 1]) (term #hash((x . a))))
+ ]
+
+ Evaluates to @racket['#hash((x . a))], not @racket['#hash((x . 1))].}
 ]
 
 @defform*[[(term @#,tttterm) (term @#,tttterm #:lang lang-id)]]{
