@@ -394,7 +394,7 @@ nested lists.
 }
 
 @defproc[(set-cache-size! [size positive-integer?]) void?]{
-Changes the size of the per-pattern and per-metafunction caches.
+Changes the size of the per-pattern, per-metafunction and per-judgment-form caches.
 
 The default size is @racket[63].
 }
