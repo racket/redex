@@ -77,22 +77,41 @@
                (define path (loop neighbor))
                (and path (cons node path)))]))))
 
-    (define full-path (cons cycle bad-path))
-    (define all/backwards (for/list ([nt (in-list (reverse bad-path))])
-                            (define stx-lst (hash-ref nt-identifiers nt))
-                            (define lst (if (syntax? stx-lst) (syntax->list stx-lst) stx-lst))
-                            (define stx (car lst))
-                            (datum->syntax stx nt stx)))
+    (define bad-path/stx-objects
+      (for/list ([nt (in-list bad-path)])
+        (define stx-lst (hash-ref nt-identifiers nt))
+        (define lst (if (syntax? stx-lst) (syntax->list stx-lst) stx-lst))
+        (define stx (car lst))
+        (datum->syntax stx nt stx)))
+
+    (define bad-path-starting-point
+      (for/fold ([smallest (car bad-path/stx-objects)])
+                ([point (in-list (cdr bad-path/stx-objects))])
+        (define smaller?
+          (< (or (syntax-position smallest) +inf.0)
+             (or (syntax-position point) +inf.0)))
+        (if smaller?
+            smallest
+            point)))
+    (define bad-path-in-canonical-order
+      (let loop ([bad-path bad-path/stx-objects])
+        (cond
+          [(equal? bad-path-starting-point (car bad-path))
+           bad-path]
+          [else
+           (loop (append (cdr bad-path) (list (car bad-path))))])))
+    (define full-path (cons (car (reverse bad-path-in-canonical-order))
+                            bad-path-in-canonical-order))
     (raise-syntax-error 'define-language
-                        (if (= 1 (length bad-path))
+                        (if (= 1 (length bad-path-in-canonical-order))
                             (format "the non-terminal ~a is defined in terms of itself"
-                                    (car bad-path))
+                                    (syntax-e (car bad-path-in-canonical-order)))
                             (format
                              "found a cycle of non-terminals that doesn't consume input:~a"
                              (apply
                               string-append
-                              (for/list ([node (in-list full-path)])
-                                (format " ~a" node)))))
+                              (for/list ([node (in-list bad-path-in-canonical-order)])
+                                (format " ~a" (syntax-e node))))))
                         stx
-                        (car all/backwards)
-                        (cdr all/backwards))))
+                        (car bad-path-in-canonical-order)
+                        (cdr bad-path-in-canonical-order))))
