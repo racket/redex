@@ -34,6 +34,7 @@
                            (bind @#,ttpattern @#,tttterm)
                            (bind/hidden @#,ttpattern @#,tttterm)
                            (judgment-holds (judgment-form-id pat/term ...))
+                           (judgment-holds (relation-id @#,tttterm ...))
                            (side-condition/hidden racket-expression)]
                [shortcuts (code:line)
                           (code:line with shortcut ...)]
