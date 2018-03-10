@@ -29,7 +29,7 @@ stands for repetition unless otherwise indicated):
          (in-hole term term)
          hole
          (mf-apply identifier term ...)
-         literal]
+         datum]
    [term-sequence 
      term
      ,@expr
@@ -63,15 +63,18 @@ them.}
 @item{A term written @racket[(mf-apply f arg ...)] asserts that @racket[f]
 is a @tech{metafunction} and produces the term @racket[(f arg ...)].}
 
- @item{A term written as a literal produces that literal.
+ @item{A term written as any other @tech[#:doc '(lib "scribblings/reference/reference.scrbl")]{datum}
+  not listed above produces that @tech[#:doc '(lib "scribblings/reference/reference.scrbl")]{datum}.
+  For example, @racket[(term (1 x #t))] is the same as @racket['(1 x #t)].
+  
   Term substitution and metafunction application do not occur
-  within literal values. For example,
+  within compound @tech[#:doc '(lib "scribblings/reference/reference.scrbl")]{datums}. For example,
 
   @racketblock[
  (term-let ([a 1]) (term #hash((x . a))))
  ]
 
- Evaluates to @racket['#hash((x . a))], not @racket['#hash((x . 1))].}
+ is the same as @racket['#hash((x . a))], not @racket['#hash((x . 1))].}
 ]
 
 @defform*[[(term @#,tttterm) (term @#,tttterm #:lang lang-id)]]{
