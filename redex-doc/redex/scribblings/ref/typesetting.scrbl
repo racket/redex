@@ -261,9 +261,8 @@ other tools that combine @racketmodname[pict]s together.
 }
 
 @deftogether[[
-@defform[(render-metafunction metafunction-name maybe-contract)]{}
-@defform/none[#:literals (render-metafunction)
-              (render-metafunction metafunction-name filename maybe-contract)]{}
+@defform*[[(render-metafunction metafunction-name maybe-contract)
+           (render-metafunction metafunction-name filename maybe-contract)]]{}
 @defform[(render-metafunctions metafunction-name ... 
                                maybe-filename maybe-contract)
           #:grammar ([maybe-filename (code:line)
