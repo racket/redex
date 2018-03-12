@@ -59,7 +59,7 @@ the comparison. It defaults to @racket[(default-equiv)].
                        (code:line #:equiv pred-expr)
                        (code:line #:pred pred-expr)])
               #:contracts ([rel-expr reduction-relation?]
-                           [pred-expr (--> any/c any)]
+                           [pred-expr (-> any/c any)]
                            [e1-expr any/c]
                            [e2-expr any/c])]{
 
@@ -92,7 +92,7 @@ isn't supplied, then @racket[(default-equiv)] is used.
 @defform/subs[(test--> rel-expr option ... e1-expr e2-expr ...)
               ([option (code:line #:equiv pred-expr)])
               #:contracts ([rel-expr reduction-relation?]
-                           [pred-expr (--> any/c any/c any/c)]
+                           [pred-expr (-> any/c any/c any/c)]
                            [e1-expr any/c]
                            [e2-expr any/c])]{
 
