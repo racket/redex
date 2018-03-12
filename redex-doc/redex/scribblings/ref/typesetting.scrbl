@@ -431,8 +431,8 @@ This function sets @racket[dc-for-text-size]. See also
 
 A parameter that controls the rendering of extended languages.
 If the parameter value is @racket[#t], then a language constructed with
-extend-language is shown as if the language had been
-constructed directly with @racket[language]. If it is @racket[#f], then only
+@racket[define-extended-language] is shown as if the language had been
+constructed directly with @racket[define-language]. If it is @racket[#f], then only
 the last extension to the language is shown (with
 four-period ellipses, just like in the concrete syntax).
 
