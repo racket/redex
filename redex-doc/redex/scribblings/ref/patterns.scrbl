@@ -36,7 +36,7 @@ identifier's lexical binding:
                pat:variable-except pat:variable-prefix
                pat:variable-not-otherwise-mentioned
                pat:hole pat:symbol pat:name pat:in-hole pat:hide-hole
-               pat:side-condition pat:cross
+               pat:side-condition
                pat:pattern-sequence pat:other-literal)
    [pattern pat:any
             pat:_
@@ -56,7 +56,6 @@ identifier's lexical binding:
             (pat:in-hole pattern pattern)
             (pat:hide-hole pattern)
             (pat:side-condition pattern guard-expr)
-            (pat:cross id)
             (pat:pattern-sequence ...)
             pat:other-literal]
    [pattern-sequence 
@@ -222,13 +221,6 @@ to match, otherwise the @pattern matches. Any
 occurrences of @racket[pat:name] in the @pattern (including those implicitly
 present via @tt{_} patterns) are bound using @racket[term-let] in
 @racket[_guard-expr]. 
-}
-
-@item{The @tt{(@defpattech[cross] @racket[_id])} @pattern is used for the compatible
-closure functions. If the language contains a non-terminal with the
-same name as @racket[_id], the @pattern @racket[(cross _id)] matches the
-context that corresponds to the compatible closure of that
-non-terminal.
 }
 
 @item{The @tt{(@defpattech[pattern-sequence] ...)}
