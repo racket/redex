@@ -152,7 +152,7 @@ see also term.rkt for some restrictions/changes there
                  [under '()]
                  [under-mismatch-ellipsis '()])
         (syntax-case term (side-condition variable-except variable-prefix
-                                          hole name in-hole hide-hole cross unquote and)
+                                          hole name in-hole hide-hole unquote and)
           [(side-condition pre-pat (and))
            ;; rewriting metafunctions (and possibly other things) that have no where, etc clauses
            ;; end up with side-conditions that are empty 'and' expressions, so we just toss them here.
@@ -239,14 +239,6 @@ see also term.rkt for some restrictions/changes there
              (values #`(hide-hole #,sub-term) vars))]
           [(hide-hole a ...) (expected-exact 'hide-hole 1 term)]
           [hide-hole (expected-arguments 'hide-hole term)]
-          [(cross a)
-           (let ()
-             (expect-identifier term #'a)
-             (define a-str (symbol->string (syntax-e #'a)))
-             (values #`(cross #,(string->symbol (format "~a-~a" a-str a-str)))
-                     '()))]
-          [(cross a ...) (expected-exact 'cross 1 term)]
-          [cross (expected-arguments 'cross term)]
           [(unquote . _)
            (raise-syntax-error what "unquote disallowed in patterns" orig-stx term)]
           [_
