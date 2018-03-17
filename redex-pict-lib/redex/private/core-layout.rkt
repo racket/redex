@@ -100,13 +100,10 @@
        #:declare transformer
        (expr/c #'(or/c (-> pict?) string?)
                #:name "atomic-rewriter rewrite")
-       (with-syntax ([(rewriter ...) (for/list ([t (in-list (syntax->list #'(transformer.c ...)))])
-                                       (wrap-expr/c #'(or/c string? (-> pict?))
-                                                    t))])
-         #`(parameterize ([atomic-rewrite-table
-                           (append (list (list name.c rewriter) ...)
+       #`(parameterize ([atomic-rewrite-table
+                         (append (list (list name.c transformer.c) ...)
                                  (atomic-rewrite-table))])
-             e))]))
+           e)]))
   
   ;; compound-rewrite-table : (listof lw) -> (listof (union lw pict string))
   (define compound-rewrite-table 
