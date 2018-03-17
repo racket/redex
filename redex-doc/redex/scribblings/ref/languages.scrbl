@@ -46,7 +46,8 @@ side-condition @|pattern|s can restrict matches in complex ways.
 A @racket[non-terminal-def] comprises one or more non-terminal names
 (considered aliases) followed by one or more productions.
 
-For example, the following defines @deftech{@racket[_lc-lang]} as the
+@; this language is copied to other-relations.scrbl to be used in examples there, too
+ For example, the following defines @deftech{@racket[_lc-lang]} as the
 grammar of the λ-calculus:
 @examples[#:label #f #:eval redex-eval #:no-prompt #:no-result
 (define-language lc-lang
