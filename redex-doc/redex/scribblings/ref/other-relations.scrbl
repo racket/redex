@@ -99,7 +99,7 @@ clause to be taken.
 The @racket[clause-name] is used only when typesetting. See
 @racket[metafunction-cases].
 
-The @racket[or] clause is used to define a form of conditional
+The @racket[or] clause is used to define a form of conditional (i.e. piecewise)
 right-hand side of a metafunction. In particular, if any of the
 @racket[where] or @racket[side-condition] clauses fail, then
 evaluation continues after an @racket[or] clause, treating the
