@@ -309,13 +309,6 @@
          'subst subst-rw
          (render-metafunction subst)))
        "metafunction-subst.png")
-(btest (with-atomic-rewriters
-        (['number "number"]
-         ['number "number"]) ;; these rewriters have no effect; here to test that path in the code
-        (with-compound-rewriter
-         'subst subst-rw
-         (render-metafunction subst)))
-       "metafunction-subst.png")
 
 
 ;; make sure two metafunctions simultaneously rewritten line up properly
