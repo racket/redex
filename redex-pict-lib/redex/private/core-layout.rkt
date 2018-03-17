@@ -53,6 +53,7 @@
          with-compound-rewriter
          with-compound-rewriters
          with-atomic-rewriter
+         with-atomic-rewriters
          STIX?
          white-bracket-sizing
          apply-rewrites
@@ -86,21 +87,26 @@
                    (basic-text "\u22ef" (default-style))
                    (basic-text "..." (default-style)))))
        (hole "[]"))))
-  
-  (define-syntax (with-atomic-rewriter stx)
+
+  (define-syntax-rule 
+    (with-atomic-rewriter name rewriter body)
+    (with-atomic-rewriters ([name rewriter]) body))
+  (define-syntax (with-atomic-rewriters stx)
     (syntax-parse stx
-      [(_ name transformer e:expr)
+      [(_ ([name transformer] ...) e:expr)
        #:declare name
        (expr/c #'symbol?
                #:name "atomic-rewriter name")
        #:declare transformer
        (expr/c #'(or/c (-> pict?) string?)
                #:name "atomic-rewriter rewrite")
-       #`(parameterize ([atomic-rewrite-table
-                         (cons (list name.c #,(wrap-expr/c #'(or/c string? (-> pict?))
-                                                           #'transformer.c))
-                               (atomic-rewrite-table))])
-           e)]))
+       (with-syntax ([(rewriter ...) (for/list ([t (in-list (syntax->list #'(transformer.c ...)))])
+                                       (wrap-expr/c #'(or/c string? (-> pict?))
+                                                    t))])
+         #`(parameterize ([atomic-rewrite-table
+                           (append (list (list name.c rewriter) ...)
+                                 (atomic-rewrite-table))])
+             e))]))
   
   ;; compound-rewrite-table : (listof lw) -> (listof (union lw pict string))
   (define compound-rewrite-table 
