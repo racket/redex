@@ -1071,6 +1071,11 @@ appears in a pattern.
 ]
 }
 
+@defform[(with-atomic-rewriters ([name-symbol string-or-thunk-returning-pict] ...)
+                                  expression)]{
+Shorthand for nested @racket[with-atomic-rewriter] expressions.
+@history[#:added "1.4"]}
+
 @defform[(with-compound-rewriter name-symbol
                                  proc
                                  expression)]{
