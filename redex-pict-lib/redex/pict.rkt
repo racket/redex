@@ -167,7 +167,8 @@
 (provide with-unquote-rewriter
          with-compound-rewriter
          with-compound-rewriters
-         with-atomic-rewriter)
+         with-atomic-rewriter
+         with-atomic-rewriters)
 
 (provide/contract
  [set-arrow-pict! (-> symbol? (-> pict?) void?)]
