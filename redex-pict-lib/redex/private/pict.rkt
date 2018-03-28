@@ -225,8 +225,7 @@
                (list lhs arrow 
                      (hbl-append
                       rhs
-                      (let ([sc (rule-pict-info->side-condition-pict rp max-w)])
-                        (inset sc (min 0 (- max-rhs (pict-width sc))) 0 0 0)))
+                      (rule-pict-info->side-condition-pict rp max-w))
                      label))
               (list
                (list lhs arrow rhs label)
