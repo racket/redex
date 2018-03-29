@@ -113,7 +113,12 @@
         (where any_z any_x)
         (side-condition (= (term number_d) 5)))))
 
-(btest (render-reduction-relation red2)
+(btest (vc-append
+        10
+        (render-reduction-relation red2)
+        (render-reduction-relation
+         red2
+         #:style 'horizontal-side-conditions-same-line))
        "red2.png")
 
 (let ()
