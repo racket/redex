@@ -270,6 +270,27 @@
          " aliases as the old;\n non-terminal X was not in the same group"
          " as P in the original language"))))
 
+(test (with-handlers ([exn:fail:syntax? exn-message])
+        (parameterize ([current-namespace ns])
+          (expand '(let ()
+                     (define-language base
+                       (e ::=
+                          done
+                          (par& e ...))
+                       (E ::= (in-hole ECM1 E))
+                       (ECM1 ::= (par& hole e e ...)))
+
+                     (λ (x)
+                       (redex-match base
+                                    (in-hole E (par& e_1 ... done e_2 ...))
+                                    x))))))
+      (regexp
+       (regexp-quote
+        (string-append
+         "in-hole's first argument is expected to match"
+         " exactly one hole, but it cannot match a hole"))))
+
+
 ;; underscores in literals
 (let ()
   (define-language L

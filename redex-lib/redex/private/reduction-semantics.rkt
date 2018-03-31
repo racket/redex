@@ -2204,7 +2204,13 @@
         (unless (equal? (hash-ref nt->hole name) nt-hole-count)
           (hash-set! nt->hole name nt-hole-count)
           (set! changed? #t))))
-    (when changed? (loop))))
+    (when changed? (loop)))
+  ;; at the end of this process, any unknown
+  ;; non-terminals cannot produce a hole,
+  ;; so update the nt map to reflect that
+  (for ([nt (in-list (hash-keys nt->hole))])
+    (when (equal? (hash-ref nt->hole nt) 'unknown)
+      (hash-set! nt->hole nt 0))))
 
 (define-for-syntax (record-nts-disappeared-bindings lang nt-ids [prop `disappeared-binding])
   (let loop ([nt-ids nt-ids]
