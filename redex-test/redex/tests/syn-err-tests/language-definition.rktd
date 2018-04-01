@@ -41,7 +41,7 @@
    #:binding-forms
    bf))
 
-(#rx"define-extended-language: cannot extend the `B' non-terminal because `L' does not define it"
+(#rx"define-extended-language: cannot extend the `B` non-terminal because the language L does not define it"
  ([dots ....])
  (let ()
    (define-language L

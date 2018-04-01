@@ -2331,7 +2331,7 @@
            (unless (member the-name old-names)
              (raise-syntax-error
               #f
-              (format "cannot extend the `~a' non-terminal because `~s' does not define it"
+              (format "cannot extend the `~a` non-terminal because the language ~s does not define it"
                       the-name
                       (syntax->datum #'orig-lang))
               stx rhs))
