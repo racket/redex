@@ -9,7 +9,6 @@
          "error.rkt"
          "judgment-form.rkt"
          "search.rkt"
-         "lang-struct.rkt"
          "enum.rkt"
          (only-in "binding-forms.rkt"
                   safe-subst binding-forms-opened? make-immutable-α-hash)
@@ -2098,7 +2097,10 @@
                                  (append (loop (car stx))
                                          (loop (cdr stx)))]
                                 [else '()]))])
-               (check-for-cycles stx #'(name ...) #'((r-rhs ...) ...) nt-identifiers)
+               (define-values (nt-hole-at-top nt-neighbors)
+                 (build-graph-and-check-for-cycles stx #'(name ...) #'((r-rhs ...) ...)
+                                                   nt-identifiers
+                                                   aliases #f #f))
                (define nt->hole (make-hash))
                (for ([name (in-list all-names-stx-list)])
                  (hash-set! nt->hole (syntax-e name) 'unknown))
@@ -2175,7 +2177,9 @@
                         (hash #,@(apply append (for/list ([(k v) (in-hash nt-identifiers)])
                                                  (with-syntax ([k k] [v v])
                                                    (list #''k #'#'v)))))
-                        '#,nt->hole)))
+                        '#,nt->hole
+                        '#,nt-hole-at-top
+                        '#,nt-neighbors)))
                     #,errortrace-safe-language-def))))))))]))
 
 (define-for-syntax (nt-hole-lub l r)
@@ -2364,7 +2368,7 @@
              (unless (hash-ref nt->hole name #f)
                (hash-set! nt->hole name 'unknown))))
          
-         (define extended-language-stx
+         (define-values (extended-language-stx nt-hole-at-top nt-neighbors)
            (with-syntax ([(((r-syncheck-expr r-rhs r-names r-names/ellipses) ...) ...)
                           (for/list ([rhss (in-list rhsss)])
                             (for/list ([rhs (in-list rhss)])
@@ -2382,21 +2386,31 @@
                                (map syntax->list (syntax->list #'((r-rhs ...) ...)))
                                rhsss
                                nt->hole)
+
+             (define-values (nt-hole-at-top nt-neighbors)
+               (build-graph-and-check-for-cycles
+                stx #'(names ...) #'((r-rhs ...) ...) nt-identifiers
+                aliases
+                (language-id-nt-hole-at-top #'orig-lang 'define-extended-language)
+                (language-id-nt-neighbors #'orig-lang 'define-extended-language)))
              
-             (with-syntax ([(primary-name ...) unaliased-new-names]
-                           [((all-names ...) ...) namess]
-                           [(alias-names ...) (hash-keys aliases)])
-               (forward-errortrace-prop
-                stx
-                (syntax/loc stx
-                  (do-extend-language
-                   (begin r-syncheck-expr ... ... orig-lang)
-                   (list (make-nt 'primary-name
-                                  (list (make-rhs `r-rhs) ...)) ...)
-                   new-bindings-table
-                   (list (list '(all-names ...) rhs/lw ...) ...)
-                   '(alias-names ...)
-                   'name))))))
+             (values
+              (with-syntax ([(primary-name ...) unaliased-new-names]
+                            [((all-names ...) ...) namess]
+                            [(alias-names ...) (hash-keys aliases)])
+                (forward-errortrace-prop
+                 stx
+                 (syntax/loc stx
+                   (do-extend-language
+                    (begin r-syncheck-expr ... ... orig-lang)
+                    (list (make-nt 'primary-name
+                                   (list (make-rhs `r-rhs) ...)) ...)
+                    new-bindings-table
+                    (list (list '(all-names ...) rhs/lw ...) ...)
+                    '(alias-names ...)
+                    'name))))
+              nt-hole-at-top
+              nt-neighbors)))
          (forward-errortrace-prop
           stx
           (quasisyntax/loc stx
@@ -2423,11 +2437,9 @@
                   (hash #,@(apply append (for/list ([(k v) (in-hash nt-identifiers)])
                                            (with-syntax ([k k] [v v])
                                              (list #''k #'#'v)))))
-                  '#,nt->hole))))))))]))
-
-(begin-for-syntax
-  (define extend-nt-ellipses '(....)))
-(define extend-nt-ellipses '(....))
+                  '#,nt->hole
+                  '#,nt-hole-at-top
+                  '#,nt-neighbors))))))))]))
 
 ;; do-extend-language : compiled-lang (listof (listof nt)) (listof (list compiled-pattern bspec)) ?
 ;;    -> compiled-lang
@@ -2600,9 +2612,22 @@
            ;; make the hash be immutable
            (for/hash ([(k v) (in-hash aliases)])
              (values k v))))
-       
+
        (define nt-identifiers (build-nt-identifiers-table #'name '()))
-       
+
+       (define-values (nt-hole-at-top nt-neighbors)
+         (build-union-language-nt-neighbors/nt-hole-at-top
+          aliases
+          (for/list ([normalized-orig-lang (in-list normalized-orig-langs)])
+            (list-ref normalized-orig-lang 0))
+          (for/list ([normalized-orig-lang (in-list normalized-orig-langs)])
+            (language-id-nt-hole-at-top (list-ref normalized-orig-lang 1)
+                                        'define-union-language))
+          (for/list ([normalized-orig-lang (in-list normalized-orig-langs)])
+            (language-id-nt-neighbors (list-ref normalized-orig-lang 1)
+                                      'define-union-language))))
+       (check-for-cycles stx nt-identifiers nt-neighbors)
+
        (with-syntax ([(all-names ...) (sort (hash-map names-table (λ (x y) x))
                                             string<=?
                                             #:key symbol->string)]
@@ -2629,7 +2654,9 @@
                  (hash #,@(apply append (for/list ([(k v) (in-hash nt-identifiers)])
                                           (with-syntax ([k k] [v v])
                                             (list #''k #'#'v)))))
-                 '#,nt->hole))))))]))
+                 '#,nt->hole
+                 '#,nt-hole-at-top
+                 '#,nt-neighbors))))))]))
 
 (define (union-language old-langs/prefixes aliases union-langs-name)
   (define (add-prefix prefix sym)

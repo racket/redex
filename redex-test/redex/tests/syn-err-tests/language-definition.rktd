@@ -40,3 +40,64 @@
  (define-language l
    #:binding-forms
    bf))
+
+(#rx"define-extended-language: cannot extend the `B' non-terminal because `L' does not define it"
+ ([dots ....])
+ (let ()
+   (define-language L
+     (A ::= a b c d))
+   (define-extended-language L2 L
+     (B ::= dots x y z w))
+   (void)))
+
+
+(#rx"the non-terminal B is defined in terms of itself"
+ ([B1 B])
+ (define-language test
+   (B1 ::= (in-hole A B))
+   (A ::= hole)))
+(#rx"found a cycle of non-terminals that doesn't consume input: A B C D"
+ ([A1 A][B1 B][C1 C][D1 D])
+ (define-language test
+   (A1 ::= B)
+   (B1 ::= C)
+   (C1 ::= D)
+   (D1 ::= A)))
+(#rx"the non-terminal B is defined in terms of itself"
+ ([B1 B])
+ (let ()
+   (define-language test)
+   (define-extended-language test2 test
+     (B1 ::= (in-hole A B))
+     (A ::= hole))
+   (void)))
+(#rx"the non-terminal B is defined in terms of itself"
+ ([B1 B])
+ (let ()
+   (define-language test
+     (A ::= hole))
+   (define-extended-language test2 test
+     (B1 ::= (in-hole A B)))
+   (void)))
+(#rx"the non-terminal B is defined in terms of itself"
+ ([B1 B])
+ (let ()
+   (define-language test
+     (A ::= hole))
+   (define-extended-language test2 test
+     (B1 ::= (in-hole A B))
+     (A ::= .... (hole 2)))
+   (void)))
+(#rx"found a cycle of non-terminals that doesn't consume input"
+ ([DL (define-union-language test3
+        test1
+        test2)])
+ (let ()
+   (define-language test1
+     (A ::= B)
+     (B ::= b))
+   (define-language test2
+     (A ::= a)
+     (B ::= A))
+   DL
+   (void)))

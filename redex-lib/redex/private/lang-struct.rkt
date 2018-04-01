@@ -1,5 +1,5 @@
 #lang racket/base
-(require racket/promise)
+(require racket/promise (for-syntax racket/base))
 (provide (struct-out nt) make-multi-name-nt
          (struct-out rhs)
          (struct-out bind)
@@ -22,7 +22,15 @@
          compiled-lang-across-ht 
          compiled-lang-across-list-ht
          compiled-lang-cclang
-         default-language)
+         default-language
+
+         extend-nt-ellipses
+         (for-syntax extend-nt-ellipses))
+
+
+(begin-for-syntax
+  (define extend-nt-ellipses '(....)))
+(define extend-nt-ellipses '(....))
 
 ;; lang = (listof nt)
 ;; nt = (make-nt sym (listof rhs))
