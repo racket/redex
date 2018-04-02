@@ -2809,9 +2809,11 @@
     [else
      (define input-pat
        (runtime-judgment-form-compiled-input-contract-pat reductions))
-     (for/list ([next (in-list nexts)]
-                #:when (match-pattern? input-pat (list next)))
-       next)]))
+     (if input-pat
+         (for/list ([next (in-list nexts)]
+                    #:when (match-pattern? input-pat (list next)))
+           next)
+         nexts)]))
 
 ;; map/mt : (a -> b) (listof a) (listof b) -> (listof b)
 ;; map/mt is like map, except

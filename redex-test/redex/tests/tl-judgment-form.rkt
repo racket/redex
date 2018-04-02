@@ -877,6 +877,16 @@
         (list (term nil))))
 
 (let ()
+  (define-language L)
+
+  (define-judgment-form L
+    #:mode (f I O)
+    [(f 1 2)]
+    [(f 2 3)])
+
+  (test (apply-reduction-relation* f 1) (list 3)))
+
+(let ()
   (define-language L
     (e ::=
        (cons e e)
