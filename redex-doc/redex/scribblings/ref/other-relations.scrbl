@@ -366,8 +366,10 @@ A rule's @racket[where], @racket[where/hidden], and @racket[where/error] premise
 A rule's @racket[side-condition] and @racket[side-condition/hidden] premises are similar
 to those in @racket[reduction-relation] and @racket[define-metafunction], except that
 they do not implicitly unquote their right-hand sides. In other words, a premise 
-of the form @racket[(side-condition term)] is equivalent to the premise 
-@racket[(where #t term)], except it does not typeset with the ``#t = '', as that would.
+of the form @racket[(side-condition term)] is close to the premise 
+@racket[(where #t term)], except it does not typeset with the ``#t = '', as that would
+and it holds whenever the expression evaluates to any non @racket[#f] value
+(not just @racket[#t]).
 
 Judgments with exclusively @racket[I] mode positions may also be used in @|tttterm|s
 in a manner similar to metafunctions, and evaluate to a boolean.
