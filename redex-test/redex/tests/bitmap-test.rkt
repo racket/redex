@@ -208,7 +208,10 @@
 
 ;; this tests that term-let is sucked away properly
 ;; when the metafunction is rendered
-(btest (render-metafunction TL) "metafunction-TL.png")
+(btest (parameterize ([metafunction-pict-style
+                       'left-right/compact-side-conditions])
+         (render-metafunction TL))
+       "metafunction-TL.png")
 
 (define-metafunction lang
   [(Name (name x-arg arg)) 
