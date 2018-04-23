@@ -348,9 +348,7 @@
                            [label "Top to Bottom"]))
 
   (define reductions-lang
-    (cond
-      [(reduction-relation? reductions) (reduction-relation-lang reductions)]
-      [(IO-judgment-form? reductions) (runtime-judgment-form-lang reductions)]))
+    (reduction-relation/IO-jf-lang reductions))
 
   (define snip-cache
     (let* ([term-equal? (lambda (x y) (α-equal? (compiled-lang-binding-table reductions-lang)

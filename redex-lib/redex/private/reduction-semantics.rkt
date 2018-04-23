@@ -2721,6 +2721,11 @@
 (struct search-success ())
 (struct search-failure (cutoff?))
 
+(define (reduction-relation/IO-jf-lang reductions)
+  (if (reduction-relation? reductions)
+      (reduction-relation-lang reductions)
+      (runtime-judgment-form-lang reductions)))
+
 ;; traverse-reduction-graph : 
 ;;  reduction-relation term #:goal (-> any boolean?) #:steps number?
 ;;      #:visit (-> any/c void?) -> (or/c search-success? search-failure?)
@@ -2744,9 +2749,7 @@
                ;;    152084d5ce6ef49df3ec25c18e40069950146041
                ;; suggest that a hash works better than a trie.
                [path
-                (let ([lang (if (reduction-relation? reductions)
-                                (reduction-relation-lang reductions)
-                                (runtime-judgment-form-lang reductions))])
+                (let ([lang (reduction-relation/IO-jf-lang reductions)])
                   (make-immutable-α-hash (compiled-lang-binding-table lang)
                                          (compiled-lang-literals lang)
                                          match-pattern))]
@@ -2829,8 +2832,13 @@
              (cons this-one (loop (cdr l)))
              (loop (cdr l))))])))
 
-(define (reduction-relation->rule-names x) 
+(define (reduction-relation->rule-names x)
   (reverse (reduction-relation-rule-names x)))
+
+(define (reduction-relation/IO-jf->rule-names x)
+  (cond
+    [(reduction-relation? x) (reduction-relation->rule-names x)]
+    [(IO-judgment-form? x) '(judgment-form->rule-names x)]))
 
 
 ;                                                                               
@@ -3243,6 +3251,7 @@
 (provide (rename-out [-reduction-relation reduction-relation])
          ::=
          reduction-relation->rule-names
+         reduction-relation/IO-jf-lang
          extend-reduction-relation
          reduction-relation?
          union-reduction-relations

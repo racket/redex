@@ -25,6 +25,7 @@ todo:
          "sexp-diffs.rkt"
          "size-snip.rkt"
          redex/private/reduction-semantics
+         redex/private/judgment-form
          redex/private/lang-struct
          redex/private/binding-forms
          redex/private/struct
@@ -66,7 +67,7 @@ todo:
     ;; all-nodes-ht : hash[sexp -o> (is-a/c node%)]
 
     (define all-nodes-ht
-      (let* ([lang (reduction-relation-lang red)]
+      (let* ([lang (reduction-relation/IO-jf-lang red)]
              [term-equal? (lambda (x y) (α-equal? (compiled-lang-binding-table lang)
                                                   (compiled-lang-literals lang)
                                                   match-pattern x y))]
@@ -127,7 +128,9 @@ todo:
                              [editor zoom-out-pb]))
     
     (define choice-vp (new vertical-panel% [alignment '(center center)] [parent lower-hp] [stretchable-width #f]))
-    (define reduction-names (reduction-relation->rule-names red))
+    (define reduction-names (if (IO-judgment-form? red)
+                                '()
+                                (reduction-relation->rule-names red)))
     (define reds-choice 
       (and (not (null? reduction-names))
            (new choice%
@@ -139,7 +142,7 @@ todo:
                                 (map (λ (x) (format "Reduce until ~a" x))
                                      reduction-names))])))
     (define red-name-message
-      (and (not (null? (reduction-relation->rule-names red)))
+      (and (not (null? reduction-names))
            (new message% 
                 [parent choice-vp] 
                 [stretchable-width #t]
