@@ -1,5 +1,6 @@
 #lang scribble/manual
 @(require "common.rkt"
+          scribble/example
           (for-label racket/base
                      (except-in racket/gui make-color)
                      racket/pretty
@@ -9,6 +10,8 @@
                      (only-in pict pict? text dc-for-text-size text-style/c
                               vc-append hbl-append vl-append)
                      redex))
+
+@(define redex-eval (make-base-eval '(require redex/reduction-semantics)))
 
 @title{Terms}
 
@@ -182,8 +185,32 @@ In some contexts, it may be more efficient to use @racket[term-match/single]
 The @racket[let*] analog of @racket[redex-let].
 }
 
+@defform[(redex-define language @#,ttpattern expression)]{
+ The @racket[define] analog of @racket[redex-let].
+ The form @racket[redex-define] evaluates @racket[_expression],
+ matches the result against @|ttpattern|
+ and binds the corresponding identifiers.
+
+ The form @racket[redex-define] cannot bind identifiers with ellipses.
+
+ @examples[#:eval
+           redex-eval
+           (define-language nums
+             (AE number
+                 (+ AE AE)))
+           (redex-define nums (name AE_all (+ AE_common AE_common)) (term (+ 4 4)))
+           (term (AE_all AE_common))
+           (eval:error (redex-define nums (+ AE_same AE_same) (term (+ 6 3))))
+           (eval:error (redex-define nums (number ...) (term (2 1 7))))
+ ]
+
+ @history[#:added "1.13"]
+}
+
 @defform[(define-term identifier @#,tttterm)]{
-Defines @racket[identifier] for use in @|tterm| templates.}
+Defines @racket[identifier] for use in @|tterm| templates.
+To pattern match and bind identifiers against @|tttterm|,
+see @racket[redex-define].}
 
 @defform[(term-match language [@#,ttpattern expression] ...)]{
 

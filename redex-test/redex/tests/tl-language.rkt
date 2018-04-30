@@ -738,6 +738,39 @@
                (("1" "2") ("1" "2"))))))
 
 (let ()
+  (define-language L
+    (nt ::= number (s-exp boolean nt)))
+
+  (define s-exp (term (s-exp #t 5)))
+
+  (test (begin
+          (redex-define L nt s-exp)
+          (term nt))
+        (term (s-exp #t 5)))
+
+  (test (begin
+          (redex-define L (s-exp #t nt) s-exp)
+          (term nt))
+        (term 5))
+
+  (test (with-handlers ([exn:fail:redex? exn-message])
+          (redex-define empty-language #t #f)
+          (void))
+        "redex-define: term #f does not match pattern #t")
+
+  (test (with-handlers ([exn:fail:redex? exn-message])
+          (redex-define empty-language (_ ... integer _ ...) (list 0 1))
+          (void))
+        "redex-define: pattern (_ ... integer _ ...) matched term (0 1) multiple ways")
+
+  (test (with-handlers ([exn:fail:syntax? exn-message])
+          (convert-syntax-error
+           (let ()
+             (redex-define empty-language (any ...) (list 1 2))
+             (void))))
+        "redex-define: defining identifiers under ellipses is not supported"))
+
+(let ()
   (define-language A
     (e ::= 1))
   
