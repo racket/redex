@@ -55,6 +55,7 @@
          (rename-out [test-match? redex-match?])
          term-match
          term-match/single
+         redex-define
          redex-let
          redex-let*
          define-term

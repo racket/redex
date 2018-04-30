@@ -114,7 +114,7 @@
                 ((car rhss) (car match)))
               (loop (cdr ps) (cdr cps) (cdr rhss)))))))
 
-(define-syntaxes (redex-let redex-let*)
+(define-syntaxes (redex-let redex-let* redex-define)
   (let ()
     (define-syntax-class binding
       #:description "binding clause"
@@ -130,6 +130,42 @@
                "duplicate pattern variable"
                #:with (lhs ...) #'(b.lhs ...)
                #:with (rhs ...) #'(b.rhs ...)))
+
+    (define (redex-define stx)
+      (syntax-case stx ()
+        [(form-name lang pattern rhs)
+         (begin
+           (unless (identifier? #'lang)
+             (raise-syntax-error (syntax-e #'form-name)
+                                 "expected an identifier in the language position" stx #'lang))
+           (with-syntax ([(syncheck-expr side-conditions-rewritten (names ...) (names/ellipses ...))
+                          (rewrite-side-conditions/check-errs #'lang
+                                                              (syntax-e #'form-name)
+                                                              #t #'pattern)])
+             (define name-under-ellipses
+               (for/first ([name (in-list (syntax->list #'(names ...)))]
+                           [name/ellipse (in-list (syntax->list #'(names/ellipses ...)))]
+                           #:unless (identifier? name/ellipse))
+                 name))
+             (when name-under-ellipses
+               (raise-syntax-error (syntax-e #'form-name)
+                                   "defining identifiers under ellipses is not supported"
+                                   stx
+                                   name-under-ellipses))
+             (with-syntax ([(matched ...) (generate-temporaries (syntax->list #'(names ...)))])
+               #`(begin
+                   syncheck-expr
+                   (define-values (matched ...)
+                     ((term-match/single/proc
+                       'form-name
+                       lang
+                       '(pattern)
+                       (list (compile-pattern lang `side-conditions-rewritten #t))
+                       (list
+                        (λ (match)
+                          (values (lookup-binding (mtch-bindings match) 'names) ...))))
+                      rhs))
+                   (define-term names ,matched) ...))))]))
     
     (define (redex-let stx)
       (define-values (form-name nts)
@@ -161,7 +197,7 @@
                               #'term-match/single/proc) 
               rhs))]))
     
-    (values redex-let redex-let*)))
+    (values redex-let redex-let* redex-define)))
 
 (define-syntax (compatible-closure stx)
   (syntax-case stx ()
@@ -3291,6 +3327,7 @@
          term-match/single
          redex-let 
          redex-let*
+         redex-define
          redex-enum
          redex-index
          make-bindings bindings-table bindings?
