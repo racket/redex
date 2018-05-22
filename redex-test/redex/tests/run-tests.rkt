@@ -106,6 +106,8 @@
 
 ;; Test mode:
 (module test racket/base
+  (module config info
+    (define timeout 300))
   (require syntax/location)
   (parameterize ([current-command-line-arguments
                   (vector "--examples" "--no-bitmap-gui")])
