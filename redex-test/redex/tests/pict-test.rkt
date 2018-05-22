@@ -118,4 +118,15 @@
      (--> (d any) 4)
      (--> (e any) 5 (where (1) any))))))
 
+(void
+ (render-term/pretty-write empty-language (term (1 2 3))))
+
+(void
+ (render-term/pretty-write empty-language (term (any_1 any_2 any_1))))
+
+(void
+ (render-term/pretty-write empty-language (term hole)))
+(void
+ (render-term/pretty-write empty-language (term (1 2 (((hole))) 3 4))))
+
 (printf "pict-test.rkt done\n")

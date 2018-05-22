@@ -1688,7 +1688,8 @@
 (define (term->pict/pretty-write lang term #:width [width (pretty-print-columns)])
   (define-values (in out) (make-pipe))
   (thread (λ ()
-            (parameterize ([pretty-print-columns width])
+            (parameterize ([pretty-print-columns width]
+                           [term/pretty-write-doing-the-printing #t])
               (pretty-write term out))
             (close-output-port out)))
   (port-count-lines! in)

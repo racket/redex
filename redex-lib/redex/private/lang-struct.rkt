@@ -18,6 +18,7 @@
          the-not-hole
          the-hole
          hole?
+         term/pretty-write-doing-the-printing
          (struct-out compiled-lang) 
          compiled-lang-across-ht 
          compiled-lang-across-list-ht
@@ -38,6 +39,7 @@
 ;; single-pattern = sexp
 (define-struct nt (name rhs) #:transparent)
 (define-struct rhs (pattern) #:transparent)
+(define term/pretty-write-doing-the-printing (make-parameter #f))
 (define-values (the-hole the-not-hole hole?)
   (let ()
     (struct hole (which)
@@ -50,7 +52,7 @@
                          "hole"
                          "not-hole"))
          (cond
-           [(or (equal? mode 0) (equal? mode 1))
+           [(or (equal? mode 0) (equal? mode 1) (term/pretty-write-doing-the-printing))
             (write-string str port)]
            [else
             (write-string "#<" port)
