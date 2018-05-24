@@ -696,6 +696,86 @@
           (term (f 1)))
         #rx"where/error"))
 
+(let ()
+  (define-metafunction empty-language
+    [(assc integer)
+     any
+     (where/error (_ ... (integer any) _ ...)
+                  ((5 "a") (6 "b") (7 "c") (8 "d")))])
+
+  (test (term (assc 7)) "c"))
+
+(let ()
+  (define-metafunction empty-language
+    [(f)
+     0
+     (where/error 6 6)
+     (where #f #t)]
+    [(f) 1])
+
+  (test (term (f)) 1))
+
+(let ()
+  (define-metafunction empty-language
+    [(assc integer)
+     any
+     (where/error (_ ... (integer any) _ ...)
+                  ((5 "a") (7 "b") (7 "c") (8 "d")))])
+
+  (test (with-handlers ([exn:fail? exn-message])
+          (term (assc 7)))
+        #rx"where/error"))
+
+(let ()
+  (define-metafunction empty-language
+    [(assc integer)
+     any
+     (where/error (_ ... (_ any) _ ...)
+                  ((5 "a") (6 "b") (7 "c") (8 "d")))])
+
+  (test (with-handlers ([exn:fail? exn-message])
+          (term (assc 7)))
+        #rx"where/error"))
+
+(let ()
+  (define-metafunction empty-language
+    [(f)
+     0
+     (where/error 3 4)
+     (where #f #t)]
+    [(f) 1])
+
+  (test (with-handlers ([exn:fail? exn-message])
+          (term (f)))
+        #rx"where/error"))
+
+;; The expression (f 4) should not raise an error because
+;; (where/error integer 3) always succeeds, and checking
+;; whether the two integers in where/error and (f integer)
+;; are the same is part of the metafunction body.
+(let ()
+  (define-metafunction empty-language
+    [(f integer)
+     0
+     (where/error integer 3)
+     (where #t #t)]
+    [(f _) 1])
+
+  (test (term (f 4))
+        1))
+
+(let ()
+  (define-metafunction empty-language
+    [(f integer)
+     0
+     (where/error 3 integer)
+     (where #t #t)]
+    [(f _) 1])
+
+  (test (with-handlers ([exn:fail? exn-message])
+          (term (f 4)))
+        #rx"where/error"))
+
 ;; errors for not-yet-defined metafunctions
 (test (let ([on (current-namespace)])
         (parameterize ([current-namespace (make-base-namespace)])
