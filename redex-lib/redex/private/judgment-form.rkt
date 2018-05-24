@@ -444,10 +444,15 @@
 (define (combine-where/error-results pat term who lang result)
   (define mtchs (match-pattern pat term))
   (unless mtchs (error who "where/error did not match"))
-  (define fst (result (mtch-bindings (car mtchs))))
-  (for ([m (in-list (cdr mtchs))])
-    (define nxt (result (mtch-bindings m)))
-    (unless (alpha-equivalent? lang fst nxt)
+  (define all-results
+    (for/list ([mtch (in-list mtchs)])
+      (result (mtch-bindings mtch))))
+  (define fst
+    (for/first ([a-result (in-list all-results)]
+                #:when a-result)
+      a-result))
+  (for ([nxt (in-list all-results)])
+    (unless (or (not nxt) (alpha-equivalent? lang fst nxt))
       (error who
              "where/error matched multiple ways, but did not return alpha-equivalent? results")))
   fst)
