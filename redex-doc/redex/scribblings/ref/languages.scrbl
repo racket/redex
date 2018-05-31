@@ -65,7 +65,8 @@ grammar of the λ-calculus:
  @racket[E] for the evaluation contexts.
 
 Non-terminals used in @racket[define-language] are not bound in
-@pattech[side-condition] patterns and duplicates are not constrained
+@pattech[side-condition] patterns. Duplicate non-terminals
+that appear outside of the binding-forms section are not constrained
 to be the same unless they have underscores in them.
 
 @mini-heading{Binding Forms}
