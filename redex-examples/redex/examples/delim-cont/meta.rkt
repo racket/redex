@@ -7,49 +7,50 @@
 ;; Substitution:
 
 (define-metafunction grammar
-  [(subst x_1 x_1 e_1) ; shortcut
-   e_1]
-  [(subst x_1 e_1 (λ (x_2 ... x_1 x_3 ...) e_2))
-   (λ (x_2 ... x_1 x_3 ...) e_2)]
-  [(subst x_1 x_2 (λ (x_3 ...) e_1)) ; shortcut; x_1 != any x_3
-   (λ (x_3 ...) (subst x_1 x_2 e_1))]
-  [(subst x_1 e_1 (λ (x_2 ...) e_2)) ; x_1 != any x_2
-   ,(term-let ([(x_new ...) (variables-not-in (term (x_1 e_1 e_2)) (term (x_2 ...)))])
-              (term (λ (x_new ...) 
-                      (subst x_1 e_1 (subst* (x_2 ...) (x_new ...) e_2)))))]
-  [(subst x_1 e_1 x_1) e_1]
-  [(subst x_1 e x_2) x_2] ; x_1 != x_2, since previous didn't match
-  [(subst x_1 e_1 v_1) v_1] ; all other values are atomic
-  [(subst x_1 e_1 (list v_1 ...)) (list (subst x_1 e_1 v_1) ...)]
-  [(subst x_1 e_1 (e_2 ...))
-   ((subst x_1 e_1 e_2) ...)]
-  [(subst x_1 e_1 (if e_2 e_3 e_4))
-   (if (subst x_1 e_1 e_2) 
-       (subst x_1 e_1 e_3)
-       (subst x_1 e_1 e_4))]
-  [(subst x_1 e_1 (begin e_2 e_3))
-   (begin (subst x_1 e_1 e_2) 
-          (subst x_1 e_1 e_3))]
-  [(subst x_1 e_1 (set! x_2 e_2))
-   (set! x_2 (subst x_1 e_1 e_2))]
-  [(subst x_1 e_1 (% e_2 e_3 e_4))
-   (% (subst x_1 e_1 e_2) 
-      (subst x_1 e_1 e_3) 
-      (subst x_1 e_1 e_4))]    
-  [(subst x_1 e_1 (wcm ((v_1 v_2) ...) e_2))
-   (wcm (((subst x_1 e_1 v_1)
-          (subst x_1 e_1 v_2)) ...)
-        (subst x_1 e_1 e_2))]
-  [(subst x_1 e_1 (dw x_2 e_2 e_3 e_4))
-   (dw x_2
-       (subst x_1 e_1 e_2) 
-       (subst x_1 e_1 e_3) 
-       (subst x_1 e_1 e_4))])
+  [(subst x e_1 e_2) (subst* ((x e_1)) e_2)])
 
 (define-metafunction grammar
-  [(subst* () () e_1) e_1]
-  [(subst* (x_1 x_2 ...) (e_1 e_2 ...) e_3)
-   (subst* (x_2 ...) (e_2 ...) (subst x_1 e_1 e_3))])
+  [(subst* () e) e] ;; shortcut
+  [(subst* ((x_0 e_0) ... (x_1 e_1) (x_4 e_4) ...) (λ (x_2 ... x_1 x_3 ...) e_2))
+   (subst* ((x_0 e_0) ... (x_4 e_4) ...) (λ (x_2 ... x_1 x_3 ...) e_2))]
+  [(subst* ((x_1 e_1) ...) (λ (x_2 ...) e_2)) ; x_1 != any x_2
+   ,(term-let ([(x_new ...) (variables-not-in (term (((x_1 e_1) ...) e_2)) (term (x_2 ...)))])
+              (term (λ (x_new ...)
+                      (subst* ((x_1 e_1) ...) (replace* ((x_2 x_new) ...) e_2)))))]
+  [(subst* ((x_0 e_0) ... (x_1 e_1) (x_2 e_2) ...) x_1) e_1]
+  [(subst* ((x_1 e) ...) x_2) x_2] ; x_1 != x_2, since previous didn't match
+  [(subst* ((x_1 e_1) ...) (list v_1 ...)) (list (subst* ((x_1 e_1) ...) v_1) ...)]
+  [(subst* ((x_1 e_1) ...) (cont v E)) (cont (subst* ((x_1 e_1) ...) v) E)]
+  [(subst* ((x_1 e_1) ...) v_1) v_1] ; all other values are atomic
+  [(subst* ((x_1 e_1) ...) (e_2 ...))
+   ((subst* ((x_1 e_1) ...) e_2) ...)]
+  [(subst* ((x_1 e_1) ...) (if e_2 e_3 e_4))
+   (if (subst* ((x_1 e_1) ...) e_2)
+       (subst* ((x_1 e_1) ...) e_3)
+       (subst* ((x_1 e_1) ...) e_4))]
+  [(subst* ((x_1 e_1) ...) (begin e_2 e_3))
+   (begin (subst* ((x_1 e_1) ...) e_2)
+          (subst* ((x_1 e_1) ...) e_3))]
+  [(subst* ((x_1 e_1) ...) (set! x_2 e_2))
+   (set! x_2 (subst* ((x_1 e_1) ...) e_2))]
+  [(subst* ((x_1 e_1) ...) (% e_2 e_3 e_4))
+   (% (subst* ((x_1 e_1) ...) e_2)
+      (subst* ((x_1 e_1) ...) e_3)
+      (subst* ((x_1 e_1) ...) e_4))]
+  [(subst* ((x_1 e_1) ...) (wcm ((v_1 v_2) ...) e_2))
+   (wcm (((subst* ((x_1 e_1) ...) v_1)
+          (subst* ((x_1 e_1) ...) v_2)) ...)
+        (subst* ((x_1 e_1) ...) e_2))]
+  [(subst* ((x_1 e_1) ...) (dw x_2 e_2 e_3 e_4))
+   (dw x_2
+       (subst* ((x_1 e_1) ...) e_2)
+       (subst* ((x_1 e_1) ...) e_3)
+       (subst* ((x_1 e_1) ...) e_4))])
+
+(define-metafunction grammar
+  [(replace* ((x_1 x_2) ... (x_3 x_4) (x_5 x_6) ...) x_3) x_4]
+  [(replace* ((x_1 x_2) ...) (any ...)) ((replace* ((x_1 x_2) ...) any) ...)]
+  [(replace* ((x_1 x_2) ...) any) any])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Other meta-functions:

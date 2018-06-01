@@ -30,7 +30,39 @@
       (printf "=> ~s\n\n" r)
       (error 'test "expected ~s" result)))
   (set! tests-passed (add1 tests-passed)))
+
+(define-syntax (test-subst stx)
+  (syntax-case stx ()
+    [(_ in out)
+     #`(test-subst/proc #,(syntax-line stx) (term in) (term out))]))
+(define (test-subst/proc line in out)
+  (unless (equal? in out)
+    (error 'test-subst "test on line ~a failed:\n  ~s\n  ~s"
+           line in out))
+  (set! tests-passed (+ tests-passed 1)))
+
 (define tests-passed 0)
+
+;; Subst ----------------------------------------
+
+(define (substitution-tests)
+  (test-subst (subst x x 1) 1)
+  (test-subst (subst x y 1) 1)
+  (test-subst (subst x y (x x)) (y y))
+  (test-subst (subst x y (λ (x) x)) (λ (x) x))
+  (test-subst (subst x y (λ (z x p) x)) (λ (z x p) x))
+  (test-subst (subst x y (λ (y) x)) (λ (y1) y))
+  (test-subst (subst x y (if x x x)) (if y y y))
+  (test-subst (subst* ((a 1) (b 2) (c 3)) (if a b c)) (if 1 2 3))
+  (test-subst (subst* ((a 1) (b 2) (c 3)) (dw q a b c)) (dw q 1 2 3))
+  (test-subst (subst* ((a 1) (b 2) (c 3)) (list (λ (p) a) (λ (q) b) (λ (r) c)))
+              (list (λ (p) 1) (λ (q) 2) (λ (r) 3)))
+  (test-subst (subst* ((a 1) (b 2) (c 3)) (begin a (set! z (% a b c))))
+              (begin 1 (set! z (% 1 2 3))))
+  (test-subst (subst* ((a 1) (b 2) (c 3)) (wcm (((λ (x) a) (λ (x) b))) c))
+              (wcm (((λ (x) 1) (λ (x) 2))) 3))
+  (test-subst (subst* ((a 1) (b 2)) (cont (λ (x) b) hole))
+              (cont (λ (x) 2) hole)))
 
 ;; Basic ----------------------------------------
 
@@ -1222,12 +1254,21 @@
         `(<>
           (,@chain-defns)
           [,@chain-output 1 3 4 2]
-          0)))
+          0))
+  (test "substitution"
+        `(<>
+          ((S #t))
+          ()
+          (((λ (o S) o)
+            (λ () S)
+            #f)))
+        `(<> ((S #t)) () #t)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Run
 
 (begin
+  (substitution-tests)
   (basic-tests)
   (r6rs-dw-tests)
   (cont-tests)
