@@ -1,3 +1,7 @@
+v7.0
+
+  * various bug fixes
+
 v6.12
 
   * typeset prime characters better, e.g. when writing e_′,
