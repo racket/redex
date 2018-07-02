@@ -216,6 +216,55 @@ non-terminal in the language and returns the compatible
 closure of the reduction for the specified non-terminal.
 }
 
+In the below example, @tt{r} is intended to calculate a boolean @racket[or]. Since @tt{r} does not recursively break apart its input, it will not reduce subexpressions within a larger non-matching expression @tt{t}.
+
+@racketblock[
+(define-language B
+  [x ::= #t #f (x + x)]
+  [y ::= (x * x)]
+  )
+
+(define r
+  (reduction-relation
+   B
+   #:domain x
+   [--> (#t + x)
+        #t]
+   [--> (x + #t)
+        #t]
+   ))
+
+(define t (term (#f + (#t + (#f + #t)))))
+(apply-reduction-relation r t) (code:comment @#,elem{'()})
+]
+
+The @racket[compatible-closure] @tt{r2} of @tt{r} with respect to @tt{x} is a version of @tt{r} that can reduce self-similar subexpressions within @tt{x}.
+
+@racketblock[
+(define r2 (compatible-closure r B x))
+(apply-reduction-relation r2 t) (code:comment @#,elem{'((#f + (#t + #t)) (#f + #t))})
+]
+
+However, the @racket[compatible-closure] is only defined for self-similar nonterminals. The @tt{r3} relation below was intended to separately reduce both sides of a pair.
+
+@racketblock[
+(define r3 (compatible-closure r2 B y))
+(define t-pair (term (,t * ,t)))
+(code:comment @#,elem{(apply-reduction-relation r3 t-pair) ; ERROR })
+]
+
+In order to get this effect, you can use the more general @racket[context-closure] instead.
+@racketblock[
+(define-extended-language B* B
+  [ C ::= (hole * x) (x * hole) ]
+  )
+
+(define r4 (context-closure r2 B* C))
+(apply-reduction-relation* r4 t-pair) (code:comment @#,elem{'((#t * #t))})
+]
+
+Instead of recursive @tt{x} nonterminals, it uses the @racket[hole]s to decide where to apply @tt{r2}.
+
 @defform[(context-closure reduction-relation lang pattern)]{
 
 This accepts a reduction, a language, a pattern representing
