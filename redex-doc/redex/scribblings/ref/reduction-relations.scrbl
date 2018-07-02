@@ -41,23 +41,23 @@
                [shortcut [(old-arrow-name @#,ttpattern @#,tttterm)
                           (new-arrow-name identifier identifier)]]
                [rule-name identifier
-                          string 
+                          string
                           (computed-name racket-expression)]
                [fresh-clause var ((var1 ...) (var2 ...))]
                [pat/term @#,ttpattern
                          @#,tttterm])]{
 
 Defines a reduction relation case-wise, one case for each of the
-@racket[reduction-case] clauses. 
+@racket[reduction-case] clauses.
 
 The optional @racket[domain] and @racket[codomain] clauses
 provide contracts for the relation. If the @racket[codomain]
 is not present, but the @racket[domain] is, then the
 codomain is expected to be the same as the domain.
 
-The @racket[arrow-name] in each @racket[reduction-case] clause is either 
+The @racket[arrow-name] in each @racket[reduction-case] clause is either
 @racket[base-arrow-name] (default @racket[-->]) or an arrow name
-defined by @racket[shortcuts] (described below). In either case, 
+defined by @racket[shortcuts] (described below). In either case,
 the @|pattern| refers to @racket[language] and binds variables in
 the corresponding @|tterm|. Following the @|pattern| and @|tterm|
 can be the name of the reduction rule and declarations of fresh
@@ -69,9 +69,9 @@ For example, the expression
   (reduction-relation
    lc-lang
    (--> (in-hole c_1 ((λ (variable_i ...) e_body) v_i ...))
-        (in-hole c_1 ,(foldl lc-subst 
-                             (term e_body) 
-                             (term (v_i ...)) 
+        (in-hole c_1 ,(foldl lc-subst
+                             (term e_body)
+                             (term (v_i ...))
                              (term (variable_i ...))))
         beta-v))
 ]
@@ -79,7 +79,7 @@ For example, the expression
 defines a reduction relation for the @tech{@racket[_lc-lang]} grammar.
 
 A rule's name (used in @seclink["Typesetting" "typesetting"],
-the @racket[stepper], @racket[traces], and 
+the @racket[stepper], @racket[traces], and
 @racket[apply-reduction-relation/tag-with-names]) can be given
 as a literal (an identifier or a string) or as an expression
 that computes a name using the values of the bound pattern
@@ -88,11 +88,11 @@ require literal names, so a rule definition may provide both
 a literal name and a computed name. In particular, only rules that include
 a literal name may be replaced using @racket[extend-reduction-relation],
 used as breakpoints in the @racket[stepper], and selected using
-@racket[render-reduction-relation-rules]. The output of 
+@racket[render-reduction-relation-rules]. The output of
 @racket[apply-reduction-relation/tag-with-names], @racket[traces], and
 the @racket[stepper] prefers the computed name, if it exists. Typesetting
 a rule with a computed name shows the expression that computes the name
-only when the rule has no literal name or when it would not typeset in 
+only when the rule has no literal name or when it would not typeset in
 pink due to @racket[with-unquote-rewriter]s in the context; otherwise,
 the literal name (or nothing) is shown.
 
@@ -103,7 +103,7 @@ variable, that variable is used both as a binding in the
 variable. (The variable does not have to be
 a non-terminal in the language of the reduction relation.)
 
-The second form of @racket[fresh-clause]s generates 
+The second form of @racket[fresh-clause]s generates
 a sequence of variables. In that case, the ellipses
 are literal ellipses; that is, you must actually write
 ellipses in your rule. The variable @racket[var1] is like the
@@ -140,12 +140,12 @@ the different matches (in the sense of @racket[alpha-equivalent?]
 using the language that this reduction relation is defined with).
 
 Each @racket[judgment-holds] clause acts like a @racket[where] clause, where
-the left-hand side pattern incorporates each of the patterns used in the 
+the left-hand side pattern incorporates each of the patterns used in the
 judgment form's output positions.
 
-Each @racket[shortcut] clause defines arrow names in terms of 
+Each @racket[shortcut] clause defines arrow names in terms of
 @racket[base-arrow-name] and earlier @racket[shortcut] definitions.
-The left- and right-hand sides of a @racket[shortcut] definition 
+The left- and right-hand sides of a @racket[shortcut] definition
 are identifiers, not @|pattern|s and @|tterm|s. These identifiers
 need not correspond to non-terminals in @racket[language] and if
 they do, that correspondence is ignored (more precisely, the
@@ -157,18 +157,18 @@ For example, this expression
   (reduction-relation
    lc-num-lang
    (==> ((λ (variable_i ...) e_body) v_i ...)
-        ,(foldl lc-subst 
-                (term e_body) 
-                (term (v_i ...)) 
+        ,(foldl lc-subst
+                (term e_body)
+                (term (v_i ...))
                 (term (variable_i ...))))
    (==> (+ number_1 ...)
         ,(apply + (term (number_1 ...))))
-   
+
    with
    [(--> (in-hole c_1 a) (in-hole c_1 b))
     (==> a b)])
 ]
-  
+
 defines reductions for the λ-calculus with numbers,
 where the @tt{==>} shortcut is defined by reducing in the context
 @tt{c}.
@@ -193,7 +193,7 @@ In addition to adding the rules specified to the existing
 relation, this form also reinterprets the rules in the
 original reduction, using the new language.
 }
-@defproc[(union-reduction-relations [r reduction-relation?] ...) 
+@defproc[(union-reduction-relations [r reduction-relation?] ...)
          reduction-relation?]{
 
 Combines all of the argument reduction relations into a
@@ -213,6 +213,55 @@ This accepts a reduction, a language, the name of a
 non-terminal in the language and returns the compatible
 closure of the reduction for the specified non-terminal.
 }
+
+In the below example, @tt{r} is intended to calculate a boolean @racket[or]. Since @tt{r} does not recursively break apart its input, it will not reduce subexpressions within a larger non-matching expression @tt{t}.
+
+@racketblock[
+(define-language Boolean
+  [x ::= #t #f (x + x)]
+  [y ::= (x * x)]
+  )
+
+(define r
+  (reduction-relation
+   Boolean
+   #:domain x
+   [--> (#t + x)
+        #t]
+   [--> (x + #t)
+        #t]
+   ))
+
+(define t (term (#f + (#t + (#f + #t)))))
+(apply-reduction-relation r t) (code:comment @#,elem{'()})
+]
+
+The @racket[compatible-closure] @tt{r2} of @tt{r} with respect to @tt{x} is a version of @tt{r} that can reduce self-similar subexpressions within @tt{x}.
+
+@racketblock[
+(define r2 (compatible-closure r X x))
+(apply-reduction-relation r2 t) (code:comment @#,elem{'((#f + (#t + #t)) (#f + #t))})
+]
+
+However, the @racket[compatible-closure] is only defined for self-similar nonterminals. The @tt{r3} relation below was intended to separately reduce both sides of a pair.
+
+@racketblock[
+(define r3 (compatible-closure r2 X y))
+(define t-pair (term (,t * ,t)))
+(code:comment @#,elem{(apply-reduction-relation r3 t-pair) ; ERROR })
+]
+
+In order to get this effect, you can use the more general @racket[context-closure] instead.
+@racketblock[
+(define-extended-language Y X
+  [ C ::= (hole * x) (x * hole) ]
+  )
+
+(define r4 (context-closure r2 Y C))
+(apply-reduction-relation* r4 t-pair) (code:comment @#,elem{'((#t * #t))})
+]
+
+Instead of recursive @tt{x} nonterminals, it uses the @racket[hole]s to decide where to apply @tt{r2}.
 
 @defform[(context-closure reduction-relation lang pattern)]{
 
