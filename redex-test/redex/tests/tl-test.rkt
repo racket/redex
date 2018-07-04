@@ -30,6 +30,13 @@
         #rx"FAILED .*tl-test.(?:.+):[0-9.]+\nexpected: 3\n  actual: 2\n1 test failed \\(out of 1 total\\).\n"))
 
 (let ()
+  (define-judgment-form empty-language #:mode (J I O) [(J 1 2)])
+  (test (capture-output (test-->> J 1 2) (test-results))
+        "One test passed.\n")
+  (test (capture-output (test-->> J 2 3) (test-results))
+        #rx"FAILED .*tl-test.(?:.+):[0-9.]+\nexpected: 3\n  actual: 2\n1 test failed \\(out of 1 total\\).\n"))
+
+(let ()
   (define red-share (reduction-relation 
                      empty-language
                      (--> a b)
@@ -209,6 +216,11 @@
         "One test passed.\n"))
 
 (let ()
+  (define-judgment-form empty-language #:mode (J I O) [(J any (any))])
+  (test (capture-output (test--> J (term (1 2 3)) (term ((1 2 3)))) (test-results))
+        "One test passed.\n"))
+
+(let ()
   (define red (reduction-relation empty-language 
                                   (--> any (any))
                                   (--> (any) any)))
@@ -274,7 +286,16 @@
   (test (capture-output (test-->>E 1+ 0 7)) "")
   (test (capture-output (test-->>∃ #:steps +inf.0 1+ 0 7)) "")
   (test (capture-output (test-->>∃ 1+ 0 equal-to-7)) "")
+
+  (define-judgment-form L
+    #:mode (1+/J I O)
+    [(1+/J number ,(add1 (term number)))])
   
+  (test (capture-output (test-->>∃ 1+/J 0 7)) "")
+  (test (capture-output (test-->>E 1+/J 0 7)) "")
+  (test (capture-output (test-->>∃ #:steps +inf.0 1+/J 0 7)) "")
+  (test (capture-output (test-->>∃ 1+/J 0 equal-to-7)) "")
+
   (define identity
     (reduction-relation
      L
@@ -283,7 +304,7 @@
   (test (capture-output (test-->>∃ identity 0 1))
         #rx"^FAILED .*\nterm 1 not reachable from 0\n$")
   
-  (test (capture-output (test-results)) "2 tests failed (out of 6 total).\n")
+  (test (capture-output (test-results)) "2 tests failed (out of 10 total).\n")
   
   (test-contract-violation
    (test-->>∃ 1+ 0 (λ (x y) x))

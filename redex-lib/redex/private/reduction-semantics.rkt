@@ -2944,15 +2944,16 @@
   (values (apply-reduction-relation red arg) #f))
 
 (define (test-->>/procs name red arg-thnk expected-thnk apply-red cycles-ok? equiv? pred srcinfo)
-  (unless (reduction-relation? red)
-    (error name "expected a reduction relation as first argument, got ~e" red))
+  (unless (or (reduction-relation? red)
+              (IO-judgment-form? red))
+    (error name "expected a reduction relation or an IO-judgment-form as first argument, got ~e" red))
   (when pred
     (unless (and (procedure? pred)
                  (procedure-arity-includes? pred 1))
       (error 'test-->> "expected a procedure that accepted one argument for the #:pred, got ~e"
              pred)))
   (define-values (arg expected)
-    (parameterize ([default-language (reduction-relation-lang red)])
+    (parameterize ([default-language (reduction-relation/IO-jf-lang red)])
       (values (arg-thnk) (expected-thnk))))
   (define test-failed? #f)
   (define (fail) (inc-failures) (set! test-failed? #t))
@@ -2999,7 +3000,7 @@
            relation
            start:expr
            goal)
-     #:declare relation (expr/c #'reduction-relation? 
+     #:declare relation (expr/c #'(or/c reduction-relation? IO-judgment-form?)
                                 #:name "reduction relation expression")
      #:declare goal (expr/c #'(or/c (-> any/c any/c) (not/c procedure?)) 
                             #:name "goal expression")

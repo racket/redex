@@ -58,7 +58,7 @@ the comparison. It defaults to @racket[(default-equiv)].
               ([option (code:line #:cycles-ok)
                        (code:line #:equiv pred-expr)
                        (code:line #:pred pred-expr)])
-              #:contracts ([rel-expr reduction-relation?]
+              #:contracts ([rel-expr (or/c reduction-relation? IO-judgment-form?)]
                            [pred-expr (-> any/c any)]
                            [e1-expr any/c]
                            [e2-expr any/c])]{
@@ -91,7 +91,7 @@ isn't supplied, then @racket[(default-equiv)] is used.
 
 @defform/subs[(test--> rel-expr option ... e1-expr e2-expr ...)
               ([option (code:line #:equiv pred-expr)])
-              #:contracts ([rel-expr reduction-relation?]
+              #:contracts ([rel-expr (or/c reduction-relation? IO-judgment-form?)]
                            [pred-expr (-> any/c any/c any/c)]
                            [e1-expr any/c]
                            [e2-expr any/c])]{
@@ -124,7 +124,7 @@ step, using @racket[pred-expr] to determine equivalence (or
 
 @defform/subs[(test-->>∃ option ... rel-expr start-expr goal-expr)
               ([option (code:line #:steps steps-expr)])
-              #:contracts ([rel-expr reduction-relation?]
+              #:contracts ([rel-expr (or/c reduction-relation? IO-judgment-form?)]
                            [start-expr any/c]
                            [goal-expr (or/c (-> any/c any/c)
                                             (not/c procedure?))]
