@@ -111,19 +111,13 @@
         ans))))
 
 (define (trim-fails fs)
-  (define rev-fs (reverse fs))
-  (reverse
-   (let loop ([rfs rev-fs])
-     (match rfs
-       [(cons (fail-cont _1 _2 (? (λ (b) (< b 0)) bound)) rest)
-        (loop rest)]
-       [_
-        rfs]))))
+  (dropf-right fs (match-lambda [(fail-cont _ _ (? negative?)) #t] [_ #f])))
 
 (define (shuffle-fails fs)
+  (define len (length fs))
   (cond 
-    [((length fs) . > . 0)
-     (define-values (ls rs) (split-at fs (random (length fs))))
+    [(len . > . 0)
+     (define-values (ls rs) (split-at fs (random len)))
      (append rs ls)]
     [else fs]))
 
@@ -196,45 +190,46 @@
   (define bd (get-dist len depth max-depth))
   (define n (round ((distribution-sample bd))))
   (define perm (nth-lexico-perm len (inexact->exact n)))
-  (define l-sorted (reverse (sort (shuffle l) < #:key key)))
+  (define l-sorted (list->vector (sort (shuffle l) >= #:key key)))
   (for/list ([i (in-list perm)])
-    (list-ref l-sorted i)))
+    (vector-ref l-sorted i)))
 
 (define get-dist
   (let ([cache (make-hash)])
     (λ (number-of-choices depth max-depth)
-      (hash-ref cache (list number-of-choices depth max-depth)
-                (λ ()
-                  (define nperms (factorial number-of-choices))
-                  (define d (binomial-dist (sub1 nperms) 
-                                           (+ (/ depth max-depth) 
-                                              (* 0.05 (- 0.5 (/ depth max-depth))))))
-                  (hash-set! cache (list number-of-choices depth max-depth) d)
-                  d)))))
+      (hash-ref! cache (list number-of-choices depth max-depth)
+                 (λ ()
+                   (define nperms (factorial number-of-choices))
+                   (binomial-dist (sub1 nperms) 
+                                  (+ (/ depth max-depth) 
+                                     (* 0.05 (- 0.5 (/ depth max-depth))))))))))
 
 (define (nth-lexico-perm len n)
-  (let recur ([indices (build-list len values)]
+  (define list-ref/remove
+    (match-lambda**
+     [((cons x xs) 0) (values x xs)]
+     [((cons x xs) i) (define-values (x* xs*) (list-ref/remove xs (- i 1)))
+                      (values x* (cons x xs*))]))
+  (let recur ([indices (range len)]
+              [len len]
               [n n])
     (cond
-      [(= (length indices) 1)
+      [(= len 1)
        indices]
       [else
        (define-values (q r)
-         (quotient/remainder n (factorial (- (length indices) 1))))
-       (define index (list-ref indices q))
+         (quotient/remainder n (factorial (- len 1))))
+       (define-values (index indices*) (list-ref/remove indices q))
        (cons index
-             (recur (remove index indices) r))])))
+             (recur indices* (- len 1) r))])))
 
 (define (order-clauses cs)
   (define num-prems->cs (make-hash))
   (for ([c (in-list cs)])
-    (hash-set! num-prems->cs
-               (length (clause-prems c))
-               (set-add
-                (hash-ref num-prems->cs
-                          (length (clause-prems c))
-                          (set))
-                c)))
+    (hash-update! num-prems->cs
+                  (length (clause-prems c))
+                  (λ (cs) (set-add cs c))
+                  set))
   (apply append
          (for/list ([k (in-list (sort (hash-keys num-prems->cs) <))])
            (shuffle (set->list (hash-ref num-prems->cs k))))))
