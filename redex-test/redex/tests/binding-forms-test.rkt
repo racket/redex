@@ -757,3 +757,18 @@
       (λ (x_1) e #:refers-to x_1))
     (check-equal? (term (substitute (x y) x y) #:lang L)
                   (term (y y))))
+
+
+(let ()
+  (define-language L
+    (e ::= (ζ (hide-hole E)))
+    (x ::= variable-not-otherwise-mentioned)
+    (E ::= hole (in-hole (natural E) E))
+    #:binding-forms
+    (ξ x e_1 #:refers-to x))
+
+  (check-true (pair?
+               (redex-match
+                L
+                (ξ x e)
+                (term (ξ x (ζ (1 (2 hole)))))))))

@@ -297,7 +297,13 @@
               [rest-of-body ;; no imports or ...s
                (process-under #'rest-of-body #f #f)]))]
 
-         [atomic-pattern (values (syntax-e #'atomic-pattern) #'atomic-pattern)])))
+         [atomic-pattern
+          (begin
+            (when (equal? (syntax-e #'atomic-pattern) 'in-hole)
+              (raise-syntax-error 'define-language
+                                  "`in-hole` is illegal in a binding specification"
+                                  #'atomic-pattern))
+            (values (syntax-e #'atomic-pattern) #'atomic-pattern))])))
 
    (define import-names (names-imported-in-with-depths bspec-body form-name s-body))
    (define export-names (names-mentioned-in-beta-with-depths export-beta form-name s-body))
