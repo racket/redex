@@ -67,15 +67,10 @@ todo:
     ;; all-nodes-ht : hash[sexp -o> (is-a/c node%)]
 
     (define all-nodes-ht
-      (let* ([lang (reduction-relation/IO-jf-lang red)]
-             [term-equal? (lambda (x y) (α-equal? (compiled-lang-binding-table lang)
-                                                  (compiled-lang-literals lang)
-                                                  match-pattern x y))]
-             [term-hash (lambda (x) (α-equal-hash-code (compiled-lang-binding-table lang)
-                                                       (compiled-lang-literals lang)
-                                                       match-pattern x))])
-      (make-custom-hash term-equal? term-hash)))
-    
+      (let ([lang (reduction-relation/IO-jf-lang red)])
+        (make-α-hash (compiled-lang-binding-table lang)
+                     (compiled-lang-literals lang)
+                     match-pattern)))
     (define root (new node%
                       [pp pp]
                       [all-nodes-ht all-nodes-ht]
