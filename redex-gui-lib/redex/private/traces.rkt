@@ -442,28 +442,31 @@
          (set! frontier new-frontier)]
         [else
          (define snip (car snips))
-         (define new-snips 
-           (filter 
-            (lambda (x) x)
-            (for/list ([red+sexp (in-list (reduce reductions (send snip get-expr)))])
-              (define-values (name sexp) (apply values red+sexp))
-              (call-on-eventspace-main-thread
-               (λ ()
-                 (cond
-                   [(term-filter sexp name)
-                    (define-values (dark-arrow-color 
-                                    light-arrow-color 
-                                    dark-label-color 
-                                    light-label-color
-                                    dark-pen-color
-                                    light-pen-color)
-                      (red->colors name))
-                    (build-snip snip-cache snip sexp pred pp name code-colors? 
-                                (get-user-char-width user-char-width sexp)
-                                light-arrow-color dark-arrow-color 
-                                dark-label-color light-label-color
-                                dark-pen-color light-pen-color)]
-                   [else #f]))))))
+         (define new-snips
+           (cond
+             [(is-in-domain? reductions (send snip get-expr))
+              (filter
+               (lambda (x) x)
+               (for/list ([red+sexp (in-list (reduce reductions (send snip get-expr)))])
+                 (define-values (name sexp) (apply values red+sexp))
+                 (call-on-eventspace-main-thread
+                  (λ ()
+                    (cond
+                      [(term-filter sexp name)
+                       (define-values (dark-arrow-color
+                                       light-arrow-color
+                                       dark-label-color
+                                       light-label-color
+                                       dark-pen-color
+                                       light-pen-color)
+                         (red->colors name))
+                       (build-snip snip-cache snip sexp pred pp name code-colors?
+                                   (get-user-char-width user-char-width sexp)
+                                   light-arrow-color dark-arrow-color
+                                   dark-label-color light-label-color
+                                   dark-pen-color light-pen-color)]
+                      [else #f])))))]
+             [else '()]))
          (define new-y 
            (call-on-eventspace-main-thread
             (lambda () ; =eventspace main thread=

@@ -62,7 +62,16 @@ todo:
   (define (stepper red term [pp default-pretty-printer])
     (stepper/seed red (list term) pp))
   
-  (define (stepper/seed red seed [pp default-pretty-printer])
+  (define (stepper/seed red seed [_pp #f])
+    (define pp (or _pp default-pretty-printer))
+    (for ([seed (in-list seed)])
+      (unless (is-in-domain? red seed)
+        (define exp "a list of terms in the domain of `reductions`")
+        (if _pp
+            (raise-argument-error 'stepper/seed exp
+                                  1 red seed _pp)
+            (raise-argument-error 'stepper/seed exp
+                                  1 red seed))))
     (define term (car seed))
     ;; all-nodes-ht : hash[sexp -o> (is-a/c node%)]
 
@@ -436,17 +445,19 @@ todo:
       (cond
         [(null? terms) (void)]
         [else
-         (let* ([nexts (apply-reduction-relation red term)]
-                [ith (find-i (car terms)
+         (define nexts (if (is-in-domain? red term)
+                           (apply-reduction-relation red term)
+                           '()))
+         (define ith (find-i (car terms)
                              nexts
                              (λ ()
                                (error 'stepper "term ~s does not reduce to ~s"
                                       term 
-                                      (car terms))))])
-           (forward-step 0)
-           (loop (car terms)
-                 nexts
-                 (cdr terms)))]))
+                                      (car terms)))))
+         (forward-step 0)
+         (loop (car terms)
+               nexts
+               (cdr terms))]))
     
     (send f show #t)
     (pb-change-columns)
@@ -497,21 +508,27 @@ todo:
 
       ;; #f => uninited, else
       ;; (listof (listof string))
-      ;; one list element for each successor, one nested list element for each reduction that applied (typically 1)
+      ;; one list element for each successor, one nested list
+      ;; element for each reduction that applied (typically 1)
       (define successor-names #f)
       (define/public (get-successors)
         (unless successors
-          (let-values ([(succs names)
-                        (for/fold ([succs (set)]
-                                   [names #hash()])
-                                  ([reduction (apply-reduction-relation/tagged red term #t)])
-                          (let ([name (first reduction)]
-                                [succ (second reduction)]
-                                [add (λ (x) (λ (xs) (cons x xs)))])
-                            (values (set-add succs succ)
-                                    (hash-update names succ (add name) '()))))])
-            (set! successors (set-map succs values))
-            (set! successor-names (map (λ (s) (hash-ref names s)) successors))))
+          (define nexts
+            (cond
+              [(is-in-domain? red term)
+               (apply-reduction-relation/tagged red term #t)]
+              [else '()]))
+          (define-values (succs names)
+            (for/fold ([succs (set)]
+                       [names #hash()])
+                      ([next (in-list nexts)])
+              (define name (first next))
+              (define succ (second next))
+              (define ((add x) xs) (cons x xs))
+              (values (set-add succs succ)
+                      (hash-update names succ (add name) '()))))
+          (set! successors (set-map succs values))
+          (set! successor-names (map (λ (s) (hash-ref names s)) successors)))
         successors)
       (define/public (get-successor-names)
         (get-successors) ;; force the variables to be defined

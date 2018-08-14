@@ -58,7 +58,9 @@ Expect the second step to split and show two steps.
    #:pred color-range-pred))
 
 (let ()
-  (define-language empty-language)
+  (define-language L
+    (dom ::= (number word))
+    (codom ::= (number word) number))
   
   (define (last-color-pred sexp term-node)
     (if (null? (term-node-children term-node))
@@ -66,21 +68,29 @@ Expect the second step to split and show two steps.
         "white"))
   
   (traces (reduction-relation
-           empty-language
+           L
+           #:domain dom
+           #:codomain codom
            (--> (number_1 word)
                 (,(+ (term number_1) 1) word)
                 inc)
            (--> (number_1 word)
                 (,(* (term number_1) 2) word)
-                dup))
+                dup)
+           (--> (number word)
+                number
+                out))
           '(1 word)
           #:pred last-color-pred))
 
 (let ()
-  (define-language empty-language)
+  (define-language L
+    (sexp ::= (sexp ...) number))
   (stepper
-   (reduction-relation
-    empty-language
-    (--> any (any) (computed-name (term (12 any 34))))
+   (reduction-relation L
+    #:domain sexp
+    #:codomain any
+    (--> number (number) (computed-name (term (12 number 34))))
+    (--> 0 zero)
     (--> (any) (any any) "not-computed"))
-   1234))
+   0))

@@ -2825,6 +2825,21 @@
            next)
          nexts)]))
 
+(define (is-in-domain? reductions t)
+  (cond
+    [(reduction-relation? reductions)
+     (define dom-pat (reduction-relation-compiled-domain-pat reductions))
+     (cond
+       [dom-pat (match-pattern? dom-pat t)]
+       [else #t])]
+    [else
+     (define input-pat
+       (runtime-judgment-form-compiled-input-contract-pat reductions))
+     (cond
+       [input-pat
+        (match-pattern? input-pat (list t))]
+       [else #t])]))
+
 ;; map/mt : (a -> b) (listof a) (listof b) -> (listof b)
 ;; map/mt is like map, except
 ;;  a) it uses the last argument instead of the empty list
@@ -3289,7 +3304,8 @@
          metafunc-proc?
          (struct-out metafunc-case)
          
-         (struct-out binds))
+         (struct-out binds)
+         is-in-domain?)
 
 (provide shadow nothing)
 
