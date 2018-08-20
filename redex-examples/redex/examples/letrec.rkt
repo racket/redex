@@ -142,8 +142,8 @@ A model of Racket's letrec
         (in-hole P (let ([x v] ...) e))
         "βv")
 
-   (==> (in-hole P (= number_1 number_2 number_3 ...))
-        (in-hole P ,(apply = (term (number_1 number_2 number_3 ...))))
+   (==> (in-hole P (= number_1 number_2 ...))
+        (in-hole P ,(apply = (term (number_1 number_2 ...))))
         "=")
    (==> (in-hole P (- number_1 number_2 ...))
         (in-hole P ,(apply - (term (number_1 number_2 ...))))
@@ -207,6 +207,7 @@ A model of Racket's letrec
   (test-equal (result-of (term (+ 1 2 3 4))) 10)
   (test-equal (result-of (term (- 1 2 3 4))) -8)
   (test-equal (result-of (term (* 1 2 3 4))) 24)
+  (test-equal (result-of (term (= 1))) #t)
   (test-equal (result-of (term (if (= 0 0) 1 2))) 1)
   (test-equal (result-of (term (if (= 0 2) 1 2))) 2)
   (test-equal (result-of (term (letrec ([x 1][y 2]) (+ x y)))) 3)
