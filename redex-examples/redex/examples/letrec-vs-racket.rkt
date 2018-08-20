@@ -22,7 +22,6 @@ produces the same results as racket itself
 (parameterize ([current-namespace ns])
   (namespace-require `(submod (file ,(path->string letrec-vs-racket.rkt)) all-the-stuff)))
 
-
 (define (same-as-racket? t)
   (define cleaned-up (clean-up t))
   (define redex-result (redex-eval cleaned-up))
@@ -30,7 +29,11 @@ produces the same results as racket itself
   (define ans (equal? redex-result racket-result))
   (unless ans
     (printf "cleaned up:\n")
-    (pretty-write cleaned-up))
+    (pretty-write cleaned-up)
+    (printf "from redex:\n")
+    (pretty-write redex-result)
+    (printf "from racket:\n")
+    (pretty-write racket-result))
   ans)
 
 (define v? (redex-match? lang v))
