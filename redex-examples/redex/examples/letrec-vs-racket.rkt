@@ -25,16 +25,19 @@ produces the same results as racket itself
 (define (same-as-racket? t)
   (define cleaned-up (clean-up t))
   (define redex-result (redex-eval cleaned-up))
-  (define racket-result (racket-eval cleaned-up))
-  (define ans (equal? redex-result racket-result))
-  (unless ans
-    (printf "cleaned up:\n")
-    (pretty-write cleaned-up)
-    (printf "from redex:\n")
-    (pretty-write redex-result)
-    (printf "from racket:\n")
-    (pretty-write racket-result))
-  ans)
+  (cond
+    [(equal? redex-result 'infinite-loop) #t]
+    [else
+     (define racket-result (racket-eval cleaned-up))
+     (define ans (equal? redex-result racket-result))
+     (unless ans
+       (printf "cleaned up:\n")
+       (pretty-write cleaned-up)
+       (printf "from redex:\n")
+       (pretty-write redex-result)
+       (printf "from racket:\n")
+       (pretty-write racket-result))
+     ans]))
 
 (define v? (redex-match? lang v))
 (define lam? (redex-match? lang (λ (x ...) e)))
@@ -42,6 +45,7 @@ produces the same results as racket itself
   (define result (result-of prog))
   (cond
     [(or (lam? result) (member result '(* - + =))) 'proc]
+    [(equal? result 'infinite-loop) result]
     [(v? result) result]
     [else 'error]))
 

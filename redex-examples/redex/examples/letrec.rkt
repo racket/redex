@@ -187,7 +187,8 @@ A model of Racket's letrec
 
 (define (result-of prog)
   (match (apply-reduction-relation* reductions (term ((store) ,prog)))
-    [`(((store . ,_) ,res)) res]))
+    [`(((store . ,_) ,res)) res]
+    [`() 'infinite-loop]))
 
 (module+ test
   (test-equal
