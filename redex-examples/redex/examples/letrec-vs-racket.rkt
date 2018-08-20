@@ -1,5 +1,6 @@
 #lang racket
-(require "letrec.rkt" redex/reduction-semantics)
+(require "letrec.rkt" redex/reduction-semantics
+         racket/linklet racket/runtime-path)
 
 #|
 
@@ -8,7 +9,12 @@ produces the same results as racket itself
 
 |#
 
-(require racket/runtime-path)
+(define (namespace-mapped-symbols.2 ns)
+  (for/list ([x (in-list (namespace-mapped-symbols ns))]
+             #:when (with-handlers ([exn:fail? (λ (x) #f)])
+                      (eval x ns)))
+    x))
+
 (define ns (make-base-empty-namespace))
 (module all-the-stuff racket/base
   (provide + - * set! = #%top
@@ -21,6 +27,7 @@ produces the same results as racket itself
                          ns)
 (parameterize ([current-namespace ns])
   (namespace-require `(submod (file ,(path->string letrec-vs-racket.rkt)) all-the-stuff)))
+(define originally-mapped-symbols (namespace-mapped-symbols.2 ns))
 
 (define (same-as-racket? t)
   (define cleaned-up (clean-up t))
@@ -29,15 +36,24 @@ produces the same results as racket itself
     [(equal? redex-result 'infinite-loop) #t]
     [else
      (define racket-result (racket-eval cleaned-up))
-     (define ans (equal? redex-result racket-result))
-     (unless ans
-       (printf "cleaned up:\n")
-       (pretty-write cleaned-up)
-       (printf "from redex:\n")
-       (pretty-write redex-result)
-       (printf "from racket:\n")
-       (pretty-write racket-result))
-     ans]))
+     (define newly-mapped-symbols (namespace-mapped-symbols.2 ns))
+     (cond
+       [(equal? newly-mapped-symbols originally-mapped-symbols)
+        (define ans (equal? redex-result racket-result))
+        (unless ans
+          (printf "cleaned up:\n")
+          (pretty-write cleaned-up)
+          (printf "from redex:\n")
+          (pretty-write redex-result)
+          (printf "from racket:\n")
+          (pretty-write racket-result))
+        ans]
+       [else
+        (printf "set of symbols mapped in the namespace changed to:\n")
+        (pretty-write newly-mapped-symbols)
+        (printf "cleaned up:\n")
+        (pretty-write cleaned-up)
+        #f])]))
 
 (define v? (redex-match? lang v))
 (define lam? (redex-match? lang (λ (x ...) e)))
