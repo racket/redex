@@ -19,7 +19,8 @@ produces the same results as racket itself
 (module all-the-stuff racket/base
   (provide + - * set! = #%top
            let letrec if begin
-           #%app λ void #%datum))
+           #%app λ void #%datum
+           writeln))
 (define-runtime-path letrec-vs-racket.rkt "letrec-vs-racket.rkt")
 (require (only-in (submod "." all-the-stuff))) ;; bind nothing
 (namespace-attach-module (current-namespace)
@@ -58,20 +59,34 @@ produces the same results as racket itself
 (define v? (redex-match? lang v))
 (define lam? (redex-match? lang (λ (x ...) e)))
 (define (redex-eval prog)
-  (define result (result-of prog))
-  (cond
-    [(or (lam? result) (member result '(* - + =))) 'proc]
-    [(equal? result 'infinite-loop) result]
-    [(v? result) result]
-    [else 'error]))
+  (define-values (result io) (result-and-output-of prog))
+  (define normalized-result
+    (cond
+      [(or (lam? result) (member result '(* - + =))) 'proc]
+      [(equal? result 'infinite-loop) result]
+      [(v? result) result]
+      [else 'error]))
+  (list normalized-result io))
 
 (define (racket-eval prog)
-  (with-handlers ([exn:fail? (λ (x) 'error)])
-    (define result (eval prog ns))
+  (define sp (open-output-string))
+  (define result
+    (with-handlers ([exn:fail? (λ (x) 'error)])
+      (parameterize ([current-output-port sp])
+        (eval prog ns))))
+  (close-output-port sp)
+  (define normalized-result
     (match result
       [(? procedure?) 'proc]
       [(? void?) '(void)]
-      [_ result])))
+      [_ result]))
+  (define normalized-io
+    (for/list ([l (in-lines (open-input-string (get-output-string sp)))])
+      (cond
+        [(regexp-match #rx"#<proc" l) 'procedure]
+        [(regexp-match #rx"#<void" l) '(void)]
+        [else (read (open-input-string l))])))
+  (list normalized-result normalized-io))
 
 ;; clean-up : any -> any
 ;; removes forms that shouldn't be in the original program
@@ -113,7 +128,7 @@ produces the same results as racket itself
       [(? symbol?) (pick-a-var s #t)]
       [(? boolean?) s]
       [(? number?) s])))
-  
+
 (module+ test
   (redex-check surface-lang e
                (same-as-racket? (term e))))

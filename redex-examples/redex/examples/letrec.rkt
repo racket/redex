@@ -9,6 +9,7 @@ A model of Racket's letrec
 
 (provide lang
          surface-lang
+         result-and-output-of
          result-of
          run)
 
@@ -19,14 +20,15 @@ A model of Racket's letrec
      (if e e e)
      (begin e e ...)
      (e e ...)
+     (writeln e)
      x
      v)
-  (v (λ (x_!_ ...) e)
-     + - * =
-     number
-     (void)
-     #t
-     #f)
+  (v fv sv)
+  (fv (λ (x_!_ ...) e) + - * =)
+  (sv number
+      (void)
+      #t
+      #f)
   (x variable-not-otherwise-mentioned)
 
   #:binding-forms
@@ -35,68 +37,67 @@ A model of Racket's letrec
   (letrec ([x e_x] ...) #:refers-to (shadow x ...) e_body #:refers-to (shadow x ...)))
 
 (define-extended-language lang surface-lang
-  (p ((store (x_!_ v-or-undefined) ...) e))
+  (p ((store (x_!_ v-or-undefined) ...)
+      (output o ...)
+      e))
   (e ::= ....
      undefined
      (lset! x e))
-  
-  (P ((store (x v-or-undefined) ...) E))
+  (o ::= procedure sv)
+  (P ((store (x v-or-undefined) ...) (output o ...) E))
   (E (v ... E e ...)
      (set! x E)
      (lset! x E)
      (let ((x v-or-undefined) ... (x E) (x e) ...) e)
      (if E e e)
      (begin E e e ...)
+     (writeln E)
      hole)
-  
   (v-or-undefined v undefined))
-
 
 ;; collect : term -> term
 ;; performs a garbage collection on the term `p'
 (define (collect p)
+  (match p
+    [`((store (,vars ,vs) ...) ,o ,e)
 
-  (define (find-unused vars p)
-    (filter (λ (var) (unused? var p))
-            vars))
+     (define (unused-var? var)
+       (and (not (in? var e))
+            (andmap (λ (rhs) (not (in? var rhs)))
+                    vs)))
 
-  (define (unused? var p)
-    (let ([rhss (map cadr (cdar p))]
-          [body (cadr p)])
-      (and (not (in? var body))
-           (andmap (λ (rhs) (not (in? var rhs)))
-                   rhss))))
+     (define unused
+       (for/list ([var (in-list vars)]
+                  #:when (unused-var? var))
+         var))
 
-  (define (in? var body)
-    (let loop ([body body])
-      (match body
-        [(cons a b) (or (loop a) (loop b))]
-        [(? symbol?) (equal? body var)]
-        [else #f])))
+     (cond
+       [(null? unused) p]
+       [else
+        (collect
+         (term ((store ,@(filter (λ (binding) (not (memq (car binding) unused)))
+                                 (cdar p)))
+                ,o
+                ,e)))])]))
 
-  (define (remove-unused vars p)
-    (term ((store ,@(filter (λ (binding) (not (memq (car binding) vars)))
-                            (cdar p)))
-           ,(cadr p))))
-
-  (define vars
-    (match p
-      [`((store (,xs ,vs) ...) ,e) xs]))
-  (define unused (find-unused vars p))
-  (cond
-    [(null? unused) p]
-    [else
-     (collect (remove-unused unused p))]))
+(define (in? var body)
+  (let loop ([body body])
+    (match body
+      [(cons a b) (or (loop a) (loop b))]
+      [(? symbol?) (equal? body var)]
+      [else #f])))
 
 (module+ test
-  (test-equal (collect (term ((store) 1))) (term ((store) 1)))
-  (test-equal (collect (term ((store (x 1)) 1))) (term ((store) 1)))
-  (test-equal (collect (term ((store (x 1)) x))) (term ((store (x 1)) x)))
-  (test-equal (collect (term ((store (x 1) (y x)) 1))) (term ((store) 1)))
-  (test-equal (collect (term ((store (x 1) (y x)) y))) (term ((store (x 1) (y x)) y)))
+  (test-equal (collect (term ((store) (output) 1))) (term ((store) (output) 1)))
+  (test-equal (collect (term ((store (x 1)) (output) 1))) (term ((store) (output) 1)))
+  (test-equal (collect (term ((store (x 1)) (output) x))) (term ((store (x 1)) (output) x)))
+  (test-equal (collect (term ((store (x 1) (y x)) (output) 1))) (term ((store) (output) 1)))
+  (test-equal (collect (term ((store (x 1) (y x)) (output) y)))
+              (term ((store (x 1) (y x)) (output) y)))
   ;; doesn't really do actually gc, so improving the collect
   ;; function might break this test (which would be great)
-  (test-equal (collect (term ((store (x y) (y x)) 1))) (term ((store (x y) (y x)) 1))))
+  (test-equal (collect (term ((store (x y) (y x)) (output) 1)))
+              (term ((store (x y) (y x)) (output) 1))))
 
 (define reductions
   (reduction-relation
@@ -112,29 +113,35 @@ A model of Racket's letrec
    (==> ((store (x_before v-or-undefined_before) ...
                 (x_i v_i)
                 (x_after v-or-undefined_after) ...)
+         (output o ...)
          (in-hole E_1 x_i))
         ((store (x_before v-or-undefined_before) ...
                 (x_i v_i)
                 (x_after v-or-undefined_after) ...)
+         (output o ...)
          (in-hole E_1 v_i))
         "get")
 
    (==> ((store (x_before v-or-undefined_before) ...
                 (x_i v_old)
                 (x_after v-or-undefined_after) ...)
+         (output o ...)
          (in-hole E (set! x_i v_new)))
         ((store (x_before v-or-undefined_before) ...
                 (x_i v_new)
                 (x_after v-or-undefined_after) ...)
+         (output o ...)
          (in-hole E (void)))
         "set!")
    (==> ((store (x_before v-or-undefined_before) ...
                 (x_i v-or-undefined)
                 (x_after v-or-undefined_after) ...)
+         (output o ...)
          (in-hole E (lset! x_i v_new)))
         ((store (x_before v-or-undefined_before) ...
                 (x_i v_new)
                 (x_after v-or-undefined_after) ...)
+         (output o ...)
          (in-hole E (void)))
         "lset!")
 
@@ -167,8 +174,10 @@ A model of Racket's letrec
         "ift")
 
    (==> ((store (x_old v-or-undefined_old) ...)
+         (output o ...)
          (in-hole E (let ([x_1 v-or-undefined_1] [x_2 v-or-undefined_2] ...) e)))
         ((store (x_old v-or-undefined_old) ... (x_new v-or-undefined_1))
+         (output o ...)
          (in-hole E (let ([x_2 v-or-undefined_2] ...) (substitute e x_1 x_new))))
         (fresh x_new)
         "let1")
@@ -180,15 +189,38 @@ A model of Racket's letrec
         (in-hole P (let ((x undefined) ...) (begin (lset! x e_1) ... e_2)))
         "letrec")
 
+   (==> ((store (x v-or-undefined) ...)
+         (output o ...)
+         (in-hole E (writeln sv)))
+        ((store (x v-or-undefined) ...)
+         (output o ... sv)
+         (in-hole E (void)))
+        "write flat")
+   (==> ((store (x v-or-undefined) ...)
+         (output o ...)
+         (in-hole E (writeln fv)))
+        ((store (x v-or-undefined) ...)
+         (output o ... procedure)
+         (in-hole E (void)))
+        "write proc")
+
    with
    [(--> a ,(collect (term b))) (==> a b)]))
 
-(define (run e) (traces reductions (term ((store) ,e))))
+(define (run e) (traces reductions (term ((store) (output) ,e))))
 
 (define (result-of prog)
-  (match (apply-reduction-relation* reductions (term ((store) ,prog)))
-    [`(((store . ,_) ,res)) res]
-    [`() 'infinite-loop]))
+  (define-values (result io) (result-and-output-of prog))
+  result)
+
+(define (io-of prog)
+  (define-values (result io) (result-and-output-of prog))
+  io)
+
+(define (result-and-output-of prog)
+  (match (apply-reduction-relation* reductions (term ((store) (output) ,prog)))
+    [`(((store . ,_) (output ,o ...) ,res)) (values res o)]
+    [`() (values 'infinite-loop '())]))
 
 (module+ test
   (test-equal
@@ -213,6 +245,9 @@ A model of Racket's letrec
   (test-equal (result-of (term (if (= 0 2) 1 2))) 2)
   (test-equal (result-of (term (letrec ([x 1][y 2]) (+ x y)))) 3)
   (test-equal (result-of (term (letrec ([x 1][y x][z 3]) y))) 1)
+
+  (test-equal (io-of (term (writeln (+ 1 2)))) (list 3))
+  (test-equal (io-of (term (writeln (writeln (+ 1 2))))) (term (3 (void))))
 
   ;; test it gets stuck
   (test-equal (redex-match lang
