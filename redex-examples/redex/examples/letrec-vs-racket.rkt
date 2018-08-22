@@ -21,8 +21,36 @@ produces the same results as racket itself
            let letrec if begin
            #%app λ void #%datum
            writeln))
+(module all-the-stuff-lang racket/base
+  (require (submod ".." all-the-stuff)
+           (for-syntax racket/base))
+  (provide (except-out (all-from-out (submod ".." all-the-stuff))
+                       #%top
+                       set!)
+           (rename-out [module-begin #%module-begin]
+                       [top #%top]
+                       [-set! set!]))
+  (define-syntax (-set! stx)
+    (syntax-case stx ()
+      [(_ id e) #'(#%expression (real-set! id e))]))
+  (define-syntax (real-set! stx)
+    (syntax-case stx ()
+      [(_ id e)
+       (if (identifier-binding #'id)
+           #'(set! id e)
+           #'(error 'set! "free variable ~s" 'id))]))
+  (define-syntax (module-begin stx)
+    (syntax-case stx ()
+      [(_ e) #'(#%plain-module-begin
+                (define the-answer e)
+                (provide the-answer))]))
+  (define-syntax (top stx)
+    (syntax-case stx ()
+      [(_ . x) #'(error 'free-variable "~s" 'x)])))
+
 (define-runtime-path letrec-vs-racket.rkt "letrec-vs-racket.rkt")
-(require (only-in (submod "." all-the-stuff))) ;; bind nothing
+(require (only-in (submod "." all-the-stuff))  ;; bind nothing
+         (only-in (submod "." all-the-stuff-lang)))
 (namespace-attach-module (current-namespace)
                          `(submod (file ,(path->string letrec-vs-racket.rkt)) all-the-stuff)
                          ns)
@@ -37,24 +65,32 @@ produces the same results as racket itself
     [(equal? redex-result 'infinite-loop) #t]
     [else
      (define racket-result (racket-eval cleaned-up))
+     (define racket-module-result (racket-module-eval cleaned-up))
      (define newly-mapped-symbols (namespace-mapped-symbols.2 ns))
      (cond
-       [(equal? newly-mapped-symbols originally-mapped-symbols)
-        (define ans (equal? redex-result racket-result))
-        (unless ans
-          (printf "cleaned up:\n")
-          (pretty-write cleaned-up)
-          (printf "from redex:\n")
-          (pretty-write redex-result)
-          (printf "from racket:\n")
-          (pretty-write racket-result))
-        ans]
-       [else
+       [(not (equal? newly-mapped-symbols originally-mapped-symbols))
         (printf "set of symbols mapped in the namespace changed to:\n")
         (pretty-write newly-mapped-symbols)
         (printf "cleaned up:\n")
         (pretty-write cleaned-up)
-        #f])]))
+        #f]
+       [(not (equal? redex-result racket-result))
+        (printf "cleaned up:\n")
+        (pretty-write cleaned-up)
+        (printf "from redex:\n")
+        (pretty-write redex-result)
+        (printf "from racket at the top-level:\n")
+        (pretty-write racket-result)
+        #f]
+       [(not (equal? redex-result racket-module-result))
+        (printf "cleaned up:\n")
+        (pretty-write cleaned-up)
+        (printf "from redex:\n")
+        (pretty-write redex-result)
+        (printf "from racket in a module:\n")
+        (pretty-write racket-module-result)
+        #f]
+       [else #t])]))
 
 (define v? (redex-match? lang v))
 (define lam? (redex-match? lang (λ (x ...) e)))
@@ -62,12 +98,13 @@ produces the same results as racket itself
   (define-values (result io) (result-and-output-of prog))
   (define normalized-result
     (cond
-      [(or (lam? result) (member result '(* - + =))) 'proc]
+      [(or (lam? result) (member result '(* - + =))) 'procedure]
       [(equal? result 'infinite-loop) result]
       [(v? result) result]
       [else 'error]))
   (list normalized-result io))
 
+;; e -> (list/c (or/c 'error value) (listof value))
 (define (racket-eval prog)
   (define sp (open-output-string))
   (define result
@@ -75,18 +112,37 @@ produces the same results as racket itself
       (parameterize ([current-output-port sp])
         (eval prog ns))))
   (close-output-port sp)
-  (define normalized-result
-    (match result
-      [(? procedure?) 'proc]
-      [(? void?) '(void)]
-      [_ result]))
-  (define normalized-io
-    (for/list ([l (in-lines (open-input-string (get-output-string sp)))])
-      (cond
-        [(regexp-match #rx"#<proc" l) 'procedure]
-        [(regexp-match #rx"#<void" l) '(void)]
-        [else (read (open-input-string l))])))
-  (list normalized-result normalized-io))
+  (list (normalize-result result) (normalize-io sp)))
+
+;; e -> (list/c (or/c 'error value) (listof value))
+(define racket-module-eval-name-counter 0)
+(define (racket-module-eval prog)
+  (define sp (open-output-string))
+  (define modname
+    (string->symbol (~a "racket-module-eval-module-name-" racket-module-eval-name-counter)))
+  (set! racket-module-eval-name-counter (+ racket-module-eval-name-counter 1))
+  (define result
+    (with-handlers ([exn:fail? (λ (x) 'error)])
+      (parameterize ([current-output-port sp])
+        (eval `(,#'module ,modname
+                          (submod (file ,(path->string letrec-vs-racket.rkt)) all-the-stuff-lang)
+                          ,prog))
+        (dynamic-require `',modname 'the-answer))))
+  (close-output-port sp)
+  (list (normalize-result result) (normalize-io sp)))
+
+(define (normalize-io sp)
+  (for/list ([l (in-lines (open-input-string (get-output-string sp)))])
+    (cond
+      [(regexp-match #rx"#<proc" l) 'procedure]
+      [(regexp-match #rx"#<void" l) '(void)]
+      [else (read (open-input-string l))])))
+
+(define (normalize-result result)
+  (match result
+    [(? procedure?) 'procedure]
+    [(? void?) '(void)]
+    [_ result]))
 
 ;; clean-up : any -> any
 ;; removes forms that shouldn't be in the original program
