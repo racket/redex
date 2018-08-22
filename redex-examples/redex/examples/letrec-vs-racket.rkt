@@ -38,7 +38,7 @@ produces the same results as racket itself
       [(_ id e)
        (if (identifier-binding #'id)
            #'(set! id e)
-           #'(begin e (error 'set! "free variable ~s" 'id)))]))
+           #'(let () e (error 'set! "free variable ~s" 'id)))]))
   (define-syntax (module-begin stx)
     (syntax-case stx ()
       [(_ e) #'(#%plain-module-begin
