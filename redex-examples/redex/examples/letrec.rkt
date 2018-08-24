@@ -55,6 +55,8 @@ A model of Racket's letrec
      hole)
   (v-or-undefined v undefined))
 
+(define v? (redex-match? lang v))
+
 ;; collect : term -> term
 ;; performs a garbage collection on the term `p'
 (define (collect p)
@@ -209,18 +211,44 @@ A model of Racket's letrec
 
 (define (run e) (traces reductions (term ((store) (output) ,e))))
 
-(define (result-of prog)
-  (define-values (result io) (result-and-output-of prog))
+(define (result-of prog #:steps [steps #f])
+  (define-values (result io) (result-and-output-of prog #:steps steps))
   result)
 
-(define (io-of prog)
-  (define-values (result io) (result-and-output-of prog))
+(define (io-of prog #:steps [steps #f])
+  (define-values (result io) (result-and-output-of prog #:steps steps))
   io)
 
-(define (result-and-output-of prog)
-  (match (apply-reduction-relation* reductions (term ((store) (output) ,prog)))
-    [`(((store . ,_) (output ,o ...) ,res)) (values res o)]
-    [`() (values 'infinite-loop '())]))
+(define (result-and-output-of e #:steps [steps #f])
+  (define cache (make-binding-hash lang))
+  (let loop ([prog (term ((store) (output) ,e))]
+             [steps-so-far 0])
+    (define cycle? (dict-ref cache prog #f))
+    (dict-set! cache prog #t)
+    (cond
+      [cycle?
+       (values 'infinite-loop '())]
+      [(or (not steps) (< steps-so-far steps))
+       (define nexts (apply-reduction-relation reductions prog))
+       (cond
+         [(null? nexts)
+          (match prog
+            [`((store . ,_) (output ,o ...) ,res)
+             (values res o)])]
+         [(null? (cdr nexts))
+          (loop (car nexts) (+ steps-so-far 1))]
+         [else
+          (error 'result-and-output-of
+                 (string-append
+                  "term reduced to multiple things\n"
+                  "  e: ~s\n"
+                  "  reduced to: ~s\n"
+                  "  which reduced to multiple things\n"
+                  "  ~s")
+                 e
+                 prog
+                 nexts)])]
+      [else (values 'ran-out-of-steps '())])))
 
 (module+ test
   (test-equal
@@ -310,4 +338,16 @@ A model of Racket's letrec
                               (set! n (- n 1))
                               (imperative-fact))))])
               (imperative-fact)))))
-   120))
+   120)
+
+  (test-equal
+   (result-of
+    (term (letrec ([loop (λ () (loop))])
+            (loop))))
+   'infinite-loop)
+
+  (test-equal
+   (result-of
+    (term (+ 1 (+ 1 (+ 1 (+ 1 (+ 1 (+ 1 2)))))))
+    #:steps 2)
+   'ran-out-of-steps))

@@ -60,9 +60,11 @@ produces the same results as racket itself
 
 (define (same-as-racket? t)
   (define cleaned-up (clean-up t))
-  (define redex-result (redex-eval cleaned-up))
+  (define redex-result (redex-eval cleaned-up #:steps 100))
   (cond
-    [(equal? redex-result 'infinite-loop) #t]
+    [(or (equal? redex-result 'infinite-loop)
+         (equal? redex-result 'ran-out-of-steps))
+     #t]
     [else
      (define racket-result (racket-eval cleaned-up))
      (define racket-module-result (racket-module-eval cleaned-up))
@@ -94,8 +96,8 @@ produces the same results as racket itself
 
 (define v? (redex-match? lang v))
 (define lam? (redex-match? lang (λ (x ...) e)))
-(define (redex-eval prog)
-  (define-values (result io) (result-and-output-of prog))
+(define (redex-eval prog #:steps [steps #f])
+  (define-values (result io) (result-and-output-of prog #:steps steps))
   (define normalized-result
     (cond
       [(or (lam? result) (member result '(* - + =))) 'procedure]
@@ -145,19 +147,20 @@ produces the same results as racket itself
     [_ result]))
 
 ;; clean-up : any -> any
-;; removes forms that shouldn't be in the original program
 ;; removes (most of) the free variables
 (define (clean-up s)
   (define primitives '(+ = * -))
   (let loop ([s s]
              [bound '()])
-    (define (pick-a-var x prim-ok?)
+    (define (pick-a-var x for-set!?)
       (cond
         [(member x bound) x]
-        [(or (null? bound) (zero? (random 10))) x]
+        [(zero? (random 20)) x]
         [else
-         (when prim-ok? (set! bound (append primitives bound)))
-         (list-ref bound (random (length bound)))]))
+         (unless for-set!? (set! bound (append primitives bound)))
+         (if (null? bound)
+             (if for-set!? x (random 10))
+             (list-ref bound (random (length bound))))]))
     (match s
       [`(letrec ([,xs ,es] ...) ,e)
        (define new-vars (append xs bound))
@@ -174,14 +177,14 @@ produces the same results as racket itself
       [`(λ (,xs ...) ,e)
        (define new-vars (append xs bound))
        `(λ (,@xs) ,(loop e new-vars))]
-      [`(set! ,x ,e)  `(set! ,(pick-a-var x #f) ,(loop e bound))]
+      [`(set! ,x ,e)  `(set! ,(pick-a-var x #t) ,(loop e bound))]
       [`(if ,e1 ,e2 ,e3)  `(if ,(loop e1 bound) ,(loop e2 bound) ,(loop e3 bound))]
       [`(begin ,es ...) `(begin ,@(for/list ([e (in-list es)])
                                     (loop e bound)))]
       [`(void) `(void)]
       [`(,ef ,eas ...)  `(,(loop ef bound) ,@(for/list ([ea (in-list eas)])
                                                (loop ea bound)))]
-      [(? symbol?) (pick-a-var s #t)]
+      [(? symbol?) (pick-a-var s #f)]
       [(? boolean?) s]
       [(? number?) s])))
 
