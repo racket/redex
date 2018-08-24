@@ -1,5 +1,6 @@
 #lang racket/base
-(require racket/contract)
+(require racket/contract
+         racket/dict)
 
 (require "private/reduction-semantics.rkt"
          "private/judgment-form.rkt"
@@ -117,4 +118,6 @@
  [redex-pseudo-random-generator (parameter/c pseudo-random-generator?)]
  [default-attempt-size attempt-size/c]
  [default-check-attempts (parameter/c natural-number/c)]
- [default-equiv (parameter/c (-> any/c any/c any/c))])
+ [default-equiv (parameter/c (-> any/c any/c any/c))]
+ [make-immutable-binding-hash (->* (compiled-lang?) ((listof pair?)) dict?)]
+ [make-binding-hash (->* (compiled-lang?) ((listof pair?)) dict?)])

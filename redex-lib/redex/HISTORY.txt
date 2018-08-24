@@ -1,3 +1,8 @@
+v7.1
+
+  * added make-immutable-binding-hash and make-binding-hash
+  * various bug fixes
+
 v7.0
 
   * various bug fixes

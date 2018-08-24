@@ -1111,4 +1111,25 @@
   (test (format "~a" (list L1 L2 L3))
         "(#<language: L1> #<language: L2> #<language: L3>)"))
 
+(let ()
+  (define-language L
+    (e ::= (e e) (λ (x) e) x)
+    (x ::= variable-not-otherwise-mentioned)
+    #:binding-forms
+    (λ (x) e #:refers-to x))
+
+  (define ht (make-binding-hash L))
+  (dict-set! ht (term (λ (x) x)) 1)
+  (test (dict-ref ht (term (λ (y) y))) 1)
+
+  (test (dict-ref (make-binding-hash L (list (cons (term (λ (x) (x y)))
+                                                   1)))
+                  (term (λ (z) (z y))))
+        1)
+
+  (test (dict-ref (make-immutable-binding-hash L (list (cons (term (λ (x) (x y)))
+                                                             1)))
+                  (term (λ (z) (z y))))
+        1))
+
 (print-tests-passed 'tl-language.rkt)

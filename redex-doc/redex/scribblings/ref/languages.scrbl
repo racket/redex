@@ -490,7 +490,27 @@ extends all of them.
   @racket[ut.e], @racket[wt.e], and @racket[wt.t] consisting
   of the productions listed in the original languages.
 }
-                                                                                
+
+@defproc[(make-immutable-binding-hash [lang compiled-lang?]
+                                      [assocs (listof pair?) '()])
+         dict?]{
+
+ Returns an immutable
+ @tech[#:doc '(lib "scribblings/reference/reference.scrbl")]{dictionary}
+ where @racket[alpha-equivalent?] keys are treated as the same.
+
+ @history[#:added "1.14"]
+}
+@defproc[(make-binding-hash [lang compiled-lang?]
+                            [assocs (listof pair?) '()])
+         dict?]{
+ Returns a mutable
+ @tech[#:doc '(lib "scribblings/reference/reference.scrbl")]{dictionary}
+ where @racket[alpha-equivalent?] keys are treated as the same.
+
+ @history[#:added "1.14"]
+}
+
 @defproc[(language-nts [lang compiled-lang?]) (listof symbol?)]{
 
 Returns the list of non-terminals (as symbols) that are

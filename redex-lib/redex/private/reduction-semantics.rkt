@@ -47,6 +47,21 @@
                 (compiled-lang-aliases lang))
          symbol<?))
 
+(define (make-binding-hash lang [assocs '()])
+  (define ht (make-α-hash (compiled-lang-binding-table lang)
+                          (compiled-lang-literals lang)
+                          match-pattern))
+  (for ([assoc (in-list assocs)])
+    (dict-set! ht (car assoc) (cdr assoc)))
+  ht)
+
+(define (make-immutable-binding-hash lang [assocs '()])
+  (for/fold ([ht (make-immutable-α-hash (compiled-lang-binding-table lang)
+                                        (compiled-lang-literals lang)
+                                        match-pattern)])
+            ([assoc (in-list assocs)])
+    (dict-set ht (car assoc) (cdr assoc))))
+
 (define-for-syntax (term-matcher orig-stx make-matcher)
   (syntax-case orig-stx ()
     [(form-name lang [pattern rhs] ...)
@@ -3342,7 +3357,10 @@
          apply-reduction-relation*
          current-cache-all?
          variable-not-in
-         variables-not-in)
+         variables-not-in
+
+         make-binding-hash
+         make-immutable-binding-hash)
 
 (provide relation-coverage
          covered-cases
