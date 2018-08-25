@@ -153,12 +153,10 @@ to traverse the whole value at once, rather than one binding form at a time.
   (cond
    ;; short-circuit on some easy cases:
    [(eq? redex-val-lhs redex-val-rhs) #t]
-   [(and (symbol? redex-val-lhs) (symbol? redex-val-rhs)) (equal? redex-val-lhs redex-val-rhs)]
-   [(or (xor (symbol? redex-val-lhs)
-             (symbol? redex-val-rhs))
-        (xor (list? redex-val-lhs)
-             (list? redex-val-rhs))) #f]
    [(not (list? redex-val-lhs)) (equal? redex-val-lhs redex-val-rhs)]
+   [(not (list? redex-val-rhs)) (equal? redex-val-lhs redex-val-rhs)]
+   [(xor (symbol? redex-val-lhs)
+         (symbol? redex-val-rhs)) #f]
    [else
     (equal? (canonicalize language-bf-table language-literals match-pattern redex-val-lhs)
             (canonicalize language-bf-table language-literals match-pattern redex-val-rhs))]))
