@@ -220,11 +220,11 @@ A model of Racket's letrec
   io)
 
 (define (result-and-output-of e #:steps [steps #f])
-  (define cache (make-binding-hash lang))
+  (define cache (make-immutable-binding-hash lang))
   (let loop ([prog (term ((store) (output) ,e))]
              [steps-so-far 0])
     (define cycle? (dict-ref cache prog #f))
-    (dict-set! cache prog #t)
+    (set! cache (dict-set cache prog #t))
     (cond
       [cycle?
        (values 'infinite-loop '())]
