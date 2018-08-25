@@ -208,20 +208,32 @@
                  betas+ellipses)))
    
    (define-values (bspec-body pat-body)
-     (let loop ([s-body s-body] [bspec '()] [pat #'()] [ellipsis-depth 0])
+     (let loop ([s-body s-body]
+                [bspec '()]
+                [pat #'()]
+                [ellipsis-depth 0]
+                [ellipses-as-this-level '()])
        (define (rse str)
          (raise-syntax-error (syntax-e form-name) str s-body))
 
-
        (syntax-case s-body (...)
-         [() (values bspec pat)]
+         [()
+          (begin
+            (when (>= (length ellipses-as-this-level) 2)
+              (define frontwards (reverse ellipses-as-this-level))
+              (raise-syntax-error (syntax-e form-name)
+                                  "at most one ellipsis is allowed in any sequence in a binding form"
+                                  #f
+                                  (car frontwards)
+                                  (cdr frontwards)))
+            (values bspec pat))]
          [(#:refers-to . rest-of-body) (rse "#:refers-to requires an expression to its left")]
          [((... ...) . rest-of-body) (rse "... requires an expression to its left")]
          [(sbspec-sub #:refers-to) (rse "#:refers-to requires an argument")]
          [(sbspec-sub #:...bind) (rse "#:...bind requires an argument")]
          [(sbspec-sub . rest)
           (begin ;; after getting the hard-to-parse syntax out of the way, do this:
-            (define (process-under rest-of-body imports-beta dotdotdoting)
+            (define (process-under rest-of-body imports-beta dotdotdoting previous-ellipsis)
               (define (maybe-ddd sub dotdotdoting)
                 (if dotdotdoting
                     (syntax-case dotdotdoting (nothing)
@@ -259,12 +271,16 @@
                 (define-values (bspec-sub pat-sub) (loop #'sbspec-sub '() #'()
                                                          (if dotdotdoting
                                                              (+ ellipsis-depth 1)
-                                                             ellipsis-depth)))
+                                                             ellipsis-depth)
+                                                         '()))
                 (loop rest-of-body
                       `(,@bspec
                         ,(maybe-ddd (maybe-import bspec-sub imports-beta) dotdotdoting))
                       #`(#,@pat #,pat-sub #,@(if dotdotdoting #`((... ...)) #`()))
-                      ellipsis-depth)))
+                      ellipsis-depth
+                     (if previous-ellipsis
+                         (cons previous-ellipsis ellipses-as-this-level)
+                         ellipses-as-this-level))))
 
             (define (bind-must-be-followed-by)
               (rse "#...bind must be followed by `(id beta beta)`"))
@@ -277,25 +293,25 @@
               [(#:refers-to imports-beta (... ...) . rest-of-body)
                (begin
                  (save-a-beta #'imports-beta ellipsis-depth)
-                 (process-under #'rest-of-body #'imports-beta #'(nothing nothing)))]
+                 (process-under #'rest-of-body #'imports-beta #'(nothing nothing) #f))]
               [(#:refers-to imports-beta #:...bind (name tail-imports tail-exports) . rest-of-body)
                (begin
                  (save-a-beta #'imports-beta ellipsis-depth)
-                 (process-under #'rest-of-body #'imports-beta #'(name tail-imports tail-exports)))]
+                 (process-under #'rest-of-body #'imports-beta #'(name tail-imports tail-exports) #f))]
               [(#:refers-to imports-beta #:...bind . anything-else)
                (bind-must-be-followed-by)]
               [(#:refers-to imports-beta . rest-of-body)
                (begin
                  (save-a-beta #'imports-beta ellipsis-depth)
-                 (process-under #'rest-of-body #'imports-beta #f))]
+                 (process-under #'rest-of-body #'imports-beta #f #f))]
               [((... ...) . rest-of-body)
-               (process-under #'rest-of-body #f #'(nothing nothing))]
+               (process-under #'rest-of-body #f #'(nothing nothing) (car (syntax-e #'rest)))]
               [(#:...bind (name tail-imports tail-exports) . rest-of-body)
-               (process-under #'rest-of-body #f #'(name tail-imports tail-exports))]
+               (process-under #'rest-of-body #f #'(name tail-imports tail-exports) #f)]
               [(#:...bind . anythinge-else)
                (bind-must-be-followed-by)]
               [rest-of-body ;; no imports or ...s
-               (process-under #'rest-of-body #f #f)]))]
+               (process-under #'rest-of-body #f #f #f)]))]
 
          [atomic-pattern
           (begin
