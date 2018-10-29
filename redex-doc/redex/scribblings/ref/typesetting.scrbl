@@ -301,7 +301,7 @@ This function sets @racket[dc-for-text-size]. See also
     (render-metafunction add #:contract? #t)]
 
 @history[#:changed "1.3" @list{Added @racket[#:contract?] keyword argument.}
-         #:changed "1.15" @list{Added @racket[#:only-contract?] keyword argument.}]
+         #:changed "1.7" @list{Added @racket[#:only-contract?] keyword argument.}]
 }
 
 @defform[(metafunction->pict metafunction-name maybe-contract? maybe-only-contract?)]{
@@ -312,7 +312,7 @@ This function sets @racket[dc-for-text-size]. See also
   @ex[(metafunction->pict add)]
   
  @history[#:changed "1.3" @list{Added @racket[#:contract?] keyword argument.}
-          #:changed "1.15" @list{Added @racket[#:only-contract?] keyword argument.}]
+          #:changed "1.7" @list{Added @racket[#:only-contract?] keyword argument.}]
 }
 
 @defform[(metafunctions->pict metafunction-name ...)]{
