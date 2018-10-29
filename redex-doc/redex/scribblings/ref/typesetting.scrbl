@@ -264,11 +264,12 @@ other tools that combine @racketmodname[pict]s together.
 @defform*[[(render-metafunction metafunction-name maybe-contract)
            (render-metafunction metafunction-name filename maybe-contract)]]{}
 @defform[(render-metafunctions metafunction-name ... 
-                               maybe-filename maybe-contract)
+                               maybe-filename maybe-contract maybe-only-contract)
           #:grammar ([maybe-filename (code:line)
                       (code:line #:file filename)
                       (code:line #:filename filename)]
-                     [maybe-contract? (code:line) (code:line #:contract? bool-expr)])]{}]]{
+                     [maybe-contract? (code:line) (code:line #:contract? bool-expr)]
+                     [maybe-only-contract? (code:line) (code:line #:only-contract? bool-expr)])]{}]]{
 Like @racket[render-reduction-relation] but for metafunctions.
 
 Similarly, @racket[render-metafunctions] accepts multiple 
@@ -281,7 +282,9 @@ Parameters that affect rendering include
 
 If the metafunctions have contracts, they are typeset as the first
 lines of the output unless the expression following @racket[#:contract?]
-evaluates to @racket[#f] (which is the default).
+evaluates to @racket[#f] (which is the default). If
+the expression following @racket[#:only-contract?] is not @racket[#false]
+(the default) then only the contract is typeset.
 
 This function sets @racket[dc-for-text-size]. See also
 @racket[metafunction->pict] and
@@ -297,17 +300,19 @@ This function sets @racket[dc-for-text-size]. See also
       [(add (1 K_1) (1 K_2)) (0 (add (1 ·) (add K_1 K_2)))])
     (render-metafunction add #:contract? #t)]
 
-@history[#:changed "1.3" @list{Added @racket[#:contract?] keyword argument.}]
+@history[#:changed "1.3" @list{Added @racket[#:contract?] keyword argument.}
+         #:changed "1.15" @list{Added @racket[#:only-contract?] keyword argument.}]
 }
 
-@defform[(metafunction->pict metafunction-name maybe-contract?)]{
+@defform[(metafunction->pict metafunction-name maybe-contract? maybe-only-contract?)]{
   Produces a pict like @racket[render-metafunction], but without setting @racket[dc-for-text-size].
   It is suitable for use in Slideshow or other libraries that combine
   @racketmodname[pict]s.
 
   @ex[(metafunction->pict add)]
   
- @history[#:changed "1.3" @list{Added @racket[#:contract?] keyword argument.}]
+ @history[#:changed "1.3" @list{Added @racket[#:contract?] keyword argument.}
+          #:changed "1.15" @list{Added @racket[#:only-contract?] keyword argument.}]
 }
 
 @defform[(metafunctions->pict metafunction-name ...)]{

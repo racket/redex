@@ -879,17 +879,22 @@
 
 (define-syntax (metafunction->pict stx)
   (syntax-parse stx
-    [(_ name:id (~optional (~seq #:contract? contract-e:expr) #:defaults ([contract-e #'#f])))
+    [(_ name:id
+        (~optional (~seq #:contract? contract-e:expr) #:defaults ([contract-e #'#f]))
+        (~optional (~seq #:only-contract? only-contract-e:expr) #:defaults ([only-contract-e #'#f])))
      (identifier? #'name)
      #'(metafunctions->pict name
-                            #:contract? contract-e)]))
+                            #:contract? contract-e
+                            #:only-contract? only-contract-e)]))
 
 (define-syntax (metafunctions->pict stx)
   (syntax-parse stx 
     [(_ name1:id name2:id ... 
-        (~optional (~seq #:contract? contract-e:expr) #:defaults ([contract-e #'#f])))
+        (~optional (~seq #:contract? contract-e:expr) #:defaults ([contract-e #'#f]))
+        (~optional (~seq #:only-contract? only-contract-e:expr) #:defaults ([only-contract-e #'#f])))
      #'(metafunctions->pict/proc (list (metafunction name1) (metafunction name2) ...)
                                  contract-e
+                                 only-contract-e
                                  'metafunctions->pict)]))
 
 (define-syntax (relation->pict stx)
@@ -903,6 +908,7 @@
     [(_ name1:id name2:id ... (~seq k:keyword e:expr) ...)
      (define filename #'#f)
      (define contract? #'#f)
+     (define only-contract? #'#f)
      (for ([kwd (in-list (syntax->list #'(k ...)))]
            [e (in-list (syntax->list #'(e ...)))])
        (cond
@@ -911,11 +917,14 @@
           (set! filename e)]
          [(equal? '#:contract? (syntax-e kwd))
           (set! contract? e)]
+         [(equal? '#:only-contract? (syntax-e kwd))
+          (set! only-contract? e)]
          [else
           (raise-syntax-error #f "unexpected keyword" stx kwd)]))
      #`(render-metafunction/proc 
         (list (metafunction name1) (metafunction name2) ...)
         #,contract?
+        #,only-contract?
         #,filename
         'render-metafunctions)]))
 
@@ -923,14 +932,25 @@
   (syntax-parse stx
     [(_ name:id
         (~optional file:expr #:defaults ([file #'#f]))
-        (~optional (~seq k:keyword e:expr)))
+        (~seq k:keyword e:expr) ...)
+     (define contract-e #f)
+     (define only-contract-e #f)
+     (for ([k (in-list (syntax->list #'(k ...)))]
+           [e (in-list (syntax->list #'(e ...)))])
+       (case (syntax-e k)
+         [(#:contract?)
+          (when contract-e
+            (raise-syntax-error #f "two occurrences of #:contract" stx k))
+          (set! contract-e e)]
+         [(#:only-contract?)
+          (when only-contract-e
+            (raise-syntax-error #f "two occurrences of #:only-contract" stx k))
+          (set! only-contract-e e)]
+         [else
+          (raise-syntax-error #f "unknown keyword" stx k)]))
      #`(render-metafunction/proc (list (metafunction name))
-                                 #,(cond
-                                     [(not (attribute k)) #'#f]
-                                     [(and (equal? (syntax-e (attribute k)) '#:contract?))
-                                      #'e]
-                                     [else
-                                      (raise-syntax-error #f "unknown keyword" stx #'k)])
+                                 #,contract-e
+                                 #,only-contract-e
                                  file
                                  'render-metafunction)]))
 
@@ -1025,11 +1045,12 @@
                      c-p
                      rule-p))))
 
-(define (metafunctions->pict/proc mfs contract? name)
+(define (metafunctions->pict/proc mfs _contract? only-contract? name)
   (unless (andmap (λ (mf) (equal? (metafunc-proc-lang (metafunction-proc (car mfs)))
                                   (metafunc-proc-lang (metafunction-proc mf))))
                   mfs)
     (error name "expected metafunctions that are all drawn from the same language"))
+  (define contract? (or _contract? only-contract?))
   (define current-linebreaks (linebreaks))
   (define current-sc-linebreaks (sc-linebreaks))
   (define all-nts (language-nts (metafunc-proc-lang (metafunction-proc (car mfs)))))
@@ -1365,7 +1386,8 @@
                                hsep
                                (for/list ([e (in-list row)]
                                           [col (in-list all-cols)])
-                                 (ltl-superimpose col e)))))))))))))]
+                                 (ltl-superimpose col e)))))))))
+                only-contract?))))]
     [(vertical)
      (apply vl-append
             (metafunction-gap-space)
@@ -1393,17 +1415,20 @@
                               (vl-append (metafunction-line-gap-space)
                                          rule
                                          ((adjust 'metafunction-line)
-                                          sc))))))))))]))
+                                          sc))))))
+                only-contract?))))]))
 
 ;; Combine a metafunction contract, if any, with its rules
-(define (maybe-add-contract contracts mf-p)
+(define (maybe-add-contract contracts mf-p only-contract?)
   (cond
    [(null? contracts)
     mf-p]
    [(= 1 (length contracts))
-    ((metafunction-combine-contract-and-rules)
-     (car contracts)
-     mf-p)]
+    (if only-contract?
+        (car contracts)
+        ((metafunction-combine-contract-and-rules)
+         (car contracts)
+         mf-p))]
    [else (error 'render-metafunction "internal error: more than one contract")]))
 
 (define (render-metafunction-contract lang name doms rngs separators)
@@ -1513,14 +1538,14 @@
                                (basic-text "]" (default-style)))])]
     [else x]))
 
-(define (render-metafunction/proc mfs contract? filename name)
+(define (render-metafunction/proc mfs contract? only-contract? filename name)
   (cond
     [filename
-     (save-as-ps/pdf (λ () (metafunctions->pict/proc mfs contract? name))
+     (save-as-ps/pdf (λ () (metafunctions->pict/proc mfs contract? only-contract? name))
                      filename)]
     [else
      (parameterize ([dc-for-text-size (make-object bitmap-dc% (make-object bitmap% 1 1))])
-       (metafunctions->pict/proc mfs contract? name))]))
+       (metafunctions->pict/proc mfs contract? only-contract? name))]))
 
 (define (render-pict make-pict filename)
   (cond
