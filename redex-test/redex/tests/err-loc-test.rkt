@@ -3,6 +3,7 @@
 (module util racket/base
   (require setup/path-to-relative
            racket/runtime-path
+           racket/set
            "private/test-util.rkt"
            syntax/strip-context)
   (provide exec-syntax-error-tests
@@ -13,7 +14,7 @@
   
   (define syn-err-test-namespace (make-base-namespace))
   (parameterize ([current-namespace syn-err-test-namespace])
-    (eval '(require (for-syntax racket/base)))
+    (eval '(require (for-syntax racket/base racket/syntax)))
     (eval '(require redex/reduction-semantics)))
   
   (define (syntax-error-test-setup thunk)
@@ -33,7 +34,7 @@
                                  (let ([ans (let ([marks (continuation-mark-set->list
                                                           (exn-continuation-marks exn)
                                                           errortrace-key)])
-                                              (if (null? marks) '() (list (cdar marks))))])
+                                              (if (null? marks) '() (map cdr marks)))])
                                    (let loop ([ans ans])
                                      (cond
                                        [(pair? ans) (cons (loop (car ans)) (loop (cdr ans)))]
@@ -55,8 +56,9 @@
     (let-values ([(actual-message actual-sources)
                   (setup (λ () (begin (exec (strip-context test)) (values "" '()))))])
       (test/proc (λ () actual-message) expected-message line file)
-      (test/proc (λ () actual-sources) expected-sources line file)))
-  
+      (test/proc (λ () actual-sources) expected-sources line file
+                 (λ (got expected) (subset? expected got)))))
+
   (define (make-error-test spec)
     (syntax-case spec ()
       [(message named-pieces body)
@@ -69,10 +71,10 @@
                (map source-location (syntax->list #'(loc-piece ...)))
                #'(let-syntax ([subst 
                                (λ (stx)
-                                 (syntax-case (syntax-local-introduce stx) ()
-                                   [(_ loc-name ... non-loc-name ...)
-                                    #'body]))])
-                   (subst loc-piece ... non-loc-piece ...)
+                                 (with-syntax* ([loc-name #'((... ...) loc-piece)] ...
+                                                [non-loc-name #'((... ...) non-loc-piece)] ...)
+                                   #'((... ...) body)))])
+                   (subst)
                    (void)))]))
   
   (define (source-location stx)
@@ -95,7 +97,7 @@
 
 (require "private/test-util.rkt"
          redex/reduction-semantics
-         (for-syntax racket/base)
+         (for-syntax racket/base racket/syntax)
          'util)
 
 (reset-count)
@@ -115,7 +117,7 @@
                zero))))
 
 (parameterize ([current-namespace (make-base-namespace)])
-  (eval '(require (for-syntax racket/base)))
+  (eval '(require (for-syntax racket/base racket/syntax)))
   (eval '(require redex/reduction-semantics redex/pict))
   (eval '(define-language L
            (s a b c)))
@@ -128,7 +130,7 @@
 
 (parameterize ([current-namespace (make-base-namespace)])
   (eval '(require redex/reduction-semantics))
-  (eval '(require (for-syntax racket/base)))
+  (eval '(require (for-syntax racket/base racket/syntax)))
   (exec-runtime-error-tests "run-err-tests/judgment-form-undefined.rktd"))
 
 (exec-syntax-error-tests "syn-err-tests/metafunction-definition.rktd")
@@ -143,7 +145,7 @@
 (exec-syntax-error-tests "syn-err-tests/judgment-holds.rktd")
 
 (parameterize ([current-namespace (make-base-namespace)])
-  (eval '(require (for-syntax racket/base)))
+  (eval '(require (for-syntax racket/base racket/syntax)))
   (eval '(require redex/reduction-semantics))
   (eval '(define-language L
            (s a b c)))
@@ -163,10 +165,11 @@
   (exec-runtime-error-tests "run-err-tests/judgment-form-contracts.rktd")
   (exec-runtime-error-tests "run-err-tests/judgment-form-undefined.rktd")
   (exec-runtime-error-tests "run-err-tests/judgment-form-ellipses.rktd")
-  (exec-runtime-error-tests "run-err-tests/judgment-form-where-error.rktd"))
+  (exec-runtime-error-tests "run-err-tests/judgment-form-where-error.rktd")
+  (exec-runtime-error-tests "run-err-tests/test-judgment-holds.rktd"))
 
 (parameterize ([current-namespace (make-base-namespace)])
-  (eval '(require (for-syntax racket/base)))
+  (eval '(require (for-syntax racket/base racket/syntax)))
   (eval '(require redex/reduction-semantics))
   (eval '(define-language L))
   (eval '(define-metafunction L
@@ -183,5 +186,12 @@
     (exec-runtime-error-tests "run-err-tests/term.rktd"))
   
   (exec-syntax-error-tests "syn-err-tests/term.rktd")
+
+(parameterize ([current-namespace (make-base-namespace)])
+  (eval '(require (for-syntax racket/base racket/syntax)
+                  redex/reduction-semantics))
+  (exec-runtime-error-tests "run-err-tests/test-equal.rktd")
+  (exec-runtime-error-tests "run-err-tests/test-predicate.rktd")
+  (exec-runtime-error-tests "run-err-tests/test-reduction-relation.rktd"))
   
 (print-tests-passed 'err-loc-test.rkt)

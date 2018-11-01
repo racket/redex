@@ -45,12 +45,12 @@
     [else
      (printf "~a: ~a test~a failed.\n" filename failures (if (= 1 failures) "" "s"))]))
 
-(define (test/proc run expected line filename)
+(define (test/proc run expected line filename [=? matches?])
   ;(printf "testing line ~s:~s\n" filename line)
   (let ([got (with-handlers ((exn:fail? values)) (run))])
     (set! tests (+ tests 1))
     (unless (and (not (exn? got))
-                 (matches? got expected))
+                 (=? got expected))
       (set! failures (+ 1 failures))
       (eprintf "test: file ~a line ~a:\n     got ~s\nexpected ~s\n"
                filename
