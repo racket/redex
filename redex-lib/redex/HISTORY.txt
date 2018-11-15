@@ -17,6 +17,7 @@ v6.12
 v6.11
 
   * various bug fixes
+  * added #:codomain clause to `reduction-relation`
 
 v6.10
 

@@ -176,6 +176,8 @@ where the @tt{==>} shortcut is defined by reducing in the context
 A @racket[fresh] clause in @racket[reduction-case] defined by shortcut
 refers to the entire term, not just the portion matched by the left-hand
 side of shortcut's use.
+
+@history[#:changed "1.14" @elem{Added the @racket[#:codomain] clause.}]
 }
 
 @defform[(extend-reduction-relation reduction-relation language more ...)]{
