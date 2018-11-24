@@ -214,56 +214,51 @@ Returns the names of the reduction relation's named clauses.
 This accepts a reduction, a language, the name of a
 non-terminal in the language and returns the compatible
 closure of the reduction for the specified non-terminal.
+
+In the below example, @racket[_r] is intended to calculate a boolean @racket[or].
+Since @tt{r} does not recursively break apart its input, it will not reduce
+subexpressions within a larger non-matching expression @tt{t}.
+
+@examples[
+#:label #f
+#:eval redex-eval
+ (eval:no-prompt
+  (define-language unary-arith
+    [e ::= Z (S e) (+ e e)]))
+
+ (eval:no-prompt
+  (define addition-without-context
+    (reduction-relation
+     unary-arith
+     #:domain e
+     (--> (+ (S e_1) e_2)
+          (+ e_1 (S e_2)))
+     (--> (+ Z e)
+          e))))
+
+ (eval:no-prompt
+  (define nested-example (term (+ (+ (S Z) (S Z))
+                                  (+ (S Z) (S Z))))))
+ (eval:check (apply-reduction-relation addition-without-context
+                                       nested-example)
+             '())
+]
+
+The @racket[compatible-closure] operator allows us to close
+@racket[_addition-without-context] over all nested @racket[_e]
+contexts and then we can use it to find the sum.
+
+@examples[
+#:label #f
+#:eval redex-eval
+(eval:no-prompt
+ (define addition-compat-closure
+   (compatible-closure addition-without-context unary-arith e)))
+ (eval:check (apply-reduction-relation* addition-compat-closure
+                                        nested-example)
+             (list (term (S (S (S (S Z)))))))
+]
 }
-
-In the below example, @tt{r} is intended to calculate a boolean @racket[or]. Since @tt{r} does not recursively break apart its input, it will not reduce subexpressions within a larger non-matching expression @tt{t}.
-
-@racketblock[
-(define-language B
-  [x ::= #t #f (x + x)]
-  [y ::= (x * x)]
-  )
-
-(define r
-  (reduction-relation
-   B
-   #:domain x
-   [--> (#t + x)
-        #t]
-   [--> (x + #t)
-        #t]
-   ))
-
-(define t (term (#f + (#t + (#f + #t)))))
-(apply-reduction-relation r t) (code:comment @#,elem{'()})
-]
-
-The @racket[compatible-closure] @tt{r2} of @tt{r} with respect to @tt{x} is a version of @tt{r} that can reduce self-similar subexpressions within @tt{x}.
-
-@racketblock[
-(define r2 (compatible-closure r B x))
-(apply-reduction-relation r2 t) (code:comment @#,elem{'((#f + (#t + #t)) (#f + #t))})
-]
-
-However, the @racket[compatible-closure] is only defined for self-similar nonterminals. The @tt{r3} relation below was intended to separately reduce both sides of a pair.
-
-@racketblock[
-(define r3 (compatible-closure r2 B y))
-(define t-pair (term (,t * ,t)))
-(code:comment @#,elem{(apply-reduction-relation r3 t-pair) ; ERROR })
-]
-
-In order to get this effect, you can use the more general @racket[context-closure] instead.
-@racketblock[
-(define-extended-language B* B
-  [ C ::= (hole * x) (x * hole) ]
-  )
-
-(define r4 (context-closure r2 B* C))
-(apply-reduction-relation* r4 t-pair) (code:comment @#,elem{'((#t * #t))})
-]
-
-Instead of recursive @tt{x} nonterminals, it uses the @racket[hole]s to decide where to apply @tt{r2}.
 
 @defform[(context-closure reduction-relation lang pattern)]{
 
@@ -271,6 +266,47 @@ This accepts a reduction, a language, a pattern representing
 a context (i.e., that can be used as the first argument to
 @racket[in-hole]; often just a non-terminal) in the language and
 returns the closure of the reduction in that context.
+
+ Continuing the example in the documentation for
+ @racket[compatible-closure], one might find
+ that there are too many reductions that can
+ take place. The original example, in fact, reduces
+ to two different terms in a single step.
+
+
+@examples[
+#:label #f
+#:eval redex-eval
+ (apply-reduction-relation addition-compat-closure
+                           nested-example)]
+
+If we wanted to force an order of evaluation, requiring that
+we evaluate the left side of the addition before moving
+on to the right, we can do that by limiting the context
+where the addition is performed. Here is one definition
+of a context that does that limitation.
+
+@examples[
+#:label #f
+#:eval redex-eval
+(eval:no-prompt
+ (define-extended-language unary-arith-E unary-arith
+   (E ::= hole (+ n E) (+ E e))
+   (n ::= Z (S n))))
+]
+Now we can use the more general @racket[compatible-closure]
+to close only over the places where @racket[_E] allows us
+to reduce
+@examples[
+#:label #f
+#:eval redex-eval
+ (eval:check (apply-reduction-relation
+              (context-closure addition-without-context
+                               unary-arith-E
+                               E)
+              nested-example)
+             (list (term (+ (+ Z (S (S Z))) (+ (S Z) (S Z))))))]
+
 }
 
 @defproc[(reduction-relation? [v any/c]) boolean?]{
