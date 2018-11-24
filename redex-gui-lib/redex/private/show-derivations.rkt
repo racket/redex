@@ -70,7 +70,10 @@
     (send pb end-edit-sequence))
   
   (define controls-panel (new vertical-panel% [parent ac] [stretchable-height #f]))
-  (define which-derivation-panel (new horizontal-panel% [parent ac] [stretchable-height #f] [alignment '(right center)]))
+  (define which-derivation-panel (new horizontal-panel%
+                                      [parent ac]
+                                      [stretchable-height #f]
+                                      [alignment '(right center)]))
   
   (define (next/prev-derivation dir label)
     (new button%
