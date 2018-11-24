@@ -398,7 +398,7 @@ Returns the height of @racket[tn] in the window.
 Recognizes term nodes.
 }
 
-@defparam[reduction-steps-cutoff cutoff number?]{
+@defparam[reduction-steps-cutoff cutoff natural-number/c]{
 
 A parameter that controls how many steps the @racket[traces] function
 takes before stopping.
