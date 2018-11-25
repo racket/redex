@@ -133,7 +133,8 @@
     (let loop ([derivation derivation])
       (define children
         (reverse
-         (for/fold ([children '()]) ([sub (in-list (derivation-subs derivation))])
+         (for/fold ([children '()])
+                   ([sub (in-list (derivation-subs derivation))])
            (define child (loop sub))
            (cons child children))))
       (define line-snip (new line-snip%))
@@ -149,7 +150,6 @@
                                (derivation-term derivation))
                               line-snip
                               name-snip))
-      (send snip set-derivation-children children)
       (send pb insert snip)
       (send pb insert line-snip)
       (when name-snip (send pb insert name-snip))
@@ -217,27 +217,25 @@
     (super-new)))
 
 (define (make-snip expr children pp code-colors? cw line-snip name-snip)
-  (let* ([text (new deriv-text%)]
-         [es (instantiate deriv-editor-snip% ()
-               [char-width cw]
-               [editor text]
-               [pp pp]
-               [expr expr]
-               [with-border? #f]
-               [line-snip line-snip]
-               [name-snip name-snip])])
-    (send text set-autowrap-bitmap #f)
-    (send text set-max-width 'none)
-    (send text freeze-colorer)
-    (unless code-colors?
-      (send text stop-colorer #t))
-    (send es format-expr)
-    es))
+  (define text (new deriv-text%))
+  (send text set-autowrap-bitmap #f)
+  (send text set-max-width 'none)
+  (send text freeze-colorer)
+  (unless code-colors?
+    (send text stop-colorer #t))
+  (new deriv-editor-snip%
+       [char-width cw]
+       [editor text]
+       [pp pp]
+       [expr expr]
+       [with-border? #f]
+       [derivation-children children]
+       [line-snip line-snip]
+       [name-snip name-snip]))
 
 (define deriv-editor-snip%
   (class* size-editor-snip% ()
-    (define derivation-children '())
-    (define/public (set-derivation-children c) (set! derivation-children c))
+    (init-field derivation-children)
     (init-field line-snip)
     (init-field name-snip)
     
@@ -246,7 +244,7 @@
         (define-values (children-width children-height)
           (for/fold ([width 0]
                      [height 0])
-            ([child (in-list derivation-children)])
+                    ([child (in-list derivation-children)])
             (define-values (this-w this-h) (send child resize-derivation pb table))
             (values (+ width this-w)
                     (max height this-h))))
@@ -300,7 +298,10 @@
               (+ dy (- derivation-height that-ones-height my-height sub-derivation-vertical-gap)))
         (+ dx that-ones-width sub-derivation-horizontal-gap)))
     
-    (super-new)))
+    (super-new)
+
+    (inherit format-expr)
+    (format-expr)))
 
 (define line-snip%
   (class snip%
