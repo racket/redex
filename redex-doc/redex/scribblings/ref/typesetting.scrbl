@@ -91,6 +91,7 @@ that operate on @racketmodname[pict]s
 @racket[reduction-relation->pict],
 @racket[relation->pict],
 @racket[judgment-form->pict],
+@racket[derivation->pict],
 @racket[metafunction->pict], and
 @racket[lw->pict].
 The primary difference between these functions is that the former list
@@ -167,8 +168,8 @@ sets @racket[dc-for-text-size] and the latter does not.
 }
 
 @defproc[(render-language [lang compiled-lang?]
-                          [file (or/c false/c path-string?) #f]
-                          [#:nts nts (or/c false/c (listof (or/c string? symbol?)))
+                          [file (or/c #f path-string?) #f]
+                          [#:nts nts (or/c #f (listof (or/c string? symbol?)))
                            (render-language-nts)])
          (if file void? pict?)]{
 
@@ -192,7 +193,7 @@ are otherwise setting @racket[dc-for-text-size].
 }
 
 @defproc[(language->pict (lang compiled-lang?)
-                         [#:nts nts (or/c false/c (listof (or/c string? symbol?)))
+                         [#:nts nts (or/c #f (listof (or/c string? symbol?)))
                           (render-language-nts)])
          pict?]{
 
@@ -208,7 +209,7 @@ together.
 }
 
 @defproc[(render-reduction-relation [rel reduction-relation?]
-                                    [file (or/c false/c path-string?) #f]
+                                    [file (or/c #f path-string?) #f]
                                     [#:style style reduction-rule-style/c (rule-pict-style)])
          (if file void? pict?)]{
 
@@ -399,6 +400,16 @@ This function sets @racket[dc-for-text-size]. See also
 @racket[judgment-form->pict].
 }
 
+@defproc[(derivation->pict [language compiled-lang?] [derivation derivation?]) pict?]{
+ Produces a pict that looks like the derivation in @racket[show-derivations],
+ except that it uses @racket[term->pict/pretty-write] to draw the
+ individual terms in the derivation.
+
+ @ex[(derivation->pict nums (car (build-derivations (eq (0 (1 (0 ·))) (0 (1 ·))))))]
+
+ @history[#:added "1.8"]
+}
+
 @defform[(relation->pict relation-name)]{
   This produces a pict, but without setting @racket[dc-for-text-size].
   It is suitable for use in Slideshow or other libraries that combine
@@ -413,7 +424,7 @@ This function sets @racket[dc-for-text-size]. See also
 
 @section{Customization}
 
-@defparam[render-language-nts nts (or/c false/c (listof symbol?))]{
+@defparam[render-language-nts nts (or/c #f (listof symbol?))]{
   The value of this parameter controls which non-terminals
   @racket[render-language] and @racket[language->pict] render by default. If it
   is @racket[#f] (the default), all non-terminals are rendered.
@@ -461,7 +472,7 @@ Defaults to @racket[#f].
 
 @defparam[render-reduction-relation-rules 
           rules 
-          (or/c false/c 
+          (or/c #f
                 (listof (or/c symbol? 
                               string?
                               exact-nonnegative-integer?)))]{

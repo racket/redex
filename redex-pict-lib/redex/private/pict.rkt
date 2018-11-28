@@ -99,7 +99,8 @@
          
          rule-pict-info->side-condition-pict
 
-         linebreaks sc-linebreaks)
+         linebreaks sc-linebreaks
+         string->bracketed-label)
 
 
 ;                                                                             

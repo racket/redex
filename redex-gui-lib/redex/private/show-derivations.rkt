@@ -4,15 +4,13 @@
          racket/match
          racket/pretty
          framework
+         redex/private/derivations-layout
          "size-snip.rkt"
          redex/private/judgment-form
          "traces.rkt")
 
 (provide show-derivations
          derivation/ps)
-
-(define sub-derivation-horizontal-gap 20)
-(define sub-derivation-vertical-gap 10) ;; must be even
 
 (define (derivation/ps derivation filename
                        #:pp [pp default-pretty-printer]
@@ -42,7 +40,7 @@
                         (λ ()
                           (set! size-callback-queued? #f)
                           (send pb begin-edit-sequence)
-                          (send pb re-run-layout)
+                          (layout-derivation pb)
                           (send pb end-edit-sequence))
                         #f))
                      (super on-size w h))
@@ -58,14 +56,16 @@
     
   (define (show-derivation i)
     (set! current-derivation i)
-    (set! pb (new derivation-pb%))
+    (set! pb (new derivation-pb% [pp pp] [racket-colors? racket-colors?]))
     (send ec set-editor pb)
     (send f reflow-container)
     (send pb begin-edit-sequence)
-    (fill-derivation-pb pb (list-ref derivations i) pp racket-colors? 
-                        (if char-width-slider
-                            (send char-width-slider get-value)
-                            init-cw))
+    (parameterize ([initial-char-width
+                    (if char-width-slider
+                        (send char-width-slider get-value)
+                        init-cw)])
+      (fill-derivation-container pb (list-ref derivations i)))
+    (layout-derivation pb)
     (send which-msg set-label (ith-label i))
     (send pb end-edit-sequence))
   
@@ -116,7 +116,7 @@
                  (when pb
                    (send pb begin-edit-sequence)
                    (set-all-cws (send char-width-slider get-value))
-                   (send pb re-run-layout)
+                   (layout-derivation pb)
                    (send pb end-edit-sequence)))])))
   (show-derivation 0)
   (cond
@@ -128,58 +128,46 @@
 (define deriv-frame%
   (frame:standard-menus-mixin (frame:basic-mixin frame%)))
 
-(define (fill-derivation-pb pb derivation pp racket-colors? cw)
-  (define top-snip
-    (let loop ([derivation derivation])
-      (define children
-        (reverse
-         (for/fold ([children '()])
-                   ([sub (in-list (derivation-subs derivation))])
-           (define child (loop sub))
-           (cons child children))))
+(define derivation-pb%
+  (class pasteboard%
+
+    (init-field pp racket-colors?)
+    (define root-snip #f)
+    (define/public (set-root ts) (set! root-snip ts))
+    (define/public (get-root) root-snip)
+
+    (inherit insert)
+    ;; called in the dynamic extent of the call to `fill-derivation-container`
+    ;; so the `initial-char-width` setting from `show-derivation` will be in effect
+    (define/public (add-node term label children)
       (define line-snip (new line-snip%))
-      (define name-snip (and (derivation-name derivation)
-                             (make-object string-snip% 
-                               (format " [~a]" (derivation-name derivation)))))
-      (define snip (make-snip (derivation-term derivation) 
+      (define name-snip (and label
+                             (make-object string-snip% (format " [~a]" label))))
+      (define snip (make-snip term
                               children
                               pp
                               racket-colors?
                               (get-user-char-width 
-                               cw
-                               (derivation-term derivation))
+                               (initial-char-width)
+                               term)
                               line-snip
                               name-snip))
-      (send pb insert snip)
-      (send pb insert line-snip)
-      (when name-snip (send pb insert name-snip))
-      snip))
-  (send pb set-top-snip top-snip)
-  (send pb re-run-layout))
+      (insert snip)
+      (insert line-snip)
+      (when name-snip (insert name-snip))
+      snip)
 
-(define derivation-pb%
-  (class pasteboard%
-    
-    (define top-snip #f)
-    (define/public (set-top-snip ts) (set! top-snip ts))
-    (define/public (get-top-snip) top-snip)
-    
-    (define/public (re-run-layout)
-      (define table (make-hash))
-      (send top-snip resize-derivation this table)
-      (define admin (send this get-admin))
-      (define-values (init-x init-y)
-        (cond
-          [admin
-           (define bw (box 0))
-           (define bh (box 0))
-           (send admin get-view #f #f bw bh)
-           (match-define (cons derivation-width derivation-height) (hash-ref table top-snip))
-           (values (max 0 (- (/ (unbox bw) 2) (/ derivation-width 2)))
-                   (max 0 (- (/ (unbox bh) 2) (/ derivation-height 2))))]
-          [else
-           (values 0 0)]))
-      (send top-snip layout-derivation table this init-x init-y))
+    (inherit get-admin)
+    (define/public (get-size)
+      (define admin (get-admin))
+      (cond
+        [admin
+         (define bw (box 0))
+         (define bh (box 0))
+         (send admin get-view #f #f bw bh)
+         (values (unbox bw) (unbox bh))]
+        [else
+         (values 0 0)]))
     
     (define/augment (can-interactive-resize? evt) #f)
     (define/augment (can-interactive-move? evt) #f)
@@ -238,65 +226,28 @@
     (init-field derivation-children)
     (init-field line-snip)
     (init-field name-snip)
-    
-    (define/public (resize-derivation pb table)
-      (let loop ([derivation derivation])
-        (define-values (children-width children-height)
-          (for/fold ([width 0]
-                     [height 0])
-                    ([child (in-list derivation-children)])
-            (define-values (this-w this-h) (send child resize-derivation pb table))
-            (values (+ width this-w)
-                    (max height this-h))))
-        (define sub-derivation-width
-          (if (null? derivation-children)
-              0
-              (+ children-width (* (- (length derivation-children)
-                                      1)
-                                   sub-derivation-horizontal-gap))))
-        (define name-width (if name-snip
-                               (find-snip-width pb name-snip)
-                               0))
-        (define derivation-width
-          (+ (max sub-derivation-width
-                  (find-snip-width pb this))
-             name-width))
-        (define derivation-height
-          (+ children-height
-             sub-derivation-vertical-gap
-             (find-snip-height pb this)))
-        (hash-set! table this (cons derivation-width derivation-height))
-        (values derivation-width derivation-height)))
-    
-    (define/public (layout-derivation table pb dx dy)
-      (match-define (cons derivation-width derivation-height) (hash-ref table this))
-      (define my-height (find-snip-height pb this))
-      (define my-width (find-snip-width pb this))
-      (define name-snip-width (if name-snip
-                                  (find-snip-width pb name-snip)
-                                  0))
-      (define my-x (+ dx (- (/ (- derivation-width name-snip-width) 2) (/ my-width 2))))
-      (define my-y (+ dy derivation-height (- my-height)))
-      (define children-width
-        (for/sum ([child (in-list derivation-children)])
-          (car (hash-ref table child))))
-      (define start-dx (+ dx (/ (- (- derivation-width name-snip-width) children-width) 2)))
-      (send pb move-to this my-x my-y)
-      (send pb move-to line-snip dx (- my-y (/ sub-derivation-vertical-gap 2)))
-      (send line-snip set-width (- derivation-width name-snip-width))
-      (when name-snip
-        (define name-snip-height (find-snip-height pb name-snip))
-        (send pb move-to name-snip 
-              (+ dx derivation-width (- name-snip-width))
-              (- my-y (/ sub-derivation-vertical-gap 2) (/ name-snip-height 2))))
-      (for/fold ([dx start-dx]) ([snip (in-list derivation-children)])
-        (define that-ones-width (car (hash-ref table snip)))
-        (define that-ones-height (cdr (hash-ref table snip)))
-        (send snip layout-derivation table
-              pb
-              dx
-              (+ dy (- derivation-height that-ones-height my-height sub-derivation-vertical-gap)))
-        (+ dx that-ones-width sub-derivation-horizontal-gap)))
+
+    (inherit get-admin)
+    (define/public (get-term-size)
+      (define pb (send (get-admin) get-editor))
+      (values (find-snip-width pb this) (find-snip-height pb this)))
+    (define/public (get-name-size)
+      (cond
+        [name-snip
+         (define pb (send (get-admin) get-editor))
+         (values (find-snip-width pb name-snip) (find-snip-height pb name-snip))]
+        [else (values #f #f)]))
+    (define/public (set-term-position x y)
+      (define pb (send (get-admin) get-editor))
+      (send pb move-to this x y))
+    (define/public (set-name-position x y)
+      (define pb (send (get-admin) get-editor))
+      (send pb move-to name-snip x y))
+    (define/public (set-line-layout x y w)
+      (define pb (send (get-admin) get-editor))
+      (send pb move-to line-snip x y)
+      (send line-snip set-width w))
+    (define/public (get-children) derivation-children)
     
     (super-new)
 

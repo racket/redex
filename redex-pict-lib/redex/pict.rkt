@@ -3,6 +3,7 @@
 (require racket/contract
          "private/pict.rkt"
          "private/core-layout.rkt"
+         "private/derivation-pict.rkt"
          redex/private/struct
          redex/private/loc-wrapper
          redex/reduction-semantics
@@ -38,7 +39,7 @@
   (parameter/c (or/c #f (listof (or/c symbol? string? exact-nonnegative-integer?))))]
  
  [language->pict (->* (compiled-lang?)
-                      (#:nts (or/c false/c (listof (or/c string? symbol?))))
+                      (#:nts (or/c #f (listof (or/c string? symbol?))))
                       pict?)]
  [render-language
   (->i ([lang compiled-lang?])
@@ -49,6 +50,7 @@
                (if (path-string? file)
                    void?
                    pict?)])]
+ [derivation->pict (-> compiled-lang? derivation? pict?)]
  
  [rule-pict-info-arrow (-> rule-pict-info? symbol?)]
  [rule-pict-info-lhs (-> rule-pict-info? pict?)]

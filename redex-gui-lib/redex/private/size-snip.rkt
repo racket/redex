@@ -3,8 +3,7 @@
          racket/class
          framework
          racket/pretty
-         redex/private/lang-struct
-         redex/private/matcher)
+         redex/private/lang-struct)
 
 (provide reflowing-snip<%>
          size-editor-snip%
