@@ -125,7 +125,7 @@ to traverse the whole value at once, rather than one binding form at a time.
                  [name-generator generate-readable-fresh-name]
                  [literals-in-language language-literals]
                  [all-the-way-down? #f])
-    (first (rec-freshen redex-val #f #t #f))))
+    (term-and-table-term (rec-freshen redex-val #f #t #f))))
 
 
 ;; α-equal-hash-code : (listof (list compiled-pattern bspec))
@@ -170,7 +170,7 @@ to traverse the whole value at once, rather than one binding form at a time.
     [literals-in-language language-literals]
     [all-the-way-down? #t])
 
-   (let loop [(v (first (rec-freshen redex-val #f #t #f)))]
+   (let loop [(v (term-and-table-term (rec-freshen redex-val #f #t #f)))]
      (cond
       [(list? v) (map loop v)]
       [(eq? redex-val-old-var v) redex-val-new-val]
@@ -191,7 +191,7 @@ to traverse the whole value at once, rather than one binding form at a time.
                        `(,canonical-name-marker ,current-name-id))]
     [literals-in-language language-literals])
    
-   (first (rec-freshen redex-val #f #t #f))))
+   (term-and-table-term (rec-freshen redex-val #f #t #f))))
 
 ;; == name generation ==
 
@@ -210,6 +210,11 @@ to traverse the whole value at once, rather than one binding form at a time.
     "«"
     (number->string prev-freshened-number)
     "»")))
+
+;; freshen-subterms puts these things into `bind` structs
+;; instead of lists of length 2 like it used to do, so now
+;; we can see what's going on more clearly (kind of)
+(define-struct term-and-table (term table) #:transparent)
 
 
 ;; == pattern-dispatch ==
@@ -465,7 +470,8 @@ to traverse the whole value at once, rather than one binding form at a time.
 
 (define (interp-beta-as-fs-subst beta freshened-subterms)
   (interp-beta beta freshened-subterms append ;; gives us override semantics
-               (lambda (name f-s) (second (rm-lookup name f-s))) '()))
+               (lambda (name f-s)
+                 (term-and-table-table (rm-lookup name f-s))) '()))
 
 
 ;; == Reference renaming ==
@@ -584,23 +590,25 @@ to traverse the whole value at once, rather than one binding form at a time.
 ;; Freshen a value that has no specification (and thus, at this level, no binding behavior).
 (define (rec-freshen-nospec redex-val noop? top-level? assume-binder?)
   (if (and top-level? (not (all-the-way-down?)))
-      `(,redex-val ())
+      (make-term-and-table redex-val '())
       (cond
        ;; no exports
        [(list? redex-val)
-        `(,(if (all-the-way-down?)
-               ;; `noop?` is true because unused exports are treated as free
-               (map (λ (elt) (car (rec-freshen elt #f #t #f))) redex-val)
-               redex-val) ())]
+        (make-term-and-table
+         (if (all-the-way-down?)
+             ;; `noop?` is true because unused exports are treated as free
+             (map (λ (elt) (term-and-table-term (rec-freshen elt #f #t #f))) redex-val)
+             redex-val)
+         '())]
        [(and (symbol? redex-val)
              assume-binder?
              (not (member redex-val (literals-in-language))))
         (if (or noop? (and top-level? (all-the-way-down?)))
-            `(,redex-val ((,redex-val ,redex-val)))
+            (make-term-and-table redex-val `((,redex-val ,redex-val)))
             (redex-error
              #f
              (format "Internal error in freshening: a binder (~s) escaped being freshened." redex-val)))]
-       [else `(,redex-val ())])))
+       [else (make-term-and-table redex-val '())])))
 
 ;; freshen-subterms : match bspec bool bool -> match
 ;; (a utility function for `rec-freshen-spec`)
@@ -644,12 +652,11 @@ to traverse the whole value at once, rather than one binding form at a time.
                             (if (and sub-ported? (not sub-noop?))
                                 ((name-generator) exp)
                                 exp)])
-                       `(,new-name ((,exp ,new-name))))
+                       (make-term-and-table new-name `((,exp ,new-name))))
                      ;; It's something more complex:
                      (rec-freshen exp sub-noop? #f sub-ported?))
                  (map (λ (sub-exp) (handle-... (- ...-depth 1) sub-exp)) exp))))))
    red-match))
-
 
 (define (rec-freshen-spec redex-val red-match bs noop? top-level?)
   (define freshened-subterms (freshen-subterms red-match bs noop? top-level?))
@@ -692,9 +699,10 @@ to traverse the whole value at once, rather than one binding form at a time.
 
         [`(,(...bind/internal ...-name _ _) . ,body-rest)
          `(,@(unsplay
-              (first (rm-lookup-or
-                      ...-name freshened-subterms
-                      (λ () `(,(rm-lookup ...-name red-match) ())))))
+              (term-and-table-term
+               (rm-lookup-or
+                ...-name freshened-subterms
+                (λ () (make-term-and-table (rm-lookup ...-name red-match) '())))))
 
            ;; using `redex-val` here seems suspicious; it seems like I should
            ;; drop some prefix of it based on what is going on in the case, but
@@ -711,21 +719,21 @@ to traverse the whole value at once, rather than one binding form at a time.
            (error 'binding-forms.rkt "internal error: cannot support _ in this position"))
          redex-val]
         [nt
-         (first ;; discard the substitution; we only need the freshened value
+         (term-and-table-term ;; discard the substitution; we only need the freshened value
           (rm-lookup-or
            nt freshened-subterms
            ;; In Romeo, unused binders (i.e., exported but never imported)
            ;; are treated as bound. For Redex purposes, it's important that they be
            ;; free, so that putting things into plain lists doesn't unexpectedly bind things.
            ;; See https://github.com/paulstansifer/redex/issues/10
-           (λ () `(,(rm-lookup-or nt red-match (λ () nt)) ()))))])))
+           (λ () (make-term-and-table (rm-lookup-or nt red-match (λ () nt)) '()))))])))
 
   (define freshened-exports
     (interp-beta-as-fs-subst (bspec-export-beta bs) freshened-subterms))
 
-  `(,freshened-body ,freshened-exports))
+  (make-term-and-table freshened-body freshened-exports))
 
-;; rec-freshen : redex-value bool bool bool -> (list redex-value subst)
+;; rec-freshen : redex-value bool bool bool -> (term-and-table redex-value subst)
 ;; `noop?` inhibits freshening entirely, returning a substitution indicating the list of
 ;; exported binders.
 ;; `top-level?` inhibits the freshening of values that are exported, because they
@@ -744,12 +752,13 @@ to traverse the whole value at once, rather than one binding form at a time.
 ;; freshen/was-noop? : redex-value -> redex-value bool
 ;; The boolean return value is #t if the value was unchanged
 (define (freshen/noop? redex-val)
-  (dispatch redex-val (λ (rv bs) (values (first (rec-freshen-nospec rv bs #f #t)) #f))
-            (λ (rv) (values (first (rec-freshen-nospec rv #f #t #f)) #t))))
+  (dispatch redex-val
+            (λ (rv bs) (values (term-and-table-term (rec-freshen-nospec rv bs #f #t)) #f))
+            (λ (rv) (values (term-and-table-term (rec-freshen-nospec rv #f #t #f)) #t))))
 
 ;; exported-binders : redex-value -> (list symbol)
 (define (exported-binders redex-val)
-  (map cadr (second ;; top-level? needs to be off, since lone binders matter!
+  (map cadr (term-and-table-table ;; top-level? needs to be off, since lone binders matter!
              (dispatch redex-val (λ (rv bs) (rec-freshen-spec redex-val rv bs #t #f))
                        (λ (rv) (rec-freshen-nospec rv #t #f #t))))))
 
@@ -767,24 +776,24 @@ to traverse the whole value at once, rather than one binding form at a time.
 
     (check-equal?
      (rec-freshen-nospec `(a b c) #f #t #f)
-     `((a b c) ()))
+     (make-term-and-table '(a b c) '()))
 
     (check-equal?
      (rec-freshen-nospec `(a b c) #f #f #f)
-     `((a b c) ()))
+     (make-term-and-table '(a b c) '()))
 
     (check-equal?
      (rec-freshen-nospec `a #f #t #f)
-     `(a ()))
+     (make-term-and-table 'a '()))
 
-    (check-match
+    (check-equal?
      (rec-freshen-nospec `a #f #f #f)
-     `(a ()))
+     (make-term-and-table 'a '()))
 
     (check-match
      (rec-freshen-spec
       '((1 2) (3 4) 5) ;; this is mostly ignored, I believe
       (mrm (lambda lambda) (x a) (expr (a b c)))
       lambda-bspec #f #t)
-     `((lambda (,aa) (,aa b c)) ())
+     (term-and-table `(lambda (,aa) (,aa b c)) '())
      (all-distinct? aa 'a 'b 'c))))
