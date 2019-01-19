@@ -243,8 +243,8 @@ and @racket[#f] otherwise.
              ([mode-spec (code:line #:mode (form-id pos-use ...))]
               [contract-spec (code:line) 
                              (code:line #:contract (form-id @#,ttpattern-sequence ...))]
-              [invariant-spec (code:line #:inv @#,tttterm)
-                                   (code:line)]
+              [invariant-spec (code:line)
+                              (code:line #:inv @#,tttterm)]
               [pos-use I
                        O]
               [rule [premise
@@ -289,8 +289,8 @@ declaration is present, Redex dynamically checks that the terms flowing through
 these positions match the provided patterns, raising an exception recognized by 
 @racket[exn:fail:redex?] if not. The term in the optional @racket[invariant-spec] is
 evaluated after the output positions have been computed and the contract has matched
-successfully, with variables from the contract bound; a result of @racket[#f] is
-considered to be a contract violation and an exception is raised.
+successfully, with variables (that have underscores) from the contract bound;
+a result of @racket[#f] is considered to be a contract violation and an exception is raised.
 
 For example, the following defines addition on natural numbers:
 @examples[#:label #f #:eval redex-eval

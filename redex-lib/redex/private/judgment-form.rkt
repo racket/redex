@@ -1412,7 +1412,7 @@
        (unless (match-pattern contracts io-term)
          (redex-error form-name
                       (string-append
-                       "judgment values do not match its contract;\n"
+                       "judgment values do not match its contract (or invariant);\n"
                        "  contract: ~s\n"
                        "  values:   ~s")
                       (cons form-name orig-ctcs) (cons form-name io-term)))])))
@@ -1599,10 +1599,6 @@
            [mode (let ([m (syntax->datum #'mode-arg)]) (and m (cdr m)))])
        (unless (jf-is-relation? #'judgment-form-name)
          (mode-check (cdr (syntax->datum #'mode-arg)) clauses nts syn-err-name stx))
-       (define maybe-wrap-contract (if (syntax-e #'invt)
-                                       (λ (ctc-stx)
-                                         #`(side-condition #,ctc-stx (term invt)))
-                                       values))
        (define-values (i-ctc-syncheck-expr i-ctc contract-original-expr)
          (syntax-case #'ctcs ()
            [#f (values #'(void) #f #f)]
