@@ -1,6 +1,15 @@
+v7.2
+
+  * added derivation->pict
+
+  * brought the letrec model up to date with modern Racket
+
+  * misc minor bug fixes and documentation improvements
+
 v7.1
 
   * added make-immutable-binding-hash and make-binding-hash
+
   * various bug fixes
 
 v7.0
@@ -17,6 +26,7 @@ v6.12
 v6.11
 
   * various bug fixes
+
   * added #:codomain clause to `reduction-relation`
 
 v6.10
