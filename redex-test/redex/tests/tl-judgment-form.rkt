@@ -1063,6 +1063,26 @@
                  ((int → int) → int)))
         #t))
 
+
+(let ()
+  ;; test that there isn't confusion between
+  ;; the define-language-bound `L` and the
+  ;; non-terminal `L`
+  (define-language L
+    (L ::= natural (L L)))
+
+  (define-judgment-form L
+    #:mode (->n I O)
+
+    [(->n L L)
+     ------------------
+     (->n (1 L) (2 L))]
+
+    [(->n 0 0)])
+
+  (test (judgment-holds (->n (1 0) L) L)
+        (list (term (2 0)))))
+
 (provide (all-defined-out))
 
 

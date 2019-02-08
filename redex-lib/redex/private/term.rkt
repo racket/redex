@@ -505,6 +505,19 @@ see also rewrite-side-conditions.rkt for some restrictions/changes there
           (define-syntax id
             (make-term-fn #'id2)))))]))
 
+(begin-for-syntax
+  (define (forward-id id-to-rewrite-to)
+    (λ (stx)
+      (syntax-case stx (set!)
+        [(id . args)
+         (with-syntax ([app (datum->syntax #'here '#%app)])
+           #`(app #,id-to-rewrite-to . args))]
+        [(set! id e)
+         #`(set! #,id-to-rewrite-to e)]
+        [x
+         (identifier? #'x)
+         id-to-rewrite-to]))))
+
 (define-syntax (term-let/error-name stx)
   (syntax-case stx ()
     [(_ error-name ([x1 rhs1] [x rhs] ...) body1 body2 ...)
@@ -568,7 +581,9 @@ see also rewrite-side-conditions.rkt for some restrictions/changes there
           (syntax/loc stx
             (datum-case rhs1 ()
               [new-x1
-               (let-syntax ([orig-names (make-term-id #'new-names depths #'orig-names)] ...)
+               (let-syntax ([orig-names (make-term-id #'new-names depths #'orig-names
+                                                      (forward-id #'orig-names))]
+                            ...)
                  (term-let/error-name error-name ((x rhs) ...) body1 body2 ...))]
               [_ no-match])))))]
     [(_ error-name () body1 body2 ...)
