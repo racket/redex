@@ -206,3 +206,24 @@
      #:mode mode2
      [(J2 any_1 17 any_1)])
    (void)))
+
+(#rx"where expected 2 part\\(s\\), but got 3"
+ ([clause (where _ 1 2)]) 
+ (let ()
+   (define-language L)
+   (define-judgment-form L
+     #:mode (T)
+     [clause
+      -------------
+      (T)])
+   (void)))
+(#rx"side-condition expected 1 part\\(s\\), but got 3"
+ ([clause (side-condition _ 1 2)])
+ (let ()
+   (define-language L)
+   (define-judgment-form L
+     #:mode (T)
+     [clause
+      -------------
+      (T)])
+   (void)))

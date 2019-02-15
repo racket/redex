@@ -1457,6 +1457,13 @@
       [(prem . remaining)
        (cons #'prem (drop-ellipses #'remaining))]))
   (define (fold-clause pat-pos tmpl-pos acc-init clause)
+    (define (raise-length-error name source expected actual)
+      (raise-syntax-error syn-err-name
+                          (format "~a expected ~a part(s), but got ~a"
+                                  (syntax-e name)
+                                  expected
+                                  (length (syntax->list actual)))
+                          source))
     (syntax-case clause ()
       [(conc . prems)
        (let-values ([(conc-in conc-out) (split-body #'conc)])
@@ -1470,10 +1477,16 @@
                 (begin
                   (tmpl-pos #'tmpl acc)
                   (pat-pos #'pat acc))]
+               [(-where e ...)
+                (where-keyword? #'-where)
+                (raise-length-error #'-where prem 2 #'(e ...))]
                [(-side-condition tmpl)
                 (side-condition-keyword? #'-side-condition)
                 (begin (tmpl-pos #'tmpl acc)
                        acc)]
+               [(-side-condition e ...)
+                (side-condition-keyword? #'-side-condition)
+                (raise-length-error #'-side-condition prem 1 #'(e ...))]
                [(form-name . _)
                 (if (judgment-form-id? #'form-name)
                     (let-values ([(prem-in prem-out) (split-body prem)])
