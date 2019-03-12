@@ -16,7 +16,18 @@
      get-pure-port
      (λ (in-port)
        (copy-port in-port out-port)))))
-(gunzip "models.tar.gz")
+(with-handlers ([exn:fail?
+                 (λ (exn)
+                   (printf "an exception was raised while gunzipping. File's prefix:\n=======\n")
+                   (call-with-input-file "models.tar.gz"
+                     (λ (port)
+                       (for ([i (in-range 1000)])
+                         (define b (read-byte port))
+                         (unless (eof-object? b)
+                           (write-byte b)))
+                       (printf "\n=======\n")))
+                   (raise exn))])
+  (gunzip "models.tar.gz"))
 (untar "models.tar")
 
 (define racket-files
