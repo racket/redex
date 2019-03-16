@@ -7,7 +7,7 @@
 
 (define tmp-dir (make-temporary-file "ryr-test-~a" 'directory))
 (current-directory tmp-dir)
-(define models-url "http://www.eecs.northwestern.edu/~robby/lightweight-metatheory/models.tar.gz")
+(define models-url "http://users.cs.northwestern.edu/~robby/lightweight-metatheory/models.tar.gz")
 (printf "downloading ~a\n   to ~a\n" models-url tmp-dir)
 (call-with-output-file "models.tar.gz"
   (λ (out-port)
