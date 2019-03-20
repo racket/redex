@@ -18,7 +18,8 @@
     #f 
     (list (make-paragraph 
            (list (racketidfont (make-element #f (list (symbol->string 'a0))))
-                 (make-element #f (list " " (hspace 1) " " (racketidfont (symbol->string 'a))))
+                 (make-element #f (list " " (hspace 1) " "
+                                        (racketidfont (make-element #f (list (symbol->string 'a))))))
                  ...)))))
 
 @(define redex-eval (make-base-eval '(require redex/reduction-semantics redex/pict racket/port)))
