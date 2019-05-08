@@ -63,11 +63,11 @@
     (apply except/e
            symbol/e
            (used-vars lang)))
-  
   (define filled-cc-enums
     (delay (let-values ([(fin-cc-lang rec-cc-lang cant-enumerate-cc-table)
                          (sep-lang (force cc-lang) #f)])
-             (make-lang-table! l-enum cc-enums fin-cc-lang rec-cc-lang cant-enumerate-cc-table)
+             (make-lang-table! l-enum cc-enums fin-cc-lang rec-cc-lang cant-enumerate-cc-table
+                               #:i-am-cross? #t)
              cc-enums)))
 
   (define-values (fin-lang rec-lang cant-enumerate-table) (sep-lang lang clang-all-ht))
@@ -82,7 +82,8 @@
   (make-lang-table! l-enum nt-enums fin-lang rec-lang cant-enumerate-table)
   l-enum)
 
-(define (make-lang-table! l-enum ht fin-lang rec-lang cant-enumerate-table)
+(define (make-lang-table! l-enum ht fin-lang rec-lang cant-enumerate-table
+                          #:i-am-cross? [i-am-cross? #f])
   (define (enumerate-lang! cur-lang enum-f)
     (for ([nt (in-list cur-lang)])
       (hash-set! ht
@@ -92,11 +93,13 @@
                      (enum-f (nt-rhs nt) ht)))))
   (enumerate-lang! fin-lang
                    (λ (rhs enums)
-                     (enumerate-rhss rhs l-enum)))
+                     (enumerate-rhss rhs l-enum
+                                     #:cross-table (and i-am-cross? enums))))
   (define rec-lang-base-i (length fin-lang))
   (enumerate-lang! rec-lang
                    (λ (rhs enums)
-                     (delay/e (enumerate-rhss rhs l-enum)
+                     (delay/e (enumerate-rhss rhs l-enum
+                                              #:cross-table (and i-am-cross? enums))
                               #:count +inf.f))))
 
 (define (build-nt-unparse-term+pat lang clang-all-ht call-nt-proc/bool)
@@ -159,7 +162,8 @@
      (to-nat raw-enumerator (from-term term))]
     [else #f]))
 
-(define (enumerate-rhss rhss l-enum)
+(define (enumerate-rhss rhss l-enum
+                        #:cross-table [cross-table #f])
   (define (with-index i e)
     (map/e (λ (x) (production i x))
            production-term
@@ -170,9 +174,11 @@
          (for/list ([i (in-naturals)]
                     [production (in-list rhss)])
            (with-index i
-                       (pat/e (rhs-pattern production) l-enum)))))
+                       (pat/e (rhs-pattern production) l-enum
+                              #:cross-table cross-table)))))
 
-(define (pat/e pat l-enum)
+(define (pat/e pat l-enum
+               #:cross-table [cross-table #f])
   (match-define (ann-pat nv pp-pat) (preprocess pat))
   (map/e
    (λ (l) (apply ann-pat l))
@@ -180,11 +186,13 @@
       (list (ann-pat-ann ap)
             (ann-pat-pat ap)))
    (list/e (env/e nv l-enum)
-           (pat-refs/e pp-pat l-enum))
+           (pat-refs/e pp-pat l-enum
+                       #:cross-table cross-table))
    #:contract any/c))
 
-;; (: pat-refs/e : Pat (HashTable Symbol (Enum Pat)) (Enum Symbol) -> Enum RefPat)
-(define (pat-refs/e pat l-enum)
+;; (: pat-refs/e : Pat Lang-Enum #:cross-table [(or/c #f (Hashof symbol? enum?)]  -> Enum RefPat)
+(define (pat-refs/e pat l-enum
+                    #:cross-table [cross-table #f])
   (define (loop pat)
     (match-a-pattern
      pat
@@ -238,7 +246,9 @@
      [`(side-condition ,p ,g ,e)
       (unsupported pat)]
      [`(cross ,s)
-      (lang-enum-get-cross-enum l-enum s)]
+      (if cross-table
+          (hash-ref cross-table s)
+          (lang-enum-get-cross-enum l-enum s))]
      [`(list ,sub-pats ...)
       (apply list/e
        (for/list ([sub-pat (in-list sub-pats)])
