@@ -202,3 +202,15 @@
     (define i2 (to-nat e/e t))
     (unless (= i i2)
       (error 'bad-index "~s -> ~s -> ~s" i t i2))))
+
+
+(let ()
+  (define-language nested-finite-cross
+    (b ::= (:= e))
+    (e ::= 1))
+
+  (check-not-exn
+   (lambda ()
+     ((generate-term nested-finite-cross (cross b) #:i-th)
+      1)))
+  (try-it nested-finite-cross (cross b)))
