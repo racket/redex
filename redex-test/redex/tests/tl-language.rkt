@@ -1132,4 +1132,22 @@
                   (term (λ (z) (z y))))
         1))
 
+(let ()
+  (define-language L
+    [e ::= (e e) #f]
+    [E ::= (cross e)])
+  
+  (test (pair? (redex-match L (in-hole (cross e) 11)
+                            '(((11 #f) #f) #f)))
+        #t))
+
+(let ()
+  (define-language L
+    [e ::= (e e) #f]
+    [E ::= (cross e)])
+
+  (test (pair? (redex-match L (in-hole E 11)
+                            '(((11 #f) #f) #f)))
+        #t))
+
 (print-tests-passed 'tl-language.rkt)

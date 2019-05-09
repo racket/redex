@@ -242,8 +242,12 @@ see also term.rkt for some restrictions/changes there
           [(cross a)
            (let ()
              (expect-identifier term #'a)
-             (define a-str (symbol->string (syntax-e #'a)))
-             (values #`(cross #,(string->symbol (format "~a-~a" a-str a-str)))
+             (define-values (prefix-sym suffix-sym) (break-out-underscore #'a))
+             (when suffix-sym
+               (raise-syntax-error what
+                                   "underscores not allowed on non-terminal names in cross"
+                                   orig-stx #'a))
+             (values #`(cross #,(string->symbol (format "~a-~a" prefix-sym prefix-sym)))
                      '()))]
           [(cross a ...) (expected-exact 'cross 1 term)]
           [cross (expected-arguments 'cross term)]
