@@ -74,7 +74,8 @@
    variable-except variable-prefix
    variable-not-otherwise-mentioned
    hole name in-hole hide-hole
-   side-condition cross)
+   side-condition cross
+   compatible-closure-context)
 
 (provide pat:symbol)
 (define-syntax pat:symbol

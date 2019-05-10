@@ -1150,4 +1150,50 @@
                             '(((11 #f) #f) #f)))
         #t))
 
+
+
+(let ()
+  (define-language L
+    [e ::= (e e) #f]
+    [E ::= (compatible-closure-context e)])
+
+  (test (pair? (redex-match L (in-hole (cross e) 11)
+                            '(((11 #f) #f) #f)))
+        #t))
+
+(let ()
+  (define-language L
+    [e ::= (e e) #f]
+    [E ::= (compatible-closure-context e)])
+
+  (test (pair? (redex-match L (in-hole E 11)
+                            '(((11 #f) #f) #f)))
+        #t))
+
+(let ()
+  (define-language L
+    [e ::= v x (e e)]
+    [v ::= (λ (x) e) add1 natural])
+
+  (test (pair? (redex-match L
+                            (in-hole (compatible-closure-context v #:wrt e)
+                                     1)
+                            (term (λ (x) 1))))
+        #t))
+
+(let ()
+  (define-language L
+    [t ::= (λ (x) t) (t v) (force v) (return v)]
+    [v ::= (thunk t)])
+
+  (test (pair? (redex-match L
+                            (in-hole (compatible-closure-context v #:wrt t) 11)
+                            '(thunk (λ (x) 11))))
+        #t)
+
+  (test (pair? (redex-match L
+                            (in-hole (compatible-closure-context t #:wrt v) 11)
+                            '(thunk (λ (x) 11))))
+        #f))
+
 (print-tests-passed 'tl-language.rkt)

@@ -56,6 +56,8 @@ identifier's lexical binding:
             (pat:in-hole pattern pattern)
             (pat:hide-hole pattern)
             (pat:side-condition pattern guard-expr)
+            (pat:compatible-closure-context id)
+            (pat:compatible-closure-context id #:wrt id)
             (pat:cross id)
             (pat:pattern-sequence ...)
             pat:other-literal]
@@ -224,12 +226,46 @@ present via @tt{_} patterns) are bound using @racket[term-let] in
 @racket[_guard-expr]. 
 }
 
-@item{The @tt{(@defpattech[cross] @racket[_id])} @pattern is used for the compatible
-closure functions. If the language contains a non-terminal with the
-same name as @racket[_id], the @pattern @racket[(cross _id)] matches the
-context that corresponds to the compatible closure of that
-non-terminal.
-}
+ @item{The @tt{(@defpattech[compatible-closure-context]
+   @racket[_nt])} @pattern matches context that correspond
+  to where the compatible closure of a relation would match.
+  More precisely, it is a context whose shape follows the definition
+  of @racket[_nt], but allowing for a @tt{hole} at each place where
+  the definition of @racket[_nt] refers to itself.
+
+  For example, with this language definition:
+  @racketblock[(define-language L
+                 (e ::= (λ (x) e) (e e) x)
+                 (C ::= (λ (x) C) (C e) (e C) hole)
+                 (x ::= variable-not-otherwise-mentioned))]
+  the pattern @racket[(pat:compatible-closure-context e)] is
+  equivalent to the pattern @racket[C].
+
+  The @racket[(pat:compatible-closure-context _nt1 #:wrt _nt2)]
+  pattern similarly is a context, but it decomposes terms matching
+  the non-terminal
+  @racket[_nt1], placing a hole at each place where an @racket[_nt2]
+  non-terminal appears.
+
+  For example, with this language definition:
+  @racketblock[(define-language L
+                 (e ::= v (e e) x)
+                 (v ::= (λ (x) e))
+                 (C ::= V (C e) (e C) hole)
+                 (V ::= (λ (x) C))
+                 (x ::= variable-not-otherwise-mentioned))]
+  the pattern @racket[(pat:compatible-closure-context v #:wrt e)] is
+  equivalent to the pattern @racket[V] and the pattern
+  the pattern @racket[(pat:compatible-closure-context e #:wrt e)] is
+  equivalent to the pattern @racket[C]. More generally, leaving off
+  the @racket[#:wrt] argument is the same as using the same non-terminal
+  twice.
+ }
+
+ @item{The @tt{(@defpattech[cross] @racket[_nt])} @pattern is
+  an unfortunately-named version of @pattech[compatible-closure-context]
+  that exists for backward compatibility and does not support @tt{#:wrt}.
+ }
 
 @item{The @tt{(@defpattech[pattern-sequence] ...)}
 @pattern matches a term
@@ -306,7 +342,8 @@ bound to @racket['()].
           as either always producing exactly one hole or may
           produce some other number of holes,
           and the first argument to @racket[in-hole] is allowed
-          to accept only patterns that produce exactly one hole.}]
+          to accept only patterns that produce exactly one hole.}
+         #:changed "1.15" @list{Added @tt{compatible-closure-context}}]
 
 @defform*[[(redex-match lang @#,ttpattern term-expr)
            (redex-match lang @#,ttpattern)]]{

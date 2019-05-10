@@ -954,7 +954,9 @@ See match-a-pattern.rkt for more details
        (values
         (λ (exp hole-info nesting-depth)
           (unless (hash-maps? across-ht id)
-            (error 'compile-pattern "unknown cross reference ~a" id))
+            (error 'compile-pattern "unknown cross reference ~a, have only ~a"
+                   id
+                   (hash-keys across-ht)))
           (match-nt (hash-ref across-list-ht id)
                     (hash-ref across-ht id)
                     id exp hole-info

@@ -51,7 +51,7 @@
 (check-equal? (rsc (any_1 any_1) (x) #f) `((list (name any_1 any) (name any_1 any)) 
                                            (any_1 any_1) 
                                            (any_1 any_1)))
-(check-equal? (rsc (in-hole (hole a #f (hide-hole hole)) (cross x)) '(x) #f)
+(check-equal? (rsc (in-hole (hole a #f (hide-hole hole)) (cross x)) (x) #f)
               `((in-hole (list hole a #f (hide-hole hole)) (cross x-x))
                 ()
                 ()))
