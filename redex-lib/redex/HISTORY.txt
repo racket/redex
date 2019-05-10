@@ -1,5 +1,9 @@
 v7.2
 
+  * misc minor bug fixes
+
+v7.2
+
   * added derivation->pict
 
   * brought the letrec model up to date with modern Racket
