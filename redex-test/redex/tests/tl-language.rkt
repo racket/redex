@@ -1196,4 +1196,17 @@
                             '(thunk (λ (x) 11))))
         #f))
 
+(let ()
+  (define-language L
+    [t u ::= (λ (x) t) (t v) (force v) (return v)]
+    [v w ::= (thunk t)]
+    [C ::= (compatible-closure-context u)
+           (compatible-closure-context w #:wrt t)])
+
+  (test (pair? (redex-match L
+                            (in-hole C 11)
+                            '(thunk (λ (x) 11))))
+        #t))
+
+
 (print-tests-passed 'tl-language.rkt)

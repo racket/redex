@@ -100,7 +100,7 @@ see also term.rkt for some restrictions/changes there
          what
          (format "underscores not allowed on non-terminal names in ~a" where)
          orig-stx #'a))
-      prefix-sym)
+      (hash-ref aliases prefix-sym prefix-sym))
     
     ; union-find w/o balancing or path compression (at least for now)
     (define (union e f sets)
