@@ -324,7 +324,7 @@
     [(hide-hole p)
      (hide-hole (refs-to-fn p nv))]
     [(name-ref n)
-     (t-env-name-ref nv n)]
+     (refs-to-fn (t-env-name-ref nv n) nv)]
     [(misname-ref n tag)
      (refs-to-fn (t-env-misname-ref nv n tag) nv)]
     [(list subrefpats ...)

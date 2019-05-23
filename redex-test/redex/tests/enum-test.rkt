@@ -98,6 +98,7 @@
 (try-it λv v)
 (try-it λv E)
 (try-it λv x)
+(try-it λv (e e))
 
 ;; No longer supported
 (define-language M
