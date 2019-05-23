@@ -305,52 +305,43 @@
     #:contract t-env?)])
 
 ;; to-term : (ann-pat t-env pat-with-refs) -> redex term
-(define/match (to-term ap)
-  [((ann-pat nv term))
-   (strip-hide-holes ((refs-to-fn term) nv))])
+(define (to-term ap)
+  (match ap
+    [(ann-pat nv term)
+     (strip-hide-holes (refs-to-fn term nv))]))
 
-;; refs-to-fn : RefPat -> (TEnv -> Term)
-(define (refs-to-fn refpat)
+;; refs-to-fn : RefPat TEnv -> Term
+(define (refs-to-fn refpat nv)
   (match refpat
     [(ann-pat nv term)
-     (λ (_)
-        ((refs-to-fn term) nv))]
+     (refs-to-fn term nv)]
     [(production _ term)
-     (refs-to-fn term)]
+     (refs-to-fn term nv)]
     [(decomp ctx-refs termpat-refs)
-     (define ctx-fn (refs-to-fn ctx-refs))
-     (define term-fn (refs-to-fn termpat-refs))
-     (λ (nv)
-        (define ctx (ctx-fn nv))
-        (define term (term-fn nv))
-        (plug-hole ctx term))]
+     (define ctx (refs-to-fn ctx-refs nv))
+     (define term (refs-to-fn termpat-refs nv))
+     (plug-hole ctx term)]
     [(hide-hole p)
-     (define p-fn (refs-to-fn p))
-     (λ (nv)
-        (hide-hole (p-fn nv)))]
+     (hide-hole (refs-to-fn p nv))]
     [(name-ref n)
-     (λ (nv)
-        (t-env-name-ref nv n))]
+     (t-env-name-ref nv n)]
     [(misname-ref n tag)
-     (λ (nv)
-        ((refs-to-fn (t-env-misname-ref nv n tag)) nv))]
+     (refs-to-fn (t-env-misname-ref nv n tag) nv)]
     [(list subrefpats ...)
-     (compose
-      append*
-      (sequence-fn
-       (for/list ([subrefpat (in-list subrefpats)])
-         (match subrefpat
-           [(repeat _ subs)
-            (sequence-fn (map refs-to-fn subs))]
-           [(nrep-ref n tag)
-            (λ (nv)
-               (define env-ts (t-env-nrep-ref nv n))
-               (for/list ([nv-t (in-list env-ts)])
-                 (match nv-t
-                   [(cons nv tterms)
-                    ((refs-to-fn (hash-ref tterms tag)) nv)])))]
-           [_ (sequence-fn (list (refs-to-fn subrefpat)))]))))]
-    [else (λ (_) refpat)]))
+     (append*
+      (for/list ([subrefpat (in-list subrefpats)])
+        (match subrefpat
+          [(repeat _ subs)
+           (for/list ([sub (in-list subs)])
+             (refs-to-fn sub nv))]
+          [(nrep-ref n tag)
+           (define env-ts (t-env-nrep-ref nv n))
+           (for/list ([nv-t (in-list env-ts)])
+             (match nv-t
+               [(cons nv tterms)
+                (refs-to-fn (hash-ref tterms tag) nv)]))]
+          [_ (list (refs-to-fn subrefpat nv))])))]
+    [else refpat]))
 
 (define (strip-hide-holes term)
   (match term
@@ -371,11 +362,6 @@
       [_ term]))
   (unhide (plug ctx)))
 
-;; (: sequence-fn : (All (a b) (Listof (a -> b)) -> (a -> (Listof b))))
-(define (sequence-fn fs)
-  (λ (x)
-     (for/list ([f (in-list fs)])
-       (f x))))
 
 ;; lang-enum-get-nt-enum : lang-enum Symbol -> (or/c Enum #f)
 (define (lang-enum-get-nt-enum l-enum s)
