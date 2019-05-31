@@ -248,10 +248,10 @@ To test your solution use @racket[redex-match] like this:
                (code:comment @#,t{your solution goes here})
               (term (1 2 3 4)))]
 where you expect a result like this
-@racketblock[(list
-              (match (list (bind 'e_1 1) (bind 'e_2 2)))
-              (match (list (bind 'e_1 2) (bind 'e_2 3)))
-              (match (list (bind 'e_1 3) (bind 'e_2 4))))]
+@racketresultblock[(list
+                    (match (list (bind 'e_1 1) (bind 'e_2 2)))
+                    (match (list (bind 'e_1 2) (bind 'e_2 3)))
+                    (match (list (bind 'e_1 3) (bind 'e_2 4))))]
 but possibly with more pattern variables in the resulting
 match.
 
