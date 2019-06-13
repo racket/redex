@@ -502,7 +502,13 @@
           (['typeof rewrite-typeof]
            ['extend rewrite-extend]
            ['lookup rewrite-lookup])
-          (render-judgment-form typeof))
+           (parameterize ([relation-clauses-combine
+                           (λ (l) (apply vc-append 20 l))]
+                          [relation-clause-combine
+                           (λ (premises conclusion rule-name)
+                             ;; test the contracts
+                             (default-relation-clause-combine premises conclusion rule-name))])
+             (render-judgment-form typeof)))
          "stlc.png"))
 
 (done)

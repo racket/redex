@@ -1,5 +1,9 @@
 v7.4
 
+  * added default-relation-clause-combine and relation-clause-combine
+
+v7.3
+
   * added compatible-closure-context
 
 v7.2

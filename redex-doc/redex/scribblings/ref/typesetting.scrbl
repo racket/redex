@@ -959,7 +959,43 @@ single reduction relation.
  @history[#:added "1.7"]
 }
 
-@defparam[relation-clauses-combine combine 
+@defparam[relation-clause-combine combine 
+          (parameter/c
+           (-> (listof (listof pict?))
+               pict?
+               (or/c string? #f)
+               pict?))]{
+
+ Controls the construction of a particular clause of a
+ reduction relation or judgment form. The first argument are
+ the premises (each inner list of premises are on the same
+ line as each other), the second argument is the conclusion
+ and the third argument is the name of the rule (if the rule
+ is named).
+
+ The default value is @racket[default-relation-clause-combine].
+
+ @history[#:added "1.9"]
+}
+
+
+@defproc[(default-relation-clause-combine
+           [premises (listof (listof pict?))]
+           [conclusion pict?]
+           [rule-name (or/c string? #f)])
+         pict?]{
+ Builds a pict for the premises as
+ @racketblock[(apply vc-append 4
+                     (for/list ([premises (in-list premises)])
+                       (apply hbl-append 20 premises)))]
+ and then adds a line below it and the conclusion pict below that.
+ If @racket[rule-name] is not @racket[#f], then it adds the name
+ next to the bar.
+
+ @history[#:added "1.9"]
+}
+
+@defparam[relation-clauses-combine combine
                                    (parameter/c (-> (listof pict?) pict?))]{
   The @racket[combine] function is called with the list of picts that are obtained by rendering
   a relation; it should put them together into a single pict. It defaults to

@@ -100,6 +100,8 @@
                         (-> string? number? (values number? number? number? number?)))]
  [horizontal-bar-spacing (parameter/c exact-nonnegative-integer?)]
  [relation-clauses-combine (parameter/c (-> (listof pict?) pict?))]
+ [relation-clause-combine (parameter/c (-> (listof (listof pict?)) pict? (or/c string? #f) pict?))]
+ [default-relation-clause-combine (-> (listof (listof pict?)) pict? (or/c string? #f) pict?)]
  [metafunction-arrow-pict (parameter/c (-> pict?))]
  [where-make-prefix-pict (parameter/c (-> pict?))]
  [where-combine (parameter/c (-> pict? pict? pict?))])

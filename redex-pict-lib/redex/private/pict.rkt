@@ -96,6 +96,8 @@
          arrow->pict
          horizontal-bar-spacing
          relation-clauses-combine
+         relation-clause-combine
+         default-relation-clause-combine
          
          rule-pict-info->side-condition-pict
 
@@ -1615,24 +1617,35 @@
    (for/list ([conclusion (in-list conclusions)]
               [premises (in-list premisess)]
               [name (in-list selected-eqn-names)])
-     (define top (apply vc-append 4 (map (λ (premises) (apply hbl-append 20 premises)) premises)))
-     (define line-w (max (pict-width top) (pict-width conclusion)))
-     (define line (dc (λ (dc dx dy) (send dc draw-line dx dy (+ dx line-w) dy))
-                      line-w 1)) 
-     (define w/out-label
-       (vc-append
-        (horizontal-bar-spacing)
-        top
-        line
-        conclusion))
-     (if (and name (judgment-form-show-rule-names))
+     ((relation-clause-combine)
+      premises
+      conclusion
+      name))))
+
+(define (default-relation-clause-combine premises conclusion name)
+  (define top (apply vc-append 4 (map (λ (premises) (apply hbl-append 20 premises)) premises)))
+  (define line-w (max (pict-width top) (pict-width conclusion)))
+  (define line (dc (λ (dc dx dy) (send dc draw-line dx dy (+ dx line-w) dy))
+                   line-w 1))
+  (define w/out-label
+    (vc-append
+     (horizontal-bar-spacing)
+     top
+     line
+     conclusion))
+  (define the-label-pict
+    (and name
+         (judgment-form-show-rule-names)
          (let ([label (string->bracketed-label name)])
            (let-values ([(x y) (rc-find w/out-label line)])
-             (hb-append w/out-label 
-                        (vl-append label
-                                   (blank 0 (- (- (pict-height w/out-label) y)
-                                               (/ (pict-height label) 2)))))))
-         w/out-label))))
+             (vl-append label
+                        (blank 0 (- (- (pict-height w/out-label) y)
+                                    (/ (pict-height label) 2))))))))
+  (if the-label-pict
+      (hb-append w/out-label the-label-pict)
+      w/out-label))
+
+(define relation-clause-combine (make-parameter default-relation-clause-combine))
 
 (define horizontal-bar-spacing (make-parameter 4))
 (define relation-clauses-combine (make-parameter (λ (l) (apply vc-append 20 l))))
