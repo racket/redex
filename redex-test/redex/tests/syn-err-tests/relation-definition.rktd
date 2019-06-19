@@ -28,3 +28,20 @@
 (#rx"expected an identifier in the language position"
  ([not-lang [(R a)]])
  (define-relation not-lang))
+
+(#rx"mode specifies a 2-ary relation but use supplied 3 terms"
+ ([wrong-arity (J2 natural_1 natural_2 0)])
+ (let ()
+   (define-judgment-form syn-err-lang
+     #:mode (J2 I O)
+
+     [------------
+      (J2 any any)])
+
+   (define-relation syn-err-lang
+     R ⊂ any × any
+
+     [(R natural_1 natural_2)
+      wrong-arity])
+
+   (void)))
