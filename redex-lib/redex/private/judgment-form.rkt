@@ -190,9 +190,9 @@
   (define temporaries (generate-temporaries names))
   (values
    (for/fold ([cs '()])
-     ([n names]
-      [w/e names/ellipses]
-      [x temporaries])
+             ([n (in-list names)]
+              [w/e (in-list names/ellipses)]
+              [x (in-list temporaries)])
      (cond [(hash-ref bindings (syntax-e n) #f)
             => (λ (b) 
                  (let ([b-id/depth (id/depth b)]
@@ -206,8 +206,8 @@
            [else cs]))
    temporaries
    (for/fold ([extended bindings])
-     ([name names] 
-      [w/ellipses names/ellipses])
+             ([name (in-list names)]
+              [w/ellipses (in-list names/ellipses)])
      (hash-set extended (syntax-e name) w/ellipses))))
 
 (define alpha-equivalent?
@@ -1470,7 +1470,7 @@
          (check-judgment-arity orig-stx #'conc)
          (define acc-out
            (for/fold ([acc (foldl pat-pos acc-init conc-in)])
-                     ([prem (drop-ellipses #'prems)])
+                     ([prem (in-list (drop-ellipses #'prems))])
              (syntax-case prem ()
                [(-where pat tmpl)
                 (where-keyword? #'-where)
@@ -1491,11 +1491,11 @@
                 (if (judgment-form-id? #'form-name)
                     (let-values ([(prem-in prem-out) (split-body prem)])
                       (check-judgment-arity orig-stx prem)
-                      (for ([pos prem-in]) (tmpl-pos pos acc))
+                      (for ([pos (in-list prem-in)]) (tmpl-pos pos acc))
                       (foldl pat-pos acc prem-out))
                     (raise-syntax-error syn-err-name "expected judgment form name" #'form-name))]
                [_ (raise-syntax-error syn-err-name "malformed premise" prem)])))
-         (for ([pos conc-out]) (tmpl-pos pos acc-out))
+         (for ([pos (in-list conc-out)]) (tmpl-pos pos acc-out))
          acc-out)]))
   (for ([clause (in-list clauses)])
     (define do-tmpl
@@ -1570,7 +1570,7 @@
                   #:when (judgment-form-id? #'form-name)
                   (define mode (judgment-form-mode (lookup-judgment-form-id #'form-name)))
                   (define-values (_ outs) (split-by-mode (syntax->list #'pieces) mode))
-                  (for/fold ([binds binds]) ([out outs])
+                  (for/fold ([binds binds]) ([out (in-list outs)])
                     (append (name-pattern-lws out) binds))]
                  [(where lhs rhs) (append (name-pattern-lws #'lhs) binds)]
                  [_ binds])))]
