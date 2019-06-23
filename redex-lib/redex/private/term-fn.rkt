@@ -41,7 +41,9 @@
        (cond [(syntax-local-value stx (λ () #f)) => p?]
              [else #f])))
 
-;; mode: (or/c #f (listof (or/c 'I 'O))  -- #f means the judgment form is actually a relation
+;; mode: (or/c #f --  means the judgment form is actually a relation
+;;             natural -- the arity of the judgment form; used when there is no #:mode declaration
+;;             (listof (or/c 'I 'O))
 (define-struct judgment-form (name mode proc mk-proc lang lws rule-names 
                                    gen-clauses mk-gen-clauses term-proc relation?
                                    cache runtime-judgment-form-id
