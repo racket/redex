@@ -11,7 +11,8 @@
                               vc-append hbl-append vl-append)
                      redex))
 
-@(define redex-eval (make-base-eval '(require redex/reduction-semantics redex/pict)))
+@(define redex-eval (make-base-eval '(require redex/reduction-semantics redex/pict
+                                              racket/pretty)))
 @; this definition is copied from languages.scrbl
 @(redex-eval
   '(define-language lc-lang
@@ -240,7 +241,7 @@ and @racket[#f] otherwise.
                contract-spec
                invariant-spec
                rule rule ...)
-             ([mode-spec (code:line #:mode (form-id pos-use ...))]
+             ([mode-spec (code:line) (code:line #:mode (form-id pos-use ...))]
               [contract-spec (code:line) 
                              (code:line #:contract (form-id @#,ttpattern-sequence ...))]
               [invariant-spec (code:line)
@@ -275,15 +276,24 @@ and @racket[#f] otherwise.
                       -----
                       etc.])]{
 Defines @racket[form-id] as a relation on terms via a set of inference rules.
-Each rule must be such that its premises can be evaluated left-to-right
-without ``guessing'' values for any of their pattern variables. Redex checks this
-property using the mandatory @racket[mode-spec] declaration, which partitions positions
-into inputs @racket[I] and outputs @racket[O]. Output positions in conclusions
-and input positions in premises must be @|tttterm|s; input positions in conclusions and 
-output positions in premises must be @|ttpattern|s.
-The @racket[rule-name]s are used by @racket[build-derivations]
-and by @racket[render-judgment-form].
+       
+ If a @racket[mode-spec] appears, each rule must be such that
+ its premises can be evaluated left-to-right without
+ ``guessing'' values for any of their pattern variables.
+ Redex checks this property using @racket[mode-spec]
+ declaration, which partitions positions into inputs
+ @racket[I] and outputs @racket[O]. Output positions in
+ conclusions and input positions in premises must be
+ @|tttterm|s; input positions in conclusions and output
+ positions in premises must be @|ttpattern|s. The
+ @racket[rule-name]s are used by @racket[build-derivations]
+ and by @racket[render-judgment-form].
 
+ If a @racket[mode-spec] is not present, Redex cannot
+ compute a derivation for the judgment form, instead it can
+ check that a given derivation is valid according to the
+ rules.
+ 
 When the optional @racket[contract-spec]
 declaration is present, Redex dynamically checks that the terms flowing through
 these positions match the provided patterns, raising an exception recognized by 
@@ -306,8 +316,10 @@ For example, the following defines addition on natural numbers:
              ------------------------- "add1"
              (sum (s n_1) n_2 (s n_3))])]
 
-The @racket[judgment-holds] form checks whether a relation holds for any 
-assignment of pattern variables in output positions.
+ When a judgment form has a mode, the
+ @racket[judgment-holds] form checks whether a judgment form
+ holds for any assignment of pattern variables in output
+ positions.
 @examples[
 #:eval redex-eval
        (judgment-holds (sum (s (s z)) (s z) (s (s (s z)))))
@@ -328,13 +340,103 @@ to compute all pairs with a given sum.
            (define-judgment-form nats
              #:mode (sumr O O I)
              #:contract (sumr n n n)
-             [------------ sumr-z
+             [------------ "z"
               (sumr z n n)]
              
              [(sumr n_1 n_2 n_3)
-              -------------------------- sumr-s
+              -------------------------- "s"
               (sumr (s n_1) n_2 (s n_3))])
            (judgment-holds (sumr n_1 n_2 (s (s z))) (n_1 n_2))]
+
+ In some situations, there is no mode that could be specified
+ that Redex accepts. It is possible to leave off the mode
+ in that case, as in this judgment form:
+ @examples[#:label #f #:eval redex-eval
+           (define-extended-language nat-exprs nats
+             (e ::= (+ e e) n))
+
+           (define-judgment-form nat-exprs
+             #:contract (same-exp e e)
+
+             [(sum n_1 n_2 n_3)
+              -------------------------- "add"
+              (same-exp (+ n_1 n_2) n_3)]
+
+             [-------------- "refl"
+              (same-exp e e)]
+
+             [(same-exp e_1 e_2) (same-exp e_2 e_3)
+              ------------------ "trans"
+              (same-exp e_1 e_3)]
+
+             [(same-exp e_2 e_1)
+              ------------------ "sym"
+              (same-exp e_1 e_2)]
+
+             [(same-exp e_1 e_2)
+              ---------------------------------- "compat-l"
+              (same-exp (+ e_1 e_3) (+ e_2 e_3))]
+
+             [(same-exp e_1 e_2)
+              ---------------------------------- "compat-r"
+              (same-exp (+ e_3 e_1) (+ e_3 e_2))])]
+
+ With a modeless judgment form, Redex cannot compute the entire derivation
+ for you, but it can check that a given derivation is valid according
+ to the rules in the judgment form. Here is one such derivation:
+ @examples[#:label #f #:eval redex-eval
+           (define same-exp-derivation
+             (let* ([one `(s z)]
+                    [two `(s ,one)]
+                    [three `(s ,two)]
+                    [four `(s ,three)]
+                    [five `(s ,four)]
+                    [six `(s ,five)])
+               (derivation
+                `(same-exp (+ ,four ,two)
+                           (+ ,one (+ ,two ,three)))
+                "trans"
+                (list
+                 (derivation `(same-exp (+ ,four ,two) ,six)
+                             "add"
+                             (list))
+                 (derivation
+                  `(same-exp ,six
+                             (+ ,one (+ ,two ,three)))
+                  "sym"
+                  (list
+                   (derivation
+                    `(same-exp (+ ,one (+ ,two ,three))
+                               ,six)
+                    "trans"
+                    (list
+                     (derivation
+                      `(same-exp (+ ,one (+ ,two ,three))
+                                 (+ ,one ,five))
+                      "compat-r"
+                      (list
+                       (derivation `(same-exp (+ ,two ,three)
+                                              ,five)
+                                   "add"
+                                   (list))))
+                     (derivation `(same-exp (+ ,one ,five)
+                                            ,six)
+                                 "add"
+                                 (list))))))))))]
+ It is a bit hard to read in that form; here it is in
+ a more traditional tree rendering:
+ @examples[#:label #f #:eval redex-eval
+           (parameterize ([pretty-print-columns 20])
+             (derivation->pict nat-exprs same-exp-derivation))]
+
+ And using @racket[judgment-holds], we see that Redex agrees
+ it is a valid derivation for @racket[same-exp].
+ @examples[#:label #f #:eval redex-eval
+           (judgment-holds same-exp same-exp-derivation)]
+
+ The premises must be in the same order in the
+ @racket[derivation] struct's @racket[_subs] field as they
+ appear in the definition of the judgment form.
 
 A rule's @racket[where], @racket[where/hidden], and @racket[where/error] premises behave as in 
 @racket[reduction-relation] and @racket[define-metafunction].
@@ -471,17 +573,36 @@ helpful when debugging.
 }
                              
 @defform*/subs[((judgment-holds judgment-or-relation)
-                (judgment-holds judgment-or-relation @#,tttterm))
+                (judgment-holds judgment-or-relation @#,tttterm)
+                (judgment-holds judgment-form-id derivation-expr))
                ([judgment-or-relation
                  (judgment-form-id pat/term ...)
                  (relation-id pat/term ...)])]{
-In its first form, checks whether @racket[judgment-or-relation] holds for any assignment of
-the pattern variables in @racket[judgment-form-id]'s output positions (or just that it holds
- in the case that a relation from @racket[define-relation] is used). In its second
-form, produces a list of terms by instantiating the supplied term template with
-each satisfying assignment of pattern variables. In the second case, if a relation
-is supplied, there are no pattern variables, so the result is either a list with
-one element or the empty list.
+                                             
+ In its first form, checks whether
+ @racket[judgment-or-relation] holds for any assignment of
+ the pattern variables in @racket[judgment-form-id]'s output
+ positions (or just that it holds in the case that a relation
+ from @racket[define-relation] is used).
+
+ In its second form, produces a list of terms by
+ instantiating the supplied term template with each
+ satisfying assignment of pattern variables. In the second
+ case, if a relation is supplied, there are no pattern
+ variables, so the result is either a list with one element
+ or the empty list.
+
+ In both of the first two forms, any given judgment form
+ must have a mode.
+
+ In its third form, the @racket[judgment-form-id] must not
+ have a mode, and the @racket[derivation-expr] must produce a
+ @racket[derviation] struct. The result of
+ @racket[judgment-holds] is @racket[#t] when the derivation
+ is valid, according to the rules of the judgment form, and
+ @racket[#f] otherwise. Note that the premises of the
+ derivation must appear in the same order as the premises in
+ the definition of the judgment form.
 
  @examples[#:label #f #:eval redex-eval
            (judgment-holds (sum (s (s z)) (s z) n))

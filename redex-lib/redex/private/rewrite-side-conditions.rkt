@@ -17,7 +17,9 @@ see also term.rkt for some restrictions/changes there
            "term-fn.rkt"
            "keyword-macros.rkt"
            racket/match
+           racket/sequence
            "match-a-pattern.rkt"
+           syntax/boundmap
            (for-template
             racket/base
             "term.rkt"
@@ -31,7 +33,8 @@ see also term.rkt for some restrictions/changes there
            make-language-id
            language-id-nts
            bind-pattern-names
-           check-hole-sanity)
+           check-hole-sanity
+           is-ellipsis?)
   
   (provide (struct-out id/depth))
   
@@ -364,9 +367,6 @@ see also term.rkt for some restrictions/changes there
           [(terms ...)
            (let ()
              (define terms-lst (syntax->list #'(terms ...)))
-             (define (is-ellipsis? term)
-               (and (identifier? term)
-                    (regexp-match? #rx"^[.][.][.]" (symbol->string (syntax-e term)))))
              (when (and (pair? terms-lst) (is-ellipsis? (car terms-lst)))
                (raise-syntax-error what
                                    "ellipsis should not appear in the first position of a sequence"
@@ -566,6 +566,11 @@ see also term.rkt for some restrictions/changes there
       (when nt->hole
         (check-hole-sanity what #'term nt->hole orig-stx))
       #'(void-stx term (name ...) (name/ellipses ...))))
+
+
+(define (is-ellipsis? term)
+  (and (identifier? term)
+       (regexp-match? #rx"^[.][.][.]" (symbol->string (syntax-e term)))))
 
 (define (break-out-underscore id)
   (define sym (syntax-e id))
@@ -790,9 +795,24 @@ see also term.rkt for some restrictions/changes there
                   (loop (cdr dups))))])))
 
   (define (bind-pattern-names err-name names/ellipses vals body)
-    (with-syntax ([(names/ellipsis ...) names/ellipses]
-                  [(val ...) vals])
+    (define known (make-free-identifier-mapping))
+    (define (get-id stx)
+      (syntax-case stx ()
+        [(x . y) (get-id #'x)]
+        [x (identifier? #'x) #'x]))
+    (with-syntax ([(binds ...)
+                   (for/list ([names/ellipsis (in-syntax names/ellipses)]
+                              [val (in-syntax vals)]
+                              #:unless (free-identifier-mapping-get
+                                        known
+                                        (get-id names/ellipsis)
+                                        (λ () #f)))
+                     (free-identifier-mapping-put!
+                      known
+                      (get-id names/ellipsis)
+                      #t)
+                     (list names/ellipsis val))])
       #`(term-let/error-name
          #,err-name
-         ([names/ellipsis val] ...) 
+         (binds ...)
          #,body)))

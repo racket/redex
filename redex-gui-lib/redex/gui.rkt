@@ -11,6 +11,7 @@
          "private/size-snip.rkt"
          "private/show-derivations.rkt"
          redex/private/judgment-form
+         redex/private/lang-struct
          mrlib/graph
          racket/contract
          racket/class

@@ -908,7 +908,6 @@
                       lang-nts
                       lang-id
                       sides/withs/freshs
-                      'flatten
                       #`(begin
                           from-syncheck-expr
                           (list (cons #,(or computed-name #'none)
@@ -1486,7 +1485,7 @@
                                    (bind-withs
                                     syn-error-name '()  
                                     #'effective-lang lang-nts #'lang
-                                    sc/b 'flatten
+                                    sc/b
                                     (if (free-identifier=? #'metafunction-leave-default-language-alone
                                                            #'lang)
                                         #`(list (term #,rhs))

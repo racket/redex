@@ -1083,7 +1083,548 @@
   (test (judgment-holds (->n (1 0) L) L)
         (list (term (2 0)))))
 
-(provide (all-defined-out))
+(let ()
+  (define-language L)
+  (define-judgment-form L
+    [(J any)
+     ------------ "()"
+     (J (any))]
 
+    [----------- "N"
+     (J natural)])
+
+  (test (judgment-holds
+         J
+         (derivation '(J 0) "N" '()))
+        #t)
+
+
+  (test (judgment-holds
+         J
+         (derivation '(J "x") "N" '()))
+        #f)
+
+  (test (judgment-holds
+         J
+         (derivation
+          '(J (0))
+          "()"
+          (list (derivation '(J 0) "N" '()))))
+        #t)
+
+  (test (judgment-holds
+         J
+         (derivation
+          '(J (0))
+          "()"
+          (list (derivation '(J "x") "N" '()))))
+        #f)
+
+  (test (judgment-holds
+         J
+         (derivation
+          '(J (((0))))
+          "()"
+          (list
+           (derivation
+            '(J ((0)))
+            "()"
+            (list
+             (derivation
+              '(J (0))
+              "()"
+              (list (derivation '(J 0) "N" '()))))))))
+        #t))
+
+(let ()
+  (define-language L)
+  (define-judgment-form L
+    [(J any)
+     ------------
+     (J (any))]
+
+    [-----------
+     (J natural)])
+
+  (test (judgment-holds
+         J
+         (derivation '(J 0) #f '()))
+        #t)
+
+  (test (judgment-holds
+         J
+         (derivation '(J "x") #f '()))
+        #f)
+
+  (test (judgment-holds
+         J
+         (derivation
+          '(J (0))
+          #f
+          (list (derivation '(J 0) #f '()))))
+        #t)
+
+  (test (judgment-holds
+         J
+         (derivation
+          '(J (0))
+          #f
+          (list (derivation '(J "x") #f '()))))
+        #f)
+
+  (test (judgment-holds
+         J
+         (derivation
+          '(J (((0))))
+          #f
+          (list
+           (derivation
+            '(J ((0)))
+            #f
+            (list
+             (derivation
+              '(J (0))
+              #f
+              (list (derivation '(J 0) #f '()))))))))
+        #t))
+
+(let ()
+  (define-language L)
+
+  (define-judgment-form L
+    [(J any_2)
+     ------------ "select"
+     (J (any_1 ... any_2 any_3 ...))]
+
+    [----------- "123"
+     (J 123)])
+
+  (test (judgment-holds
+         J
+         (derivation
+          '(J (123))
+          "select"
+          (list (derivation '(J 123) "123" '()))))
+        #t)
+
+  (test (judgment-holds
+         J
+         (derivation
+          '(J (1 123 3))
+          "select"
+          (list (derivation '(J 123) "123" '()))))
+        #t)
+
+  (test (judgment-holds
+         J
+         (derivation
+          '(J ((1) (2 3) (4 (4 5 123) 6) ()))
+          "select"
+          (list
+           (derivation
+            '(J (4 (4 5 123) 6))
+            "select"
+            (list
+             (derivation
+              '(J (4 5 123))
+              "select"
+              (list (derivation '(J 123) "123" '())))))))) 
+        #t))
+
+
+(let ()
+  (define-language L)
+
+  (define-judgment-form L
+    [(J any_1)
+     (J any_2)
+     ------------ "node"
+     (J (any_1 any_2))]
+
+    [----------- "leaf"
+     (J #f)])
+
+  (test (judgment-holds
+         J
+         (derivation
+          '(J (#f ((#f #f) #f)))
+          "node"
+          (list
+           (derivation '(J #f) "leaf" (list))
+           (derivation
+            '(J ((#f #f) #f))
+            "node"
+            (list
+             (derivation
+              '(J (#f #f))
+              "node"
+              (list
+               (derivation '(J #f) "leaf" (list))
+               (derivation '(J #f) "leaf" (list))))
+             (derivation '(J #f) "leaf" (list)))))))
+        #t))
+
+(let ()
+  (define-language nats
+    (n z (s n)))
+
+  (define-judgment-form nats
+    [(less-than (s n_1) (s n_2))
+     (less-than n_1 n_2)]
+    [(less-than z (s n))])
+
+  (test (judgment-holds less-than
+                        (derivation
+                         '(less-than (s z) (s (s (s z))))
+                         #f
+                         (list (derivation '(less-than z (s (s z))) #f '()))))
+        #t))
+
+(let ()
+  (define-language L)
+  (define-judgment-form L
+    [(J (any ...))
+     -----
+     (J (1 any ...))]
+    [(J (any ...))
+     -----
+     (J (2 any ...))]
+    [(J (any ...))
+     -----
+     (J (3 any ...))]
+
+    [-----
+     (J ())])
+
+  (test (judgment-holds J
+                        (derivation
+                         '(J (1 2 3 2 1))
+                         #f
+                         (list
+                          (derivation
+                           '(J (2 3 2 1))
+                           #f
+                           (list
+                            (derivation
+                             '(J (3 2 1))
+                             #f
+                             (list
+                              (derivation
+                               '(J (2 1))
+                               #f
+                               (list
+                                (derivation
+                                 '(J (1))
+                                 #f
+                                 (list
+                                  (derivation
+                                   '(J ())
+                                   #f
+                                   (list)))))))))))))
+        #t))
+
+(let ()
+  (define-language U
+    (n Z (S n)))
+
+  (define-judgment-form U
+    #:contract (jsum n n n)
+
+    [------------ "Z"
+     (jsum n Z n)]
+
+    [(jsum n_1 n_2 n_3)
+     -------------------------- "S"
+     (jsum n_1 (S n_2) (S n_3))])
+
+  (test (regexp-match?
+         #rx"^jsum: [^\n]*does not match contract"
+         (with-handlers ([exn:fail? exn-message])
+           (judgment-holds jsum
+                           (derivation
+                            '(jsum (S Z) Z (S ZZZ))
+                            "Z"
+                            (list)))
+           "no exception raised"))
+        #t)
+
+  (test (regexp-match?
+         #rx"^jsum: [^\n]*does not match contract"
+         (with-handlers ([exn:fail? exn-message])
+           (judgment-holds jsum
+                           (derivation
+                            '(jsum (S Z) (S Z) (S (S Z)))
+                            "S"
+                            (list
+                             (derivation
+                              '(jsum (S Z) ZZ (S Z))
+                              "Z"
+                              (list)))))
+           "no exception raised"))
+        #t)
+
+  (test (regexp-match?
+         #rx"^jsum: [^\n]*does not match contract"
+         (with-handlers ([exn:fail? exn-message])
+           (judgment-holds jsum
+                           (derivation
+                            '(jsum (S Z) (S Z) (S (S ZZZ)))
+                            "S"
+                            (list
+                             (derivation
+                              '(jsum (S Z) Z (S Z))
+                              "Z"
+                              (list)))))
+           "no exception raised"))
+        #t)
+
+  (test (regexp-match?
+         #rx"^jsum: unknown rule in derivation"
+         (with-handlers ([exn:fail? exn-message])
+           (judgment-holds jsum
+                           (derivation
+                            '(jsum Z Z Z)
+                            "ZZZ"
+                            (list)))
+           "no exception raised"))
+        #t))
+
+(let ()
+  (define-language U
+    (n Z (S n)))
+
+  (define-metafunction U
+    is-zero : n -> boolean
+    [(is-zero Z) #t]
+    [(is-zero n) #f])
+
+  (define-judgment-form U
+
+    [(where #t (is-zero n))
+     ---------------------- "Z"
+     (J n)])
+
+  (test (judgment-holds J
+                        (derivation
+                         '(J (S Z))
+                         "Z"
+                         (list)))
+        #f)
+
+  (test (judgment-holds J
+                        (derivation
+                         '(J Z)
+                         "Z"
+                         (list)))
+        #t))
+
+(let ()
+
+  (define-language L)
+
+  (define-judgment-form L
+    [(J any) ...
+     ------ "()"
+     (J (any ...))]
+
+    [----- "n"
+     (J natural)])
+
+
+  (test (judgment-holds
+         J
+         (derivation '(J 1) "n" (list)))
+        #t)
+
+  (test (judgment-holds
+         J
+         (derivation
+          '(J (1))
+          "()"
+          (list (derivation '(J 1) "n" (list)))))
+        #t)
+
+  (test (judgment-holds
+         J
+         (derivation
+          '(J (1 2))
+          "()"
+          (list (derivation '(J 1) "n" (list))
+                (derivation '(J 2) "n" (list)))))
+        #t)
+
+  (test (judgment-holds
+         J
+         (derivation
+          '(J (1 2 3))
+          "()"
+          (list (derivation '(J 1) "n" (list))
+                (derivation '(J 2) "n" (list))
+                (derivation '(J 3) "n" (list)))))
+        #t)
+
+  (test (judgment-holds
+         J
+         (derivation
+          '(J (1 2 3 4 5 6))
+          "()"
+          (list (derivation '(J 1) "n" (list))
+                (derivation '(J 2) "n" (list))
+                (derivation '(J 3) "n" (list))
+                (derivation '(J 4) "n" (list))
+                (derivation '(J 5) "n" (list))
+                (derivation '(J 6) "n" (list)))))
+        #t)
+
+  (test (judgment-holds
+         J
+         (derivation
+          '(J (1 2 3 4 5 6))
+          "()"
+          (list (derivation '(J 1) "n" (list))
+                (derivation '(J 2) "n" (list))
+                (derivation '(J "three") "n" (list))
+                (derivation '(J 4) "n" (list))
+                (derivation '(J 5) "n" (list))
+                (derivation '(J 6) "n" (list)))))
+        #f)
+
+  (test (judgment-holds
+         J
+         (derivation
+          '(J (1 2 3 4 5 6))
+          "()"
+          (list (derivation '(J 1) "n" (list))
+                (derivation '(J 2) "n" (list))
+                (derivation '(J 3) "n" (list))
+                (derivation '(J 5) "n" (list))
+                (derivation '(J 6) "n" (list)))))
+        #f)
+
+  (test (judgment-holds
+         J
+         (derivation
+          '(J ((1) 2 (3 4 (5))))
+          "()"
+          (list
+           (derivation
+            '(J (1))
+            "()"
+            (list (derivation '(J 1) "n" (list))))
+           (derivation '(J 2) "n" (list))
+           (derivation
+            '(J (3 4 (5)))
+            "()"
+            (list
+             (derivation '(J 3) "n" (list))
+             (derivation '(J 4) "n" (list))
+             (derivation
+              '(J (5)) "()"
+              (list (derivation '(J 5) "n" (list)))))))))
+        #t))
+
+(let ()
+  (define-language L)
+
+  (define-judgment-form L
+
+    [-------------- "0"
+     (same-exp any (any 0))]
+
+    [(same-exp any_1 any_2)
+     (same-exp any_2 any_3)
+     ---------------------- "trans"
+     (same-exp any_1 any_3)])
+
+  (test (judgment-holds
+         same-exp
+         (derivation '(same-exp 1 (1 0))
+                     "0"
+                     (list)))
+        #t)
+
+
+  (test (judgment-holds
+         same-exp
+         (derivation
+          '(same-exp 1 ((1 0) 0))
+          "trans"
+          (list
+           (derivation '(same-exp 1 (1 0))
+                       "0"
+                       (list))
+           (derivation '(same-exp (1 0) ((1 0) 0))
+                       "0"
+                       (list)))))
+        #t))
+
+(let ()
+  (define-language nats
+    (n ::= z (s n))
+    (e ::= (+ e e) n))
+
+  (define-judgment-form nats
+    #:mode (sum I I O)
+    #:contract (sum n n n)
+
+    [(sum n_1 n_2 n_3) 
+     -------------------------  "+1"
+     (sum (s n_1) n_2 (s n_3))]
+
+    [-----------  "zero"
+     (sum z n n)])
+
+  (define-judgment-form nats
+    [(sum n_1 n_2 n_3)
+     -------------------------- "add"
+     (same-exp (+ n_1 n_2) n_3)])
+
+  (test (judgment-holds
+         same-exp
+         (derivation '(same-exp (+ (s (s (s (s z)))) (s (s z)))
+                                   (s (s (s (s       (s (s z)))))))
+                     "add"
+                     (list)))
+        #t))
+
+(let ()
+  (define-language nats
+    (n ::= z (s n))
+    (e ::= (+ e e) n))
+
+  (define-judgment-form nats
+    #:mode (sum I I O)
+    #:contract (sum n n n)
+    [-----------  "zero"
+     (sum z n n)]
+
+    [(sum n_1 n_2 n_3)
+     ------------------------- "add1"
+     (sum (s n_1) n_2 (s n_3))])
+
+  (define-judgment-form nats
+    #:contract (same-exp e e)
+
+    [(sum n_1 n_2 n_3)
+     -------------------------- "add"
+     (same-exp (+ n_1 n_2) n_3)])
+
+  (test (judgment-holds
+         same-exp
+         (derivation '(same-exp (+ (s (s (s (s z))))
+                                   (s (s z)))
+                                (s (s (s (s (s (s z)))))))
+                     "add"
+                     (list)))
+        #t)
+
+  (test (judgment-holds
+         same-exp
+         (derivation '(same-exp (+ (s (s (s (s z))))
+                                   (s (s z)))
+                                (s (s (s (s (s z))))))
+                     "add"
+                     (list)))
+        #f))
 
 (print-tests-passed 'tl-judgment-form.rkt)

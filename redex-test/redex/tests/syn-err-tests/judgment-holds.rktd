@@ -2,7 +2,7 @@
  ([not-judgment-form junk])
  (judgment-holds (not-judgment-form z (s z))))
 
-(#rx"a[?]: mode specifies a 1-ary relation but use supplied 2 terms"
+(#rx"a[?]: mode specifies a unary relation but use supplied 2 terms"
  ([bad-judgment (a? a q)])
  ([name a?])
  (let ()
@@ -11,7 +11,7 @@
      [(name a)])
    (judgment-holds bad-judgment)))
 
-(#rx"mode specifies a 2-ary relation but use supplied 1 term"
+(#rx"mode specifies a binary relation but use supplied 1 term"
  ([bad-judgment (test Z)])
  ()
  (let ()

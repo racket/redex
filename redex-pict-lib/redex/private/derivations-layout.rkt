@@ -2,7 +2,7 @@
 (require racket/class
          racket/match
          racket/contract
-         redex/private/judgment-form
+         redex/private/lang-struct
          racket/dict)
 
 (provide

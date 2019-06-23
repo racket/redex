@@ -420,7 +420,6 @@
      (sum (s n_1) n_2 (s n_3))])
   
   (define-judgment-form nats
-    #:mode (mfw I O)
     [(mfw n_1 n_2)
      (where n_2 (f n_1))])
   

@@ -27,7 +27,10 @@
          from-smiley-number
          to-smiley-number
 
-         forward-errortrace-prop)
+         forward-errortrace-prop
+
+         judgment-form-pending-expansion
+         lookup-judgment-form-id)
 
 (define-values (struct-type make-term-fn term-fn? term-fn-get term-fn-set!) 
   (make-struct-type 'term-fn #f 1 0))
@@ -41,7 +44,9 @@
        (cond [(syntax-local-value stx (λ () #f)) => p?]
              [else #f])))
 
-;; mode: (or/c #f (listof (or/c 'I 'O))  -- #f means the judgment form is actually a relation
+;; mode: (or/c #f --  means the judgment form is actually a relation
+;;             natural -- the arity of the judgment form; used when there is no #:mode declaration
+;;             (listof (or/c 'I 'O))
 (define-struct judgment-form (name mode proc mk-proc lang lws rule-names 
                                    gen-clauses mk-gen-clauses term-proc relation?
                                    cache runtime-judgment-form-id
@@ -149,3 +154,12 @@
            (syntax-source prop))
       (syntax-property stx 'errortrace:annotate #t #t)
       stx))
+
+;; pre: (judgment-form-id? stx) holds
+(define (lookup-judgment-form-id stx)
+  (define jf-pe (judgment-form-pending-expansion))
+  (if (and jf-pe
+           (free-identifier=? (car jf-pe) stx))
+      (cdr jf-pe)
+      (syntax-local-value stx)))
+(define judgment-form-pending-expansion (make-parameter #f))

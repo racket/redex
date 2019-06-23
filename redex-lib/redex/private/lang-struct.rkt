@@ -26,8 +26,8 @@
          default-language
 
          extend-nt-ellipses
-         (for-syntax extend-nt-ellipses))
-
+         (for-syntax extend-nt-ellipses)
+         (struct-out derivation))
 
 (begin-for-syntax
   (define extend-nt-ellipses '(....)))
@@ -144,3 +144,14 @@
 (define default-language (make-parameter #f))
 
 (define-struct compiled-pattern (cp binds-names? skip-dup-check? lang-α-equal?) #:transparent)
+
+(struct derivation (term name subs) 
+  #:extra-constructor-name make-derivation
+  #:transparent
+  #:guard (λ (term name subs struct-name)
+            (unless (or (not name) (string? name))
+              (raise-argument-error struct-name "(or/c string? #f)" 1 term name subs))
+            (unless (and (list? subs)
+                         (andmap derivation? subs))
+              (raise-argument-error struct-name "derivation?" 2 term name subs))
+            (values term name subs)))

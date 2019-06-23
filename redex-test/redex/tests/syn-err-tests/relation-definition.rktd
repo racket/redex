@@ -29,7 +29,7 @@
  ([not-lang [(R a)]])
  (define-relation not-lang))
 
-(#rx"mode specifies a 2-ary relation but use supplied 3 terms"
+(#rx"mode specifies a binary relation but use supplied 3 terms"
  ([wrong-arity (J2 natural_1 natural_2 0)])
  (let ()
    (define-judgment-form syn-err-lang
