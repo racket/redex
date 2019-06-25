@@ -297,9 +297,6 @@
                                  [else (error 'unknown-where-mode "~s" where-mode)])
                              pat-id
                              (term e #:lang #,ct-lang)
-                             #,@(if (where/error? #'-where)
-                                    (list #`'orig-name "file.rkt" 12345 12 rt-lang)
-                                    (list))
                              #,proc-stx))))))]
          [((-side-condition s ...) y ...)
           (side-condition-keyword? #'-side-condition)
