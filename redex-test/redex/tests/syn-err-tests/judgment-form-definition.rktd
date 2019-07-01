@@ -22,6 +22,12 @@
    #:mode (sum I I O)
    #:contract bad-spec))
 
+(#rx"expected definition to include a mode specification"
+ ([bad-def (define-judgment-form syn-err-lang
+             #:contract (J)
+             [(J)])])
+ bad-def)
+
 (#rx"expected at most one contract specification"
  ([dup-spec (J)])
  (define-judgment-form syn-err-lang
@@ -113,14 +119,14 @@
       (where number_2 unbound)
       (where (name q number) number_1)])
    (void)))
-(#rx"J: mode specifies a unary relation but use supplied 0 terms"
+(#rx"J: mode specifies a 1-ary relation but use supplied 0 terms"
  ([bad-conc (J)]) ([name J])
  (let ()
    (define-judgment-form syn-err-lang
      #:mode (name I)
      [bad-conc])
    (void)))
-(#rx"J: mode specifies a unary relation but use supplied 0 terms"
+(#rx"J: mode specifies a 1-ary relation but use supplied 0 terms"
  ([bad-prem (J)]) ([name J])
  (let ()
    (define-judgment-form syn-err-lang
@@ -128,7 +134,7 @@
      [(name number)
       bad-prem])
    (void)))
-(#rx"J: mode specifies a nullary relation but use supplied 1 term"
+(#rx"J: mode specifies a 0-ary relation but use supplied 1 term"
  ([bad-prem (J a)]) ([name J])
  (let ()
    (define-judgment-form syn-err-lang
@@ -190,14 +196,14 @@
    (void)))
 
 (#rx"does not match original mode"
- ([J1e J1]) ([J2 J2])
+ ([mode2 (J2 I O O)]) ([J2 J2])
  (let ()
    (define-language L)
    (define-judgment-form L
      #:mode (J1 I I O)
      [(J1 any_1 any_2 any_2)])
-   (define-extended-judgment-form L J1e
-     #:mode (J2 I O O)
+   (define-extended-judgment-form L J1
+     #:mode mode2
      [(J2 any_1 17 any_1)])
    (void)))
 

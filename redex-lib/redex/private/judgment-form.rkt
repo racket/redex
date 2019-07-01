@@ -12,7 +12,6 @@
          racket/list
          racket/stxparam
          racket/dict
-         racket/match
          (only-in "pat-unify.rkt"
                   unsupported-pat-err-name
                   unsupported-pat-err)
@@ -152,19 +151,10 @@
   (require racket/list)
   
   (provide split-by-mode
-           assemble
-           mode->arity)
-
-  (define (mode->arity mode)
-    (cond
-      [(not mode)
-       (error 'mode->arity.internal-error "no arity when mode is #f")]
-      [(number? mode) mode]
-      [else (length mode)]))
+           assemble)
   
   (define (split-by-mode xs mode)
     (cond
-      [(number? mode) (values xs '())]
       [mode
        (for/fold ([ins '()] [outs '()])
                  ([x (in-list (reverse xs))]
@@ -178,7 +168,6 @@
   
   (define (assemble mode inputs outputs)
     (cond
-      [(number? mode) inputs]
       [mode
        (let loop ([ms mode] [is inputs] [os outputs])
          (if (null? ms)
@@ -247,8 +236,7 @@
 ;;   some extension of that language may end up being bound to rt-lang
 (define-for-syntax (bind-withs orig-name main rt-lang lang-nts ct-lang stx
                                where-mode body names w/ellipses
-                               side-condition-unquoted? called-from-modeless-jf?
-                               jf-results-id)
+                               side-condition-unquoted? jf-results-id)
   (define compiled-pattern-identifiers '())
   (define patterns-to-compile '())
   (define body-stx
@@ -353,12 +341,6 @@
             (define judgment-form (lookup-judgment-form-id #'form-name))
             (check-judgment-arity stx premise)
             (define mode (judgment-form-mode judgment-form))
-            (when (number? mode)
-              (unless called-from-modeless-jf?
-                (raise-syntax-error
-                 orig-name
-                 "cannot use a modeless judgment-form except from another modeless judgment form"
-                 premise)))
             (define runtime-judgment-form-id (judgment-form-runtime-judgment-form-id judgment-form))
             (define-values (input-template output-pre-pattern)
               (let-values ([(in out) (split-by-mode (syntax->list #'(pats ...)) mode)])
@@ -666,123 +648,6 @@
      (and (include-jf-rulename) rulename)
      this-output)))
 
-;; symbol hash[rulename -o> (listof modeless-jf-clause?)] derivation -> match or #f
-(define (call-modeless-judgment-form lang jf-name modeless-jf-clause-table deriv)
-  (match deriv
-    [(derivation (cons deriv-jf-name jf-args) rule-name sub-derivations)
-     (cond
-       [(equal? jf-name deriv-jf-name)
-        (modeless-jf-process-rule-candidates
-         lang
-         (hash-ref modeless-jf-clause-table rule-name)
-         jf-args
-         sub-derivations
-         (λ (bindings fail) bindings)
-         (λ () #f))]
-       [else #f])]
-    [_ #f]))
-
-(define (modeless-jf-process-rule-candidates lang candidates jf-args sub-derivations succ fail)
-  (match candidates
-    [`() (fail)]
-    [(cons (modeless-jf-clause conclusion-compiled-pattern
-                               premise-jf-procs
-                               premise-compiled-patterns)
-           more-candidates)
-     (define mtch (match-pattern conclusion-compiled-pattern jf-args))
-     (cond
-       [mtch
-        (define bindings1 (map mtch-bindings mtch))
-        (modeless-jf-process-sd
-         lang
-         sub-derivations
-         premise-jf-procs
-         premise-compiled-patterns
-         (λ (bindings2 fail)
-           (define bindings3 (combine-bindings-lists bindings1
-                                                     bindings2
-                                                     (λ (a b) (alpha-equivalent? lang a b))))
-           (if bindings3
-               (succ bindings3 fail)
-               (fail)))
-         (λ () (modeless-jf-process-rule-candidates lang
-                                                    more-candidates
-                                                    jf-args
-                                                    sub-derivations
-                                                    succ
-                                                    fail)))]
-       [else (modeless-jf-process-rule-candidates lang
-                                                  more-candidates
-                                                  jf-args
-                                                  sub-derivations
-                                                  succ
-                                                  fail)])]))
-             
-(define (modeless-jf-process-sd lang
-                                sub-derivations
-                                premise-jf-procs
-                                premise-compiled-patterns
-                                succ fail)
-  (match sub-derivations
-    [`() (succ (list empty-bindings) fail)]
-    [(cons sub-derivation more-sub-derivations)
-     (modeless-jf-process-prems
-      sub-derivation
-      premise-jf-procs
-      premise-compiled-patterns
-      (λ (bindings1 fail)
-        (modeless-jf-process-sd
-         lang
-         more-sub-derivations
-         premise-jf-procs
-         premise-compiled-patterns
-         (λ (bindings2 fail)
-           (define bindings3
-             (combine-bindings-lists bindings1
-                                     bindings2
-                                     (λ (a b) (alpha-equivalent? lang a b))))
-           (if bindings3
-               (succ bindings3 fail)
-               (fail)))
-         fail))
-      fail)]))
-
-(define (modeless-jf-process-prems sub-derivation premise-jf-procs premise-compiled-patterns
-                                   succ
-                                   fail)
-  (match* (premise-jf-procs premise-compiled-patterns)
-    [(`() `()) (fail)]
-    [((cons premise-jf-proc premise-jf-procs)
-      (cons premise-compiled-pattern premise-compiled-patterns))
-     (cond
-       [(premise-jf-proc sub-derivation)
-        (define premise-mtchs
-          (match-pattern premise-compiled-pattern
-
-                         ;; this cdr drops the name of the judgment form
-                         ;; and should not fail because the call to
-                         ;; (car premise-jf-procs) would be #f in that case
-                         (cdr (derivation-term sub-derivation))))
-        (cond
-          [premise-mtchs
-           (succ (map mtch-bindings premise-mtchs)
-                 (λ ()
-                   (modeless-jf-process-prems sub-derivation
-                                              premise-jf-procs
-                                              premise-compiled-patterns
-                                              succ
-                                              fail)))]
-          [else
-           (modeless-jf-process-prems sub-derivation
-                                      premise-jf-procs
-                                      premise-compiled-patterns
-                                      succ fail)])]
-       [else
-        (modeless-jf-process-prems sub-derivation
-                                   premise-jf-procs
-                                   premise-compiled-patterns
-                                   succ fail)])]))
-
 (define include-entire-derivation (make-parameter #f))
 (define include-jf-rulename (make-parameter #f))
 
@@ -815,19 +680,13 @@
     [(form-name pat ...)
      (judgment-form-id? #'form-name)
      (unless (jf-is-relation? #'form-name)
-       (let ([expected (mode->arity (judgment-form-mode (lookup-judgment-form-id #'form-name)))]
+       (let ([expected (length (judgment-form-mode (lookup-judgment-form-id #'form-name)))]
              [actual (length (syntax->list #'(pat ...)))])
          (unless (= actual expected)
            (raise-syntax-error 
             #f 
-            (format "mode specifies a ~a relation but use supplied ~a term~a"
-                    (case expected
-                      [(0) "nullary"]
-                      [(1) "unary"]
-                      [(2) "binary"]
-                      [else (format "~a-ary" expected)])
-                    actual
-                    (if (= actual 1) "" "s"))
+            (format "mode specifies a ~a-ary relation but use supplied ~a term~a" 
+                    expected actual (if (= actual 1) "" "s"))
             judgment))))]
     [(form-name pat ...)
      (raise-syntax-error #f "expected a judgment form name" stx #'form-name)]))
@@ -1040,14 +899,9 @@
 
 (define-for-syntax (do-extended-judgment-form lang syn-err-name body orig stx is-relation?)
   (define nts (definition-nts lang stx syn-err-name))
-  (define orig-mode (and orig
-                         (judgment-form-id? #'orig) ;; if this fails, there will be a syntax error later
-                         (judgment-form-mode (lookup-judgment-form-id #'orig))))
-  (define-values (judgment-form-name
-                  dup-form-names
-                  mode-stx mode
-                  position-contracts invariant clauses rule-names)
-    (parse-judgment-form-body body syn-err-name stx (identifier? orig) orig-mode is-relation?))
+  (define-values (judgment-form-name dup-form-names mode-stx position-contracts invariant clauses rule-names)
+    (parse-judgment-form-body body syn-err-name stx (identifier? orig) is-relation?))
+  (define mode (and mode-stx (syntax->datum mode-stx)))
   (define definitions
     (with-syntax ([judgment-form-runtime-proc
                    (syntax-property (forward-errortrace-prop
@@ -1058,7 +912,7 @@
       #`(begin
           #,@(if (identifier? orig) (list #`(void (λ () #,orig))) (list)) ;; for check syntax
           (define-syntax #,judgment-form-name 
-            (judgment-form '#,judgment-form-name '#,mode #'judgment-form-runtime-proc
+            (judgment-form '#,judgment-form-name '#,(and mode (cdr mode)) #'judgment-form-runtime-proc
                            #'mk-judgment-form-proc #'#,lang #'jf-lws
                            '#,rule-names #'judgment-runtime-gen-clauses #'mk-judgment-gen-clauses #'jf-term-proc #,is-relation?
                            #'jf-cache #'the-runtime-judgment-form
@@ -1071,17 +925,17 @@
                           original-contract-expression
                           judgment-form-input-contract
                           judgment-form-output-contract)
-            (compile-judgment-form #,judgment-form-name #,mode #,lang #,clauses #,rule-names #,position-contracts #,invariant
+            (compile-judgment-form #,judgment-form-name #,mode-stx #,lang #,clauses #,rule-names #,position-contracts #,invariant
                                    #,orig #,stx #,syn-err-name judgment-runtime-gen-clauses))
           (define judgment-form-runtime-proc (mk-judgment-form-proc #,lang))
           (define jf-lws (compiled-judgment-form-lws #,clauses #,judgment-form-name #,stx))
           (define judgment-runtime-gen-clauses (mk-judgment-gen-clauses #,lang (λ () (judgment-runtime-gen-clauses))))
-          (define jf-term-proc (make-jf-term-proc #,judgment-form-name #,syn-err-name #,lang #,nts #,mode))
+          (define jf-term-proc (make-jf-term-proc #,judgment-form-name #,syn-err-name #,lang #,nts #,mode-stx))
           (define the-runtime-judgment-form
             (build-runtime-judgment-form #,orig
                                          '#,judgment-form-name
                                          judgment-form-runtime-proc
-                                         '#,mode
+                                         '#,(and mode (cdr mode))
                                          #,lang
                                          original-contract-expression
                                          judgment-form-input-contract
@@ -1115,7 +969,7 @@
 (define-for-syntax (jf-is-relation? jf-id)
   (judgment-form-relation? (lookup-judgment-form-id jf-id)))
 
-(define-for-syntax (parse-judgment-form-body body syn-err-name full-stx extension? orig-mode is-relation?)
+(define-for-syntax (parse-judgment-form-body body syn-err-name full-stx extension? is-relation?)
   (define-syntax-class pos-mode
     #:literals (I O)
     (pattern I)
@@ -1136,43 +990,27 @@
                                     (not (horizontal-line? #'x))
                                     (not (eq? '... (syntax-e #'x))))
                                (string? (syntax-e #'x))))))
-
-  (define (conc->arity-count conc)
-    (syntax-parse conc
-      [(jf . args)
-       (define l (syntax->list #'args))
-       (and l (length l))]
-      [_ #f]))
-
   (define (parse-rules rules)
-    (define-values (backward-rules backward-names length-of-first-conc)
+    (define-values (backward-rules backward-names)
       (for/fold ([parsed-rules '()]
-                 [names '()]
-                 [length-of-first-conc #f])
-                ([rule (in-list rules)])
+                 [names '()])
+        ([rule rules])
         (syntax-parse rule
           [(prem ... _:horizontal-line n:name conc)
            (values (cons #'(conc prem ...) parsed-rules)
-                   (cons #'n names)
-                   (or length-of-first-conc (conc->arity-count #'conc)))]
+                   (cons #'n names))]
           [(prem ... _:horizontal-line conc)
            (values (cons #'(conc prem ...) parsed-rules)
-                   (cons #f names)
-                   (or length-of-first-conc (conc->arity-count #'conc)))]
+                   (cons #f names))]
           [(conc prem ... n:name)
            (values (cons #'(conc prem ...) parsed-rules)
-                   (cons #'n names)
-                   (or length-of-first-conc (conc->arity-count #'conc)))]
+                   (cons #'n names))]
           [else
            (values (cons rule parsed-rules)
-                   (cons #f names)
-                   length-of-first-conc)])))
+                   (cons #f names))])))
     (values (reverse backward-rules)
-            (reverse backward-names)
-            length-of-first-conc))
-
-  (define-values (name/mode mode-stx name/contract contract invariant rules rule-names
-                            length-of-first-conc)
+            (reverse backward-names)))
+  (define-values (name/mode mode-stx name/contract contract invariant rules rule-names)
     (syntax-parse body #:context full-stx
       [((~or (~seq #:mode ~! mode:mode-spec)
              (~seq #:contract ~! contract:contract-spec)
@@ -1181,12 +1019,14 @@
         rule:expr ...)
        (let-values ([(name/mode mode)
                      (syntax-parse #'(mode ...)
-                       [() (values #f #f)]
+                       [() #:when is-relation? (values #f #f)]
                        [((name the-mode ...)) (values #'name (car (syntax->list #'(mode ...))))]
                        [_ 
                         (raise-syntax-error 
                          #f
-                         "expected definition to include at most one mode specification"
+                         (if (null? (syntax->list #'(mode ...)))
+                             "expected definition to include a mode specification"
+                             "expected definition to include only one mode specification")
                          full-stx)])]
                     [(name/ctc ctc)
                      (syntax-parse #'(contract ...)
@@ -1204,23 +1044,8 @@
                         (raise-syntax-error
                          syn-err-name "expected at most one invariant specification"
                          #f #f (syntax->list #'dups))])])
-         (define-values (parsed-rules rule-names length-of-first-conc)
-           (parse-rules (syntax->list #'(rule ...))))
-         (values name/mode mode name/ctc ctc invt parsed-rules rule-names
-                 length-of-first-conc))]))
-
-  (define mode
-    (cond
-      [mode-stx
-       (cdr (syntax->datum mode-stx))]
-      [orig-mode orig-mode]
-      [else length-of-first-conc]))
-
-  (unless is-relation?
-    (unless mode
-      (raise-syntax-error syn-err-name
-                          "internal error: could not find mode"
-                          full-stx)))
+         (define-values (parsed-rules rule-names) (parse-rules (syntax->list #'(rule ...)))) 
+         (values name/mode mode name/ctc ctc invt parsed-rules rule-names))]))
   (check-clauses full-stx syn-err-name rules #t)
   (check-dup-rule-names full-stx syn-err-name rule-names)
   (unless is-relation? (check-arity-consistency mode-stx contract full-stx))
@@ -1237,7 +1062,7 @@
         [(symbol? (syntax-e name))
          (symbol->string (syntax-e name))]
         [else (syntax-e name)])))
-  (values form-name dup-names mode-stx mode contract invariant rules string-rule-names))
+  (values form-name dup-names mode-stx contract invariant rules string-rule-names))
 
 ;; names : (listof (or/c #f syntax[string]))
 (define-for-syntax (check-dup-rule-names full-stx syn-err-name names)
@@ -1283,42 +1108,35 @@
 
 (define-syntax (make-jf-term-proc stx)
   (syntax-parse stx
-    [(_  jdg-name syn-err-name lang nts _mode)
-     (define mode (syntax->datum #'_mode))
-     (cond
-       [(number? mode)
-        #'(λ (_)
-            (error 'syn-err-name
-                   "judgment forms no mode cannot be used in term"))]
-       [(and mode (member 'O mode))
+    [(_  jdg-name syn-err-name lang nts mode-stx)
+     (define full-mode (syntax->datum #'mode-stx))
+     (define mode (and full-mode (cdr full-mode)))
+     (if (and mode (member 'O mode))
          #'(λ (_)
-             (error 'syn-err-name
-                    "judgment forms with output mode positions cannot be used in term"))]
-       [else
-        (with-syntax* ([(binding ...) (if mode (generate-temporaries mode) '())]
-                       [(input) (generate-temporaries (list #'input))])
-          (define-values (body-stx compiled-pattern-identifiers patterns-to-compile)
-            (bind-withs (syntax-e #'syn-err-name) '() #'lang (syntax->datum #'nts) #'lang
-                        (if (jf-is-relation? #'jdg-name)
-                            (list #'(jdg-name (unquote-splicing input)))
-                            (list #'(jdg-name (unquote binding) ...)))
-                        'flatten
-                        #`(list #t)
-                        '()
-                        '()
-                        #f
-                        #f
-                        #f))
-          (with-syntax ([(compiled-pattern-identifier ...) compiled-pattern-identifiers]
-                        [(pattern-to-compile ...) patterns-to-compile])
-            #`(let ([compiled-pattern-identifier (compile-pattern lang pattern-to-compile #t)] ...)
-                #,(if (jf-is-relation? #'jdg-name)
-                      #`(λ (input)
-                          (not (null? #,body-stx)))
-                      #`(λ (input)
-                          (check-length input 'jdg-name #,(length mode))
-                          (let-values ([(binding ...) (apply values input)])
-                            (not (null? #,body-stx))))))))])]))
+             (error 'syn-err-name "judgment forms with output mode positions cannot be used in term"))
+         (with-syntax* ([(binding ...) (if mode (generate-temporaries mode) '())]
+                        [(input) (generate-temporaries (list #'input))])
+           (define-values (body-stx compiled-pattern-identifiers patterns-to-compile)
+             (bind-withs (syntax-e #'syn-err-name) '() #'lang (syntax->datum #'nts) #'lang
+                         (if (jf-is-relation? #'jdg-name)
+                             (list #'(jdg-name (unquote-splicing input)))
+                             (list #'(jdg-name (unquote binding) ...)))
+                         'flatten
+                         #`(list #t)
+                         '()
+                         '()
+                         #f
+                         #f))
+           (with-syntax ([(compiled-pattern-identifier ...) compiled-pattern-identifiers]
+                         [(pattern-to-compile ...) patterns-to-compile])
+             #`(let ([compiled-pattern-identifier (compile-pattern lang pattern-to-compile #t)] ...)
+                 #,(if (jf-is-relation? #'jdg-name)
+                       #`(λ (input)
+                           (not (null? #,body-stx)))
+                       #`(λ (input)
+                           (check-length input '#,(car full-mode) #,(length mode))
+                           (let-values ([(binding ...) (apply values input)])
+                             (not (null? #,body-stx)))))))))]))
 
 (define (check-length input name input-size)
   (unless (= (length input) input-size)
@@ -1327,22 +1145,6 @@
 
 (define-syntax (judgment-holds/derivation stx)
   (syntax-case stx ()
-    [(_ stx-name jf-id expr)
-     (identifier? #'jf-id)
-     (let ()
-       (unless (judgment-form-id? #'jf-id)
-         (raise-syntax-error (syntax-e #'stx-name)
-                             "expected a modeless judgment form when the name is used alone"
-                             #'jf-id))
-       (define judgment-form-record (lookup-judgment-form-id #'jf-id))
-       (unless (number? (judgment-form-mode judgment-form-record))
-         (raise-syntax-error (syntax-e #'stx-name)
-                             "expected a modeless judgment form when the name is used alone"
-                             #'jf-id))
-       #`(call-modeless-judgment-form #,(judgment-form-lang judgment-form-record)
-                                      'jf-id
-                                      #,(judgment-form-proc judgment-form-record)
-                                      expr))]
     [(_ stx-name derivation? judgment)
      (forward-errortrace-prop
       stx
@@ -1350,7 +1152,6 @@
         (not (null? #,(forward-errortrace-prop
                        stx
                        (syntax/loc stx (judgment-holds/derivation stx-name derivation? judgment #t)))))))]
-         
     [(_ stx-name derivation? (form-name . pats) tmpl)
      (judgment-form-id? #'form-name)
      (let* ([syn-err-name (syntax-e #'stx-name)]
@@ -1372,7 +1173,6 @@
                      '()
                      '()
                      #f
-                     (number? (judgment-form-mode judgment-form-record))
                      id-or-not))
        
        (check-judgment-arity stx judgment)
@@ -1403,79 +1203,24 @@
 (define (sort-as-strings l) (sort l string<? #:key (λ (x) (format "~s" x))))
 
 (define-syntax (judgment-holds stx)
-  (syntax-parse stx
-    [(_ jf-id e:expr)
-     #:when (identifier? #'jf-id)
-     (define arg (stx-car (stx-cdr stx)))
-     #`(#%expression
-        #,(forward-errortrace-prop
-           arg
-           (quasisyntax/loc arg (judgment-holds/derivation judgment-holds #,arg e))))]
-    [(_ (jf-id . args))
-     (define arg (stx-car (stx-cdr stx)))
-     #`(#%expression
-        #,(forward-errortrace-prop
-           arg
-           (quasisyntax/loc arg (judgment-holds/derivation judgment-holds #f #,arg))))]
-    [(_ (jf-id . args) trm)
-     (define arg (stx-car (stx-cdr stx)))
-     #`(#%expression
-        #,(forward-errortrace-prop
-           arg
-           (quasisyntax/loc arg (judgment-holds/derivation judgment-holds #f #,arg trm))))]))
+  (syntax-case stx ()
+    [(_  (jf-id . args))
+     (let ([arg (stx-car (stx-cdr stx))])
+       #`(#%expression #,(forward-errortrace-prop arg (quasisyntax/loc arg (judgment-holds/derivation judgment-holds #f #,arg)))))]
+    [(_  (jf-id . args) trm)
+     (let ([arg (stx-car (stx-cdr stx))])
+       #`(#%expression #,(forward-errortrace-prop arg (quasisyntax/loc arg (judgment-holds/derivation judgment-holds #f #,arg trm)))))]))
 
 (define-syntax (build-derivations stx)
   (syntax-case stx ()
     [(_  jf-expr)
      #'(#%expression (judgment-holds/derivation build-derivations #t jf-expr any))]))
 
-(define-for-syntax (ensure-valid-extension stx orig name mode syn-error-name)
-  (when (identifier? orig)
-    (define orig-mode (judgment-form-mode (lookup-judgment-form-id orig)))
-    (unless (equal? mode orig-mode)
-      (cond
-        [(and orig-mode (not mode))
-         (raise-syntax-error syn-error-name
-                             "cannot extend a judgment-form with a relation"
-                             stx
-                             orig)]
-        [(and mode (not orig-mode))
-         (raise-syntax-error syn-error-name
-                             "cannot extend a relation with a judgment-form"
-                             stx
-                             orig)]
-        [(and (number? orig-mode)
-              (not (number? mode)))
-         (raise-syntax-error
-          syn-error-name
-          "cannot extend a judgment-form with no mode with a judgment-form that has a mode"
-          stx
-          orig)]
-        [(and (not (number? orig-mode))
-              (number? mode))
-         (raise-syntax-error
-          syn-error-name
-          "cannot extend a judgment-form with a mode with a judgment-form that has no mode"
-          stx
-          orig)]
-        [(and orig-mode mode)
-         (raise-syntax-error syn-error-name
-                             (format
-                              (string-append
-                               "mode for extended judgment form does not match original mode;\n"
-                               "  original  mode: ~s\n"
-                               "  extension mode: ~s")
-                              `(,(syntax-e orig) ,@orig-mode)
-                              `(,(syntax-e name) ,@mode))
-                             stx
-                             orig)]
-        [else (error syn-error-name "should not happen")]))))
-
-(define-for-syntax (do-compile-judgment-form-proc name mode clauses rule-names
+(define-for-syntax (do-compile-judgment-form-proc name mode-stx clauses rule-names
                                                   orig-ctcs nts orig lang stx syn-error-name)
-  
+  (define is-relation? (jf-is-relation? name))
   (with-syntax ([(init-jf-derivation-id) (generate-temporaries '(init-jf-derivation-id))])
-    
+    (define mode (let ([m (syntax->datum mode-stx)]) (and m (cdr m))))
     (define (compile-clause clause clause-name)
       (syntax-case clause ()
         [((_ . conc-pats) . prems)
@@ -1497,14 +1242,12 @@
                                                    #'compiled-output-contract-pat]))])
                  (bind-withs syn-error-name '() lang nts lang
                              (syntax->list #'prems) 
-                             'flatten #`(list (derivation-with-output-only
-                                               (term (#,@output-pats) #:lang #,lang)
-                                               #,clause-name
-                                               jf-derivation-id))
+                             'flatten #`(list (derivation-with-output-only (term (#,@output-pats) #:lang #,lang)
+                                                                           #,clause-name
+                                                                           jf-derivation-id))
                              (syntax->list #'(names ...))
                              (syntax->list #'(names/ellipses ...))
                              #f
-                             (number? mode)
                              #'jf-derivation-id)))
              (with-syntax ([(compiled-lhs) (generate-temporaries '(compiled-lhs))]
                            [(compiled-pattern-identifier ...) compiled-pattern-identifiers]
@@ -1525,6 +1268,32 @@
                                                #'(names/ellipses ...)
                                                #'((lookup-binding bnds 'names) ...)
                                                body)))))))))]))
+  
+    (when (identifier? orig)
+      (define orig-mode (judgment-form-mode (lookup-judgment-form-id orig)))
+      (unless (equal? mode orig-mode)
+        (cond
+          [(and orig-mode mode)
+           (raise-syntax-error syn-error-name
+                               (format
+                                (string-append
+                                 "mode for extended judgment form does not match original mode;\n"
+                                 "  original  mode: ~s\n"
+                                 "  extension mode: ~s")
+                                `(,(syntax-e orig) ,@orig-mode)
+                                `(,(syntax-e name) ,@mode))
+                               stx
+                               mode-stx)]
+          [orig-mode
+           (raise-syntax-error syn-error-name
+                               "cannot extend a judgment-form with a relation"
+                               stx
+                               mode-stx)]
+          [mode
+           (raise-syntax-error syn-error-name
+                               "cannot extend a relation with a judgment-form"
+                               stx
+                               mode-stx)])))
     
     (with-syntax ([(((clause-proc-binding ...) clause-proc-body) ...) (map compile-clause clauses rule-names)])
       (with-syntax ([(clause-proc-body-backwards ...) (reverse (syntax->list #'(clause-proc-body ...)))])
@@ -1549,106 +1318,6 @@
                        compiled-input-contract-pat
                        compiled-output-contract-pat)
                     (append clause-proc-body-backwards ...)))))))))
-
-(define-for-syntax (do-compile-modeless-judgment-form-proc name mode clauses rule-names
-                                                           orig-ctcs nts orig lang stx syn-error-name)
-  (define (compile-clause clause clause-name)
-    (syntax-parse clause
-      [((_ . conc-pats) . prems)
-
-       (define-values (modeless-prems normal-prems)
-         (for/fold ([modeless-prems '()]
-                    [normal-prems '()])
-                   ([prem (in-list (syntax->list #'prems))])
-           (syntax-parse prem
-             [(form-name . more)
-              #:when (and (judgment-form-id? #'form-name)
-                          (number?
-                           (judgment-form-mode
-                            (lookup-judgment-form-id #'form-name))))
-              (values (cons prem modeless-prems)
-                      normal-prems)]
-             [_
-              (values modeless-prems
-                      (cons prem normal-prems))])))
-
-       (define/syntax-parse ((modeless-prems-syncheck-exp
-                              modeless-prem
-                              (modeless-prem-names ...)
-                              (modeless-prem-names/ellipses ...)) ...)
-         (for/list ([modeless-prem (in-list modeless-prems)])
-           (syntax-parse modeless-prem
-             [(form-name . more)
-              (rewrite-side-conditions/check-errs lang syn-error-name #t #'more)])))
-
-       (define/syntax-parse ((modeless-prem-jf-id modeless-prem-proc) ...)
-         (for/list ([modeless-prem (in-list modeless-prems)])
-           (syntax-parse modeless-prem
-             [(jf-id . more)
-              #`(jf-id
-                 #,(judgment-form-proc (lookup-judgment-form-id #'jf-id)))])))
-       
-       (define/syntax-parse (compiled-conc-x compiled-modeless-prem-x ...)
-         (generate-temporaries (cons 'compiled-conc-x #'(modeless-prem ...))))
-         
-       (define/syntax-parse (conc-syncheck-exp
-                             conc
-                             (conc-names ...)
-                             (conc-names/ellipses ...))
-         (rewrite-side-conditions/check-errs lang syn-error-name #t #'conc-pats))
-         
-       (define-values (body compiled-pattern-identifiers patterns-to-compile)
-         (parameterize ([judgment-form-pending-expansion
-                         (cons name
-                               (struct-copy judgment-form (lookup-judgment-form-id name)
-                                            [proc #'recur]
-                                            [cache #'recur-cache]
-                                            [original-contract-expression-id
-                                             #'original-contract-expression]
-                                            [compiled-input-contract-pat-id
-                                             #'compiled-input-contract-pat]
-                                            [compiled-output-contract-pat-id
-                                             #'compiled-output-contract-pat]))])
-           (bind-withs syn-error-name '() lang nts lang
-                       normal-prems
-                       'flatten
-                       #`#t ;; body
-                       (syntax->list #'(conc-names ... modeless-prem-names ... ...))
-                       (syntax->list #'(conc-names/ellipses ...
-                                        modeless-prem-names/ellipses ... ...))
-                       #f
-                       (number? mode)
-                       #'jf-derivation-id)))
-       
-       #`(modeless-jf-clause
-          (compile-pattern lang `conc #t)
-          (list (λ (deriv)
-                  (call-modeless-judgment-form lang
-                                               'modeless-prem-jf-id
-                                               modeless-prem-proc
-                                               deriv)) ...)
-          (list (compile-pattern lang `modeless-prem #t) ...))]))
-
-  (define noname-clauses '())
-  (define named-clauses '())
-  (for ([clause (in-list clauses)]
-        [rule-name (in-list rule-names)])
-    (define compiled (compile-clause clause rule-name))
-    (cond
-      [rule-name (set! named-clauses
-                       (cons #`(cons #,rule-name (list #,compiled))
-                             named-clauses))]
-      [else (set! noname-clauses (cons compiled noname-clauses))]))
-    
-  #`(λ (lang)
-      (make-hash (list #,@named-clauses
-                       #,@(if (null? noname-clauses)
-                              (list)
-                              (list #`(cons #f (list #,@noname-clauses))))))))
-
-(struct modeless-jf-clause (conclusion-compiled-pattern
-                            premise-jf-procs
-                            premise-compiled-patterns))
 
 (define (combine-judgment-rhses compiled-lhs input rhs)
   (define mtchs (match-pattern compiled-lhs input))
@@ -1745,7 +1414,7 @@
                        "  values:   ~s")
                       (cons form-name orig-ctcs) (cons form-name io-term)))])))
 
-(define-for-syntax (mode-check this-mode clauses nts syn-err-name orig-stx)
+(define-for-syntax (mode-check mode clauses nts syn-err-name orig-stx)
   (define ((check-template bound-anywhere) temp bound)
     (let check ([t temp])
       (syntax-case t (unquote)
@@ -1767,18 +1436,11 @@
     (for/fold ([b bound]) ([x ids])
       (free-id-table-set b x #t)))
   (define (split-body judgment)
-    (syntax-parse judgment
+    (syntax-case judgment ()
       [(form-name . body)
-       (define their-mode
-         (judgment-form-mode
-          (lookup-judgment-form-id #'form-name)))
-       (when (list? this-mode)
-         (unless (or (not their-mode) (list? their-mode))
-           (raise-syntax-error
-            syn-err-name
-            "judgment forms with a mode cannot use judgment forms without a mode"
-            judgment)))
-       (split-by-mode (syntax->list #'body) their-mode)]))
+       (split-by-mode (syntax->list #'body)
+                      (judgment-form-mode
+                       (lookup-judgment-form-id #'form-name)))]))
   (define (drop-ellipses prems)
     (syntax-case prems ()
       [() '()]
@@ -1944,9 +1606,9 @@
            [clauses (if (jf-is-relation? #'judgment-form-name)
                         (fix-relation-clauses (syntax-e #'judgment-form-name) (syntax->list #'raw-clauses))
                         (syntax->list #'raw-clauses))]
-           [mode (syntax->datum #'mode-arg)])
+           [mode (let ([m (syntax->datum #'mode-arg)]) (and m (cdr m)))])
        (unless (jf-is-relation? #'judgment-form-name)
-         (mode-check mode clauses nts syn-err-name stx))
+         (mode-check (cdr (syntax->datum #'mode-arg)) clauses nts syn-err-name stx))
        (define-values (i-ctc-syncheck-expr i-ctc contract-original-expr)
          (syntax-case #'ctcs ()
            [#f (values #'(void) #f #f)]
@@ -1976,33 +1638,16 @@
               (values #'syncheck #'ctc-pat))]))
        (define-values (input-contract-id output-contract-id)
          (apply values (generate-temporaries '(jf-input-contract-id jf-output-contract-id))))
-
-       (ensure-valid-extension #'full-def #'orig  #'judgment-form-name mode syn-err-name)
-
-       (define proc-stx
-         (cond
-           [(number? mode)
-            (do-compile-modeless-judgment-form-proc #'judgment-form-name
-                                                    mode
-                                                    clauses
-                                                    rule-names
-                                                    #'ctcs
-                                                    nts
-                                                    #'orig
-                                                    #'lang
-                                                    #'full-def
-                                                    syn-err-name)]
-           [else
-            (do-compile-judgment-form-proc #'judgment-form-name
-                                           mode
-                                           clauses
-                                           rule-names
-                                           #'ctcs
-                                           nts
-                                           #'orig
-                                           #'lang
-                                           #'full-def
-                                           syn-err-name)]))
+       (define proc-stx (do-compile-judgment-form-proc #'judgment-form-name
+                                                       #'mode-arg
+                                                       clauses
+                                                       rule-names
+                                                       #'ctcs
+                                                       nts
+                                                       #'orig
+                                                       #'lang
+                                                       #'full-def
+                                                       syn-err-name))
        (define gen-stx (with-syntax* ([(comp-clauses ...) 
                                        (map (λ (c) (compile-gen-clause c mode syn-err-name 
                                                                        #'judgment-form-name #'lang)) 
@@ -2107,7 +1752,7 @@
       [_else null])))
 
 (define-for-syntax (check-clauses stx syn-error-name rest relation?)
-  (syntax-parse rest
+  (syntax-case rest ()
     [([(lhs ...) roc1 roc2 ...] ...)
      rest]
     [([(lhs ...) rhs ...] ...)
@@ -2269,20 +1914,21 @@
     #'(syncheck-exp body (names ...))))
 
 (define-for-syntax (rewrite-terms terms names [reverse-mfs? #f])
+  (define maybe-rev (if reverse-mfs? reverse values))
   (with-syntax* ([((term-pattern ((res-pat ((metafunc f) args-pat)) ...) body-pat) ...)
                   (map (λ (t) (term-rewrite t names)) terms)]
-                 [((mf-clauses ...) ...)
-                  (for/list ([fs (in-list (syntax->list #'((f ...) ...)))])
-                    (for/list ([f-id (in-list (syntax->list fs))])
-                      (if (judgment-form-id? f-id)
-                          #`(error 'generate-term
-                                   "generation disabled for relations in term positions: ~a"
-                                   '#,f-id)
-                          #`(metafunc-proc-gen-clauses #,f-id))))])
-    (define to-maybe-be-revd
-      (syntax->list #'((prem mf-clauses '(list args-pat res-pat)) ... ...)))
-    (values (syntax->list #'(body-pat ...))
-            (if reverse-mfs? (reverse to-maybe-be-revd) to-maybe-be-revd))))
+                 [((mf-clauses ...) ...) (map (λ (fs) 
+                                                (map (λ (f-id)
+                                                       (with-syntax ([f-id f-id])
+                                                         (if (judgment-form-id? #'f-id)
+                                                             #'(error 'generate-term 
+                                                                      "generation disabled for relations in term positions: ~a"
+                                                                      (syntax->datum #'f-id))
+                                                             #'(metafunc-proc-gen-clauses f-id))))
+                                                     (syntax->list fs)))
+                                              (syntax->list #'((f ...) ...)))])
+                (values (syntax->list #'(body-pat ...))
+                        (maybe-rev (syntax->list #'((prem mf-clauses '(list args-pat res-pat)) ... ...))))))
 
 (define-for-syntax (check-pats stx)
   (cond

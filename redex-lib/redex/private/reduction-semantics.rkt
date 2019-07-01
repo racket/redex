@@ -916,7 +916,6 @@
                       (syntax->list #'(names ...))
                       (syntax->list #'(names/ellipses ...))
                       #t
-                      #f
                       #f))
         (with-syntax ([lhs-source (format "~a:~a:~a"
                                           (and (path? (syntax-source from))
@@ -1495,7 +1494,6 @@
                                     (syntax->list names) 
                                     (syntax->list names/ellipses)
                                     #t
-                                    #f
                                     #f))
                                  (set! compiled-pattern-identifiers
                                        (append _compiled-pattern-identifiers
