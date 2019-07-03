@@ -153,8 +153,11 @@ relation @racket[rel-expr] to a term specified by @racket[goal-expr] in
        
        (test-results)]
 
-@defform[(test-judgment-holds (judgment-form-or-relation pat/term ...))]{
-  Tests to see if @racket[(judgment-form-or-relation pat/term ...)] holds.
+@defform*[((test-judgment-holds (judgment-form-or-relation pat/term ...))
+           (test-judgment-holds modeless-judgment-form derivation-expr))]{
+ In the first form, tests to see if @racket[(judgment-form-or-relation pat/term ...)] holds.
+ In the second form, tests to see if the result of @racket[derivation-expr] is a derivation and,
+ if so, that it is derivable using @racket[modeless-judgment-form].
 }
 
 @defform[(test-predicate p? e)]{

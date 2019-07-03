@@ -3065,6 +3065,19 @@
 
 (define-syntax (test-judgment-holds stx)
   (syntax-parse stx
+    [(_ jf e:expr)
+     (unless (judgment-form-id? #'jf)
+       (raise-syntax-error 'test-judgment-holds
+                           "expected a modeless judgment-form"
+                           #'jf))
+     (define a-judgment-form (syntax-local-value #'jf))
+     (define mode (judgment-form-mode a-judgment-form))
+     (unless (number? mode)
+       (raise-syntax-error 'test-judgment-holds
+                           "expected a modeless judgment-form"
+                           #'jf))
+     #`(let ([derivation e])
+         (test-modeless-jf/proc 'jf derivation (judgment-holds jf derivation) #,(get-srcloc stx)))]
     [(_ (jf . rest))
      (unless (judgment-form-id? #'jf)
        (raise-syntax-error 'test-judgment-holds
@@ -3125,6 +3138,26 @@
        [else
         ;; this case should always result in a syntax error
         #`(judgment-holds #,orig-jf-stx)])]))
+
+(define (test-modeless-jf/proc jf derivation val srcinfo)
+  (cond
+    [val
+     (inc-successes)]
+    [else
+     (inc-failures)
+     (print-failed srcinfo)
+     (eprintf "  derivation does not satisfy ~a\n" jf)
+     (parameterize ([pretty-print-print-line
+                     (λ (new-line-number op old-len col)
+                       (cond
+                         [(number? new-line-number)
+                          (unless (= new-line-number 0) (newline op))
+                          (display "  " op)
+                          2]
+                         [else
+                          (newline op)
+                          0]))])
+       (pretty-print derivation (current-error-port)))]))
 
 (define (test-judgment-holds/proc thunk name lang pat srcinfo is-relation?)
   (define results (thunk))
