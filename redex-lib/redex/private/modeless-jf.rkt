@@ -173,10 +173,11 @@
            conc-syncheck-exp
            modeless-jf-name-only-prems-syncheck-exp
            modeless-prems-syncheck-exp
-           (modeless-jf-clause
-            (compile-pattern lang `conc #t)
-            (compile-pattern lang `modeless-prem #t)
-            (compile-pattern lang `modeless-jf-name-only-prem #f)
+           (build-modeless-jf-clause
+            lang
+            `conc
+            `modeless-prem
+            `modeless-jf-name-only-prem
             '(#,@premise-repeat-names)
             #,other-conditions
             (list (λ (deriv only-check-contracts?)
@@ -203,6 +204,13 @@
                        #,@(if (null? noname-clauses)
                               (list)
                               (list #`(cons #f (list #,@noname-clauses))))))))
+
+(define (build-modeless-jf-clause lang conc modeless-prem modeless-jf-name-only-prem
+                                  premise-repeat-names other-conditions funcs)
+  (modeless-jf-clause (compile-pattern lang conc #f)
+                      (compile-pattern lang modeless-prem #f)
+                      (compile-pattern lang modeless-jf-name-only-prem #f)
+                      premise-repeat-names other-conditions funcs))
 
 ;; call-modeless-judgment-form: lang
 ;;                              symbol
