@@ -621,18 +621,34 @@ See match-a-pattern.rkt for more details
              (loop (cdr matches) (cons merged acc))
              (loop (cdr matches) acc)))])))
 
-(define (combine-bindings-lists bindings1 bindings2 lang-α-equal?)
+(define (combine-bindings-lists bindings1 bindings1-to-dup
+                                bindings2 bindings2-to-dup
+                                lang-α-equal?)
   (define all-combinations/f
     (for*/list ([binding1 (in-list bindings1)]
                 [binding2 (in-list bindings2)])
+      (define table1 (bindings-table binding1))
+      (define table2 (bindings-table binding2))
       (merge-multiples/remove/bindings
-       (make-bindings (append (bindings-table binding1)
-                              (bindings-table binding2)))
+       (make-bindings (append (fill-out-duplicates table1 bindings1-to-dup binding2)
+                              (fill-out-duplicates table2 bindings2-to-dup binding1)))
        lang-α-equal?)))
   (define all-combinations (filter values all-combinations/f))
   (cond
     [(null? all-combinations) #f]
     [else all-combinations]))
+
+(define (fill-out-duplicates table to-duplicate table-with-lengths)
+  (for/list ([a-bind (in-list table)])
+    (define n (bind-name a-bind))
+    (cond
+      [(member n to-duplicate)
+       (define exp (bind-exp a-bind))
+       (define how-many-times (length (lookup-binding table-with-lengths n)))
+       (bind n
+             (for/list ([i (in-range how-many-times)])
+               exp))]
+      [else a-bind])))
 
 ;; merge-multiples/remove : bindings (exp exp -> boolean) -> (union #f bindings)
 ;; returns #f if all duplicate bindings don't bind the same thing
@@ -2110,7 +2126,9 @@ See match-a-pattern.rkt for more details
                        compiled-lang?))
  [combine-bindings-lists
   (-> (listof bindings?)
+      (listof symbol?)
       (listof bindings?)
+      (listof symbol?)
       (procedure-arity-includes/c 2)
       (or/c #f (non-empty-listof bindings?)))])
 (provide compiled-pattern? 

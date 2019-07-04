@@ -169,6 +169,28 @@
                        (lookup-binding bnds 'modeless-prem-names) ...)
                     body)))))
 
+       (define (get-id-depths ids)
+         (define ht (make-hash))
+         (for ([id (in-list (syntax->list ids))])
+           (define-values (sym depth) (get-id-depth id))
+           (hash-set! ht sym depth))
+         ht)
+       (define (get-id-depth stx)
+         (let loop ([stx stx]
+                    [n 0])
+           (syntax-case stx ()
+             [(more ell)
+              (is-ellipsis? #'ell)
+              (loop #'more (+ n 1))]
+             [_ (values (syntax-e stx) n)])))
+       (define premise-id-depths (get-id-depths #'(modeless-prem-names/ellipses ...)))
+       (define conc-id-depths (get-id-depths #'(conc-names/ellipses ...)))
+       (define (get-ids-to-dup our-id-depths others-id-depths)
+         (for/list ([(id depth) (in-hash our-id-depths)]
+                    #:when (< depth
+                              (hash-ref others-id-depths id -inf.0)))
+           id))
+
        #`(begin
            conc-syncheck-exp
            modeless-jf-name-only-prems-syncheck-exp
@@ -176,7 +198,9 @@
            (build-modeless-jf-clause
             lang
             `conc
+            '(#,@(get-ids-to-dup conc-id-depths premise-id-depths))
             `modeless-prem
+            '(#,@(get-ids-to-dup premise-id-depths conc-id-depths))
             `modeless-jf-name-only-prem
             '(#,@premise-repeat-names)
             #,other-conditions
@@ -205,10 +229,14 @@
                               (list)
                               (list #`(cons #f (list #,@noname-clauses))))))))
 
-(define (build-modeless-jf-clause lang conc modeless-prem modeless-jf-name-only-prem
+(define (build-modeless-jf-clause lang conc conc-ids-to-duplicate
+                                  modeless-prem modeless-prem-ids-to-duplicate
+                                  modeless-jf-name-only-prem
                                   premise-repeat-names other-conditions funcs)
   (modeless-jf-clause (compile-pattern lang conc #f)
+                      conc-ids-to-duplicate
                       (compile-pattern lang modeless-prem #f)
+                      modeless-prem-ids-to-duplicate
                       (compile-pattern lang modeless-jf-name-only-prem #f)
                       premise-repeat-names other-conditions funcs))
 
@@ -276,7 +304,9 @@
   (match candidates
     [`() (fail)]
     [(cons (modeless-jf-clause conclusion-compiled-pattern
+                               conclusion-ids-to-duplicate
                                premises-compiled-pattern
+                               premise-ids-to-duplicate
                                premises-jf-name-only-compiled-pattern
                                premises-repeat-names
                                other-conditions
@@ -297,10 +327,15 @@
             (cons (symbol->string (car t)) (cdr t))))
         (define sub-derivations-mtch (match-pattern premises-compiled-pattern
                                                     sub-derivations-arguments-term-list))
+        (define sub-derivation-bindings (and sub-derivations-mtch
+                                             (map mtch-bindings sub-derivations-mtch)))
+        (define conc-bindings (map mtch-bindings conc-mtch))
         (define conc+sub-bindings
           (and sub-derivations-mtch
-               (combine-bindings-lists (map mtch-bindings conc-mtch)
-                                       (map mtch-bindings sub-derivations-mtch)
+               (combine-bindings-lists sub-derivation-bindings
+                                       premise-ids-to-duplicate
+                                       conc-bindings
+                                       conclusion-ids-to-duplicate
                                        (λ (a b) (alpha-equivalent? lang a b)))))
         (cond
           [conc+sub-bindings
@@ -331,6 +366,7 @@
                                                   #t)))
            (fail-to-next-candidate)])]
        [else (fail-to-next-candidate)])]))
+
 
 (define (modeless-jf-process-other-conditions lang
                                               sub-derivations
@@ -398,6 +434,7 @@
               [_ #f])]))])))
 
 (struct modeless-jf-clause (conclusion-compiled-pattern
+                            conclusion-ids-to-duplicate
 
                             ;; pattern with all of the premises
                             ;; strung together in a list, but where
@@ -405,6 +442,7 @@
                             ;; strings instead of symbols (so that they
                             ;; don't accidentally run into non-terminals, etc)
                             premises-compiled-pattern
+                            premises-ids-to-duplicate
 
                             ;; pattern with all of the premises jf-names strung
                             ;; together, but with `any` for all of the arguments

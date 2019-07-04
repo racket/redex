@@ -1627,4 +1627,37 @@
                      (list)))
         #f))
 
+(let ()
+  (define-language L)
+
+  (define-judgment-form L
+
+    [-------------- "nat"
+     (⊢ natural N)]
+
+    [-------------- "bool"
+     (⊢ boolean B)]
+
+    [(⊢ any_many any_dup) ...
+     ---------------------------- "all-same"
+     (⊢ (any_many ...) any_dup)])
+
+  (test (judgment-holds
+         ⊢
+         (derivation
+          '(⊢ (0) N)
+          "all-same"
+          (list (derivation '(⊢ 0 N) "nat" (list)))))
+        #t)
+
+  (test (judgment-holds
+         ⊢
+         (derivation
+          '(⊢ (0 1 2) N)
+          "all-same"
+          (list (derivation '(⊢ 0 N) "nat" (list))
+                (derivation '(⊢ 1 N) "nat" (list))
+                (derivation '(⊢ 2 N) "nat" (list)))))
+        #t))
+
 (print-tests-passed 'tl-judgment-form.rkt)
