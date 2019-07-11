@@ -1132,9 +1132,10 @@
      (define mode (syntax->datum #'_mode))
      (cond
        [(number? mode)
-        #'(λ (_)
-            (error 'syn-err-name
-                   "judgment forms no mode cannot be used in term"))]
+        (raise-syntax-error
+         (syntax-e #'syn-err-name)
+         "modeless judgment forms cannot be used in term"
+         #'jdg-name)]
        [(and mode (member 'O mode))
          #'(λ (_)
              (error 'syn-err-name

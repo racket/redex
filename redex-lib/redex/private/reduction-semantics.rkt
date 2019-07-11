@@ -24,6 +24,7 @@
          (rename-in racket/match (match match:)))
 
 (require (for-syntax syntax/name
+                     syntax/stx
                      "keyword-macros.rkt"
                      "cycle-check.rkt"
                      "loc-wrapper-ct.rkt"
@@ -1735,11 +1736,6 @@
     [_
      (set)]))
   
-(define-for-syntax (check-arity-consistency mode contracts full-def)
-  (when (and contracts (not (= (length mode) (length contracts))))
-    (raise-syntax-error 
-     #f "mode and contract specify different numbers of positions" full-def)))
-
 (define-for-syntax (defined-name declared-names clauses orig-stx)
   (with-syntax ([(((used-names _ ...) _ ...) ...) clauses])
     (define-values (the-name other-names)
@@ -3085,6 +3081,13 @@
                            #'jf))
      (define a-judgment-form (syntax-local-value #'jf))
      (define mode (judgment-form-mode a-judgment-form))
+     (when (number? mode)
+       (raise-syntax-error 'test-judgment-holds
+                           (string-append
+                            "modeless judgment forms should supply only the their name"
+                            " as the first argument")
+                           stx
+                           (stx-car (stx-cdr stx))))
      (define orig-jf-stx (list-ref (syntax->list stx) 1))
      (define jf-list (syntax->list #'(jf . rest)))
      (cond
