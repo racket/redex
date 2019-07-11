@@ -224,6 +224,10 @@ see also rewrite-side-conditions.rkt for some restrictions/changes there
                 #t)
             (judgment-form-id? #'jf-name))
        (let ([mode (judgment-form-mode (syntax-local-value #'jf-name))])
+         (when (number? mode)
+           (raise-syntax-error 'term
+                               "modeless judgment forms disallowed"
+                               arg-stx stx))
          (when (and mode (memq 'O mode))
            (raise-syntax-error 'term 
                                "judgment forms with output mode (\"O\") positions disallowed"

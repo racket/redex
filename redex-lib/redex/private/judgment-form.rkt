@@ -1132,14 +1132,13 @@
      (define mode (syntax->datum #'_mode))
      (cond
        [(number? mode)
-        (raise-syntax-error
-         (syntax-e #'syn-err-name)
-         "modeless judgment forms cannot be used in term"
-         #'jdg-name)]
+        #'(λ (_)
+            (error 'syn-err-name
+                   "modeless judgment forms cannot be used in term"))]
        [(and mode (member 'O mode))
-         #'(λ (_)
-             (error 'syn-err-name
-                    "judgment forms with output mode positions cannot be used in term"))]
+        #'(λ (_)
+            (error 'syn-err-name
+                   "judgment forms with output mode positions cannot be used in term"))]
        [else
         (with-syntax* ([(binding ...) (if mode (generate-temporaries mode) '())]
                        [(input) (generate-temporaries (list #'input))])
