@@ -215,3 +215,10 @@
      ((generate-term nested-finite-cross (cross b) #:i-th)
       1)))
   (try-it nested-finite-cross (cross b)))
+
+(let ()
+  (define-language L
+    (m ::= (e))
+    (e ::= (f) 1)
+    (f ::= e (e ...)))
+  (try-it L m))
