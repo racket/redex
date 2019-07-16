@@ -50,7 +50,6 @@
   ;; rhs sort
   (define sorted-right
     (sort-productions cyclic
-                      cyclic-nts
                       clang-all-ht/f))
   
   (values sorted-left
@@ -105,7 +104,7 @@
    (hash)
    lang))
 
-;; find-cycles : (hash[symbol] -o> (setof symbol)) -> (setof symbol)
+;; find-cycles : (hash[symbol -o> (setof symbol)]) -> (setof symbol)
 (define (find-cycles edges)
   (foldl
    (λ (v s)
@@ -190,32 +189,71 @@
          lang))
 
 
-;; sort-productions : lang,
-;;                    (hash[symbol] -o> (setof symbol))
-;;                    (or/c #f (hash[symbol -o> (list/c any)])) -> lang
-(define (sort-productions cyclic nts clang-all-ht/f)
-  (define table (terminal-distance-table cyclic nts))
-  (for/list ([cur-nt (in-list cyclic)])
+;; Problem: we need to find an ordering of the productions of each of
+;; the metavariables such that the graph induced by the first
+;; productions in each case has no cycles.
+;;
+;; We use a fairly simple algorithm. We start with an empty set of
+;; sinks. An out-edge is an edge all of whose targets are sinks
+;; (note that this includes the empty set).
+;;
+;;   Go through each vertex. If it contains an out-edge, pick it, and
+;;   add the vertex to the list of sinks. Repeat until all vertices
+;;   are sinks.
+;;
+;;   For now, diverges if it's impossible :(.
+;;   To fix: if a round completes without any vertices becoming a
+;;   sink the jig is up
+
+(define (spanning-tree hg)
+  (let loop ([hg hg]
+             [sinks (set)]
+             [edges (hash)]
+             [vertices (hash-keys hg)])
+    (match vertices
+      ['() edges]
+      [(cons v vs)
+       (define good-edge
+         (findf (λ (e) (andmap (λ (v) (set-member? sinks v)) (set->list (second e))))
+                (hash-ref hg v)))
+       (cond [good-edge
+              (loop hg
+                    (set-add sinks v)
+                    (hash-set edges v good-edge)
+                    vs)]
+             [else
+              (loop hg sinks edges (append vs (list v)))])])))
+
+;; A HyperGraph is a Hash NTName (Listof (List Index (Setof NTName)))
+;; associating each non-terminal to a list of out-going edges
+(define (hypergraph lang)
+  (for/hash ([nt (in-list lang)])
+    (define out-edges
+      (for/list ([i (in-naturals)]
+                 [rhs (in-list (nt-rhs nt))])
+        (list i (directly-used-nts (rhs-pattern rhs)))))
+    (values (nt-name nt) out-edges)))
+
+;; sort-productions : lang (or/c #f (hash[symbol -o> (list/c any)]))
+;;                  -> lang
+;; sorts the language
+;;   SIDE EFFECT: if clang-all-ht/f is not #f, sorts it
+(define (sort-productions lang clang-all-ht/f)
+  (define spanner (spanning-tree (hypergraph lang)))
+  (for/list ([cur-nt (in-list lang)])
     (match cur-nt
       [(nt name productions)
-       (define (max-terminal-distance pat)
-         (define referenced-nts (directly-used-nts pat))
-         (define maximum
-           (for/max ([cur-name (in-set referenced-nts)])
-             (if (symbol=? cur-name name)
-                 +inf.0
-                 (hash-ref table cur-name 0))))
-         (if (and (negative? maximum)
-                  (infinite? maximum))
-             0
-             maximum))
+       (define the-edge (first (hash-ref spanner name)))
+
+       ;; less than if the left is the chosen one and the right is not
+       (define (less-than? i1 i2)
+         (and (equal? i1 the-edge)
+              (not (equal? i2 the-edge))))
+
        (define production-vec (apply vector productions))
        (define permutation
          (sort (build-list (vector-length production-vec) values)
-               <
-               #:key (compose max-terminal-distance
-                              rhs-pattern
-                              (λ (i) (vector-ref production-vec i)))
+               less-than?
                #:cache-keys? #t))
        (when clang-all-ht/f
          (define clang-all-ht-nt-vec (apply vector (hash-ref clang-all-ht/f name)))
@@ -226,25 +264,7 @@
            (for/list ([i (in-list permutation)])
              (vector-ref production-vec i)))])))
 
-;; terminal-distance-table : lang (hash[symbol] -o> symbol)
-;;                         -> (hash[symbol] -o> (U natural +inf)
-(define (terminal-distance-table cyclic recs)
-  (define (terminal-distance pat this-nt-name table)
-    (define referenced-nts (directly-used-nts pat))
-    (define maximum
-      (for/max ([cur-name (in-set referenced-nts)])
-        (cond [(symbol=? cur-name this-nt-name)
-               +inf.0]
-              [else
-               (hash-ref table cur-name 0)])))
-    (or (and (infinite? maximum)
-             (negative? maximum)
-             0)
-        (add1 maximum)))
-  (build-nt-property/name cyclic
-                          terminal-distance
-                          +inf.0
-                          min))
+;; A NTName is a symbol representing the name of a non-terminal
 
 ;; directly-used-nts : pat -> (setof symbol)
 (define (directly-used-nts pat)
