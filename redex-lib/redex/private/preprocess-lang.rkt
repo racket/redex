@@ -8,7 +8,6 @@
          racket/match
          racket/set
          racket/promise
-         "build-nt-property.rkt"
          "lang-struct.rkt"
          "match-a-pattern.rkt")
 
@@ -44,17 +43,15 @@
                   (set-member? cyclic-nts (nt-name nt)))
                lang))
   ;; topological sort
-  (define sorted-left
+  (define sorted-finite
     (topo-sort non-cyclic
                (filter-edges edges non-cyclic)))
   ;; rhs sort
-  (define sorted-right
-    (sort-productions cyclic
-                      clang-all-ht/f))
-  
-  (values sorted-left
-          sorted-right
-          (build-cant-enumerate-table lang edges)))
+  (define-values (sorted-cyclic unsolvables)
+    (sort-productions cyclic clang-all-ht/f))
+  (values sorted-finite
+          sorted-cyclic
+          (build-cant-enumerate-table lang edges unsolvables)))
 
 ;; find-edges : lang -> (hash[symbol] -o> (setof (listof symbol)))
 (define (find-edges lang)
@@ -192,37 +189,28 @@
 ;; Problem: we need to find an ordering of the productions of each of
 ;; the metavariables such that the graph induced by the first
 ;; productions in each case has no cycles.
-;;
-;; We use a fairly simple algorithm. We start with an empty set of
-;; sinks. An out-edge is an edge all of whose targets are sinks
-;; (note that this includes the empty set).
-;;
-;;   Go through each vertex. If it contains an out-edge, pick it, and
-;;   add the vertex to the list of sinks. Repeat until all vertices
-;;   are sinks.
-;;
-;;   For now, diverges if it's impossible :(.
-;;   To fix: if a round completes without any vertices becoming a
-;;   sink the jig is up
-
+;; spanning-tree : HyperGraph -> (Listof (List Index (Setof NTName))) (Listof NTName)
 (define (spanning-tree hg)
-  (let loop ([hg hg]
-             [sinks (set)]
+  (define init-vertices (hash-keys hg))
+  (let loop ([sinks (set)]
              [edges (hash)]
-             [vertices (hash-keys hg)])
-    (match vertices
-      ['() edges]
-      [(cons v vs)
+             [vertices init-vertices]
+             [time (length init-vertices)])
+    (cond
+      [(zero? time)
+       (values edges vertices)]
+      [else
+       (match-define (cons v vs) vertices)
        (define good-edge
          (findf (λ (e) (andmap (λ (v) (set-member? sinks v)) (set->list (second e))))
                 (hash-ref hg v)))
        (cond [good-edge
-              (loop hg
-                    (set-add sinks v)
+              (loop (set-add sinks v)
                     (hash-set edges v good-edge)
-                    vs)]
+                    vs
+                    (sub1 time))]
              [else
-              (loop hg sinks edges (append vs (list v)))])])))
+              (loop sinks edges (append vs (list v)) (sub1 time))])])))
 
 ;; A HyperGraph is a Hash NTName (Listof (List Index (Setof NTName)))
 ;; associating each non-terminal to a list of out-going edges
@@ -239,30 +227,35 @@
 ;; sorts the language
 ;;   SIDE EFFECT: if clang-all-ht/f is not #f, sorts it
 (define (sort-productions lang clang-all-ht/f)
-  (define spanner (spanning-tree (hypergraph lang)))
-  (for/list ([cur-nt (in-list lang)])
-    (match cur-nt
-      [(nt name productions)
-       (define the-edge (first (hash-ref spanner name)))
+  (define-values (spanner unsolvables) (spanning-tree (hypergraph lang)))
+  (define sorted
+    (for/list ([cur-nt (in-list lang)])
+      (match cur-nt
+        [(nt name productions)
+         (cond
+           [(hash-has-key? spanner name)
+            (define the-edge (first (hash-ref spanner name)))
 
-       ;; less than if the left is the chosen one and the right is not
-       (define (less-than? i1 i2)
-         (and (equal? i1 the-edge)
-              (not (equal? i2 the-edge))))
+            ;; less than if the left is the chosen one and the right is not
+            (define (less-than? i1 i2)
+              (and (equal? i1 the-edge)
+                   (not (equal? i2 the-edge))))
 
-       (define production-vec (apply vector productions))
-       (define permutation
-         (sort (build-list (vector-length production-vec) values)
-               less-than?
-               #:cache-keys? #t))
-       (when clang-all-ht/f
-         (define clang-all-ht-nt-vec (apply vector (hash-ref clang-all-ht/f name)))
-         (hash-set! clang-all-ht/f name
-                    (for/list ([i (in-list permutation)])
-                      (vector-ref clang-all-ht-nt-vec i))))
-       (nt name
-           (for/list ([i (in-list permutation)])
-             (vector-ref production-vec i)))])))
+            (define production-vec (apply vector productions))
+            (define permutation
+              (sort (build-list (vector-length production-vec) values)
+                    less-than?
+                    #:cache-keys? #t))
+            (when clang-all-ht/f
+              (define clang-all-ht-nt-vec (apply vector (hash-ref clang-all-ht/f name)))
+              (hash-set! clang-all-ht/f name
+                         (for/list ([i (in-list permutation)])
+                           (vector-ref clang-all-ht-nt-vec i))))
+            (nt name
+                (for/list ([i (in-list permutation)])
+                  (vector-ref production-vec i)))]
+           [else (nt name productions)])])))
+  (values sorted unsolvables))
 
 ;; A NTName is a symbol representing the name of a non-terminal
 
@@ -367,8 +360,7 @@
            (my-max current-max
                    (let () . defs+exprs))))]))
 
-
-(define (build-cant-enumerate-table lang edges)
+(define (build-cant-enumerate-table lang edges unsolvables)
   ;; cant-enumerate-table : hash[sym[nt] -o> boolean]
   (define cant-enumerate-table (make-hash))
   
@@ -401,7 +393,8 @@
   ;; fill in the entire table
   (for ([nt (in-list lang)])
     (cant-enumerate-nt/fill-table (nt-name nt)))
-  
+  (for ([name (in-list unsolvables)])
+    (hash-set! cant-enumerate-table name #t))
   cant-enumerate-table)
     
 ;; can-enumerate? : any/c hash[sym -o> any[boolean]] (promise hash[sym -o> any[boolean]])
