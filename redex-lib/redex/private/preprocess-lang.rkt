@@ -192,8 +192,7 @@
 ;; spanning-tree : HyperGraph -> (Listof (List Index (Setof NTName))) (Listof NTName)
 (define (spanning-tree hg)
   (define init-vertices (hash-keys hg))
-  (let loop ([sinks (set)]
-             [edges (hash)]
+  (let loop ([edges (hash)]
              [vertices init-vertices]
              [time (length init-vertices)])
     (cond
@@ -202,15 +201,14 @@
       [else
        (match-define (cons v vs) vertices)
        (define good-edge
-         (findf (λ (e) (andmap (λ (v) (set-member? sinks v)) (set->list (second e))))
+         (findf (λ (e) (andmap (λ (v2) (not (member v2 vertices))) (set->list (second e))))
                 (hash-ref hg v)))
        (cond [good-edge
-              (loop (set-add sinks v)
-                    (hash-set edges v good-edge)
+              (loop (hash-set edges v good-edge)
                     vs
                     (sub1 time))]
              [else
-              (loop sinks edges (append vs (list v)) (sub1 time))])])))
+              (loop edges (append vs (list v)) (sub1 time))])])))
 
 ;; A HyperGraph is a Hash NTName (Listof (List Index (Setof NTName)))
 ;; associating each non-terminal to a list of out-going edges
