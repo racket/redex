@@ -206,7 +206,7 @@
        (cond [good-edge
               (loop (hash-set edges v good-edge)
                     vs
-                    (sub1 time))]
+                    (length vs))]
              [else
               (loop edges (append vs (list v)) (sub1 time))])])))
 
