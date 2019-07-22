@@ -583,6 +583,11 @@
                    (term (number_1 6) #:lang L))
         '(5 6)))
 
+(test (with-handlers ([exn:fail:redex? exn-message])
+        (redex-let empty-language ([~PATTERN 'TERM])
+          "no error"))
+      #rx"pattern ~PATTERN")
+
 ;; make sure the "before underscore" check works (no syntax error)
 (let ()
   (define-extended-language L2 empty-language [(τ υ) whatever])
