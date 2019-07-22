@@ -114,10 +114,9 @@
 (define ((term-match/single/proc form-name lang ps0 cps rhss) term)
   (let loop ([ps ps0] [cps cps] [rhss rhss])
     (if (null? ps)
-        (redex-error form-name 
-                     (if (null? (cdr ps0))
-                         (format "term ~s does not match pattern ~s" term (car ps0))
-                         (format "no patterns matched ~s" term)))
+        (if (null? (cdr ps0))
+            (redex-error form-name "term ~s does not match pattern ~s" term (car ps0))
+            (redex-error form-name "no patterns matched ~s" term))
         (let ([match (match-pattern (car cps) term)])
           (if match
               (begin
