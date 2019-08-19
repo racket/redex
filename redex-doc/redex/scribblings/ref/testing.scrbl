@@ -255,7 +255,7 @@ metafunctions or unnamed reduction-relation cases) to application counts.}
                  (code:line #:source reduction-relation-expr
                             size-expr kw-args ...)
                  (code:line #:source reduction-relation-expr)]
-                [kw-args (code:line #:attempt-num attempts-expr)
+                [kw-args (code:line #:attempt-num attempt-num-expr)
                          (code:line #:retries retries-expr)])
               #:contracts ([size-expr natural-number/c]
                            [attempt-num-expr natural-number/c]
