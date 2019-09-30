@@ -974,3 +974,24 @@
   (test (with-handlers ([exn:fail? exn-message])
           (redex-check let-nl e #t #:source eval))
         #rx"language of the metafunction does not"))
+
+(let ()
+  (define-language Boxy
+    (e ::= x (e_1 e_2))
+    (t ::= nat bool)
+    (x u ::= variable-not-otherwise-mentioned))
+
+  (define-judgment-form
+    Boxy
+    #:mode (type I O)
+    #:contract (type e t)
+
+    [-------------
+     (type x bool)]
+
+    [(type e_1 bool)
+     (type e_2 bool)
+     ---------------------
+     (type (e_1 e_2) nat)])
+
+  (is-not-false (generate-term Boxy #:satisfying (type e nat) 10)))

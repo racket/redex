@@ -863,9 +863,11 @@
         (define npat (normalize-pat clang e pat))
         (hash-ref memo (list nt clang npat)
                   (λ ()
-                    (define pat-ok? 
-                      (for/or ([ntp (in-list (map (((curry normalize-pat) clang) e) (nt-pats nt clang)))])
-                        (not-failed? (unify* npat ntp empty-env clang))))
+                    (define pat-ok?
+                      (for/or ([pat (in-list (nt-pats nt clang))])
+                        (define ntp (normalize-pat clang e pat))
+                        (define ntp* (bind-names (fresh-pat-vars ntp (make-hash)) e clang))
+                        (not-failed? (unify* npat (p*e-p ntp*) (p*e-e ntp*) clang))))
                     (hash-set! memo (list nt clang npat) pat-ok?)
                     pat-ok?))))))
 
