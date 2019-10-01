@@ -8,7 +8,6 @@
  test-judgment-does-not-hold
  test-->>∃
  test--/>
- test--?>
  test-->>P
  test-->>P*)
 (require redex/reduction-semantics
@@ -54,24 +53,14 @@
     (with-check-info
      (['results res]
       ['expected expected])
-     (fail-check "could not find term not match reductions in many steps"))))
+     (fail-check "expected term was not reachable"))))
 
 (define-check (test--/> R term)
   (define res (apply-reduction-relation R term))
   (unless (empty? res)
     (with-check-info
      (['results res])
-     (fail-check "could not find term not match reductions in many steps"))))
-
-(define-check (test--?> R term t)
-  (define res (apply-reduction-relation R term))
-  (if t
-      (when (empty? res)
-        (fail-check "had no reductions when it should have"))
-      (unless (empty? res)
-        (with-check-info
-         (['results res])
-         (fail-check "could not find term not match reductions in many steps")))))
+     (fail-check "term reduced"))))
 
 (define-check (test-->>P R term P)
   (define res (apply-reduction-relation* R term))
@@ -91,7 +80,7 @@
   (unless failed
     (with-check-info
      (['all-results res])
-     (fail-check "Some terminal reductions failed property"))))
+     (fail-check "reductions failed property"))))
 
 (define-syntax in:test-equal
   (syntax-parser
@@ -100,7 +89,7 @@
        (test-equal a b #:equiv (default-equiv)))]
     [(test-equal a b #:equiv eq)
      #`(with-default-check-info*
-        (list (make-check-name 'test-equial)
+        (list (make-check-name 'test-equal)
               (make-check-location '#,(syntax->location this-syntax))
               (make-check-expression
                '(test-equal a b #:equiv eq)))
@@ -130,7 +119,7 @@
              (with-check-info
               (['|held at| (map (lambda (x) (cons 'judgment x)) r)])
               (unless (empty? r)
-                (fail-check "judgment, in fact, held")))))))]))
+                (fail-check)))))))]))
 
 (define-syntax in:test-judgment-holds
   (syntax-parser
