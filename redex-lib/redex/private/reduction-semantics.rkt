@@ -1202,10 +1202,10 @@
                   (reduction-relation-make-procs subj))])
           (make-coverage subj h))))]))
 
-(define-syntax (test-match stx) (test-match/both stx #f))
-(define-syntax (test-match? stx) (test-match/both stx #t))
+(define-syntax (redex-match stx) (redex-match/both stx #f))
+(define-syntax (redex-match? stx) (redex-match/both stx #t))
 
-(define-for-syntax (test-match/both stx boolean-only?)
+(define-for-syntax (redex-match/both stx boolean-only?)
   (syntax-case stx ()
     [(form-name lang-exp pattern)
      (identifier? #'lang-exp)
@@ -1217,7 +1217,7 @@
                        [name (syntax-local-infer-name stx)])
            #`(begin
                syncheck-expr
-               (do-test-match lang-exp `side-condition-rewritten 'binders 'name #,boolean-only?)))))]
+               (do-redex-match lang-exp `side-condition-rewritten 'binders 'name #,boolean-only?)))))]
     [(form-name lang-exp pattern expression)
      (identifier? #'lang-exp)
      (syntax 
@@ -1231,7 +1231,7 @@
 
 (define-struct match (bindings) #:inspector #f)
 
-(define (do-test-match lang pat binders context-name boolean-only?)
+(define (do-redex-match lang pat binders context-name boolean-only?)
   (unless (compiled-lang? lang)
     (error 'redex-match "expected first argument to be a language, got ~e" lang))
   (define name (or context-name
@@ -3193,6 +3193,35 @@
     [(_ p arg)
      #`(test-predicate/proc p arg #,(get-srcloc stx))]))
 
+(define-syntax (test-match stx)
+  (syntax-parse stx
+    [(_ lang:id
+        ; TODO: Make redex-match? respect default-language?
+        #;(~optional (~seq #:lang lang:id)
+                   #:defaults ([lang #'(default-language)])) p arg)
+     #`(test-match/proc values (redex-match? lang p) 'p arg #,(get-srcloc stx))]))
+
+(define-syntax (test-no-match stx)
+  (syntax-parse stx
+    [(_ lang:id p arg)
+     #`(test-match/proc not (redex-match? lang p) 'p arg #,(get-srcloc stx))]))
+
+(define (test-match/proc inv pred pat arg srcinfo)
+  ; inv is a test inversion operation:
+  ; if (inv #t) = #t, not matching is failure
+  ; if (inv #t) = #f, matching is failure
+  (cond
+    [(inv (pred arg)) (inc-successes)]
+    [else
+     (inc-failures)
+     (print-failed srcinfo)
+     (eprintf/value-at-end (format "  did~amatch pattern \"~a\""
+                                   (if (inv #t)
+                                       " not "
+                                       " ")
+                                   pat)
+                           arg)]))
+
 (define (test-predicate/proc pred arg srcinfo)
   (cond
     [(pred arg) (inc-successes)]
@@ -3358,8 +3387,8 @@
 
 (provide shadow nothing)
 
-(provide test-match
-         test-match?
+(provide redex-match
+         redex-match?
          term-match
          term-match/single
          redex-let 
@@ -3376,6 +3405,8 @@
          test-->
          test-->>∃ (rename-out [test-->>∃ test-->>E])
          test-predicate
+         test-match
+         test-no-match
          test-judgment-holds
          test-results
          default-equiv
@@ -3401,6 +3432,6 @@
          (rename-out [fresh-coverage make-coverage])
          coverage?)
 
-(provide do-test-match)
+(provide do-redex-match)
 
 (provide inform-rackunit?)

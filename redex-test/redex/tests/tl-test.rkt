@@ -339,4 +339,30 @@
   (test (capture-output (test-results))
         "One test passed.\n"))
 
+(let ()
+  (define-language L
+    (e ::= (e e) (λ (x) e) x (fix e))
+    (x ::= variable-not-otherwise-mentioned)
+    #:binding-forms
+    (λ (x) e #:refers-to x))
+
+  (test-match L e (term (x y)))
+
+  (test-match L x (term x))
+
+  (test-match L x (term y))
+
+  (test-no-match L x (term (λ (x) x)))
+
+  (test (capture-output
+         (test-match L x (term (λ (x) x))))
+        #rx"did not match pattern \"x\"")
+
+  (test (capture-output
+         (test-no-match L e (term (λ (x) x))))
+        #rx"did match pattern \"e\"")
+
+  (test (capture-output (test-results))
+        "2 tests failed (out of 6 total).\n"))
+
 (print-tests-passed 'tl-test.rkt)

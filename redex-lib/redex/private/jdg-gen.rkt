@@ -5,7 +5,7 @@
          (only-in "rg.rkt"
                   [compile rg:compile])
          (only-in "reduction-semantics.rkt"
-                  do-test-match)
+                  do-redex-match)
          "pat-unify.rkt"
          (only-in "fresh.rkt" variable-not-in)
          (for-syntax racket/base))
@@ -25,7 +25,7 @@
   (define eqs (env-eqs full-env))
   (define (get-matcher nt)
     (hash-ref nt-matchers nt
-              (λ () (let ([mtchr (do-test-match lang `(nt ,nt) '() 'pat->term #t)])
+              (λ () (let ([mtchr (do-redex-match lang `(nt ,nt) '() 'pat->term #t)])
                       (hash-set! nt-matchers nt mtchr)
                       mtchr))))
   (define (ground-or-ok p)

@@ -164,6 +164,34 @@ relation @racket[rel-expr] to a term specified by @racket[goal-expr] in
 Tests to see if the value of @racket[e] matches the predicate @racket[p?].
 }
 
+@defform[(test-match lang-id pat e)]{
+Tests to see if the value of @racket[e] matches, via @racket[redex-match?], the pattern @racket[pat].
+
+@examples[
+#:eval redex-eval
+(define-language L
+  (n natural))
+
+(test-match L n (term 1))
+(test-match L n (term #t))
+(test-results)
+]
+}
+
+@defform[(test-no-match lang-id pat e)]{
+Tests to see if the value of @racket[e] @emph{does not match}, via @racket[redex-match?], the pattern @racket[pat].
+
+@examples[
+#:eval redex-eval
+(define-language L
+  (n natural))
+
+(test-no-match L n (term 1))
+(test-no-match L n (term #t))
+(test-results)
+]
+}
+
 @defproc[(test-results) void?]{
 Prints out how many tests passed and failed, and resets the
 counters so that next time this function is called, it
