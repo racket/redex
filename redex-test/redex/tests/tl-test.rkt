@@ -250,7 +250,6 @@
                                                      (list))))))
    (regexp
     (regexp-quote "because the following sub-derivations fail:
-    (derivation '(J1 1 x) \"Base\" '())
     (derivation
        '(J2 (1 x) 1)
        \"Pair\"

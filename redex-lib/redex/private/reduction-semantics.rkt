@@ -3152,16 +3152,27 @@
        (newline op)
        0])))
 
-(define (print-failing-subderivations f d)
+;; Takes a judgment-form name `jf`, a sub-derivation predicate for testing whether a
+;; sub-derivation of `jf` is valid.
+;; The derivation predicate will only be called on sub-derivations of the
+;; judgment `jf`.
+;; Sub-derivations from other judgments get ignored.
+;; TODO: Can we create a generic sub-derivation checker that does not,
+;; statically, know the name of the judgment it is checking?
+(define (print-failing-subderivations jf f d)
   (define (print-derivation-error d)
     (parameterize ([pretty-print-print-line (derivation-pretty-printer "    ")])
       (pretty-print d (current-error-port))))
+  (define (checkable-derivation d)
+    (equal? jf (car (derivation-term d))))
   (let loop ([d d])
     (let ([ls (derivation-subs d)])
       (for ([d ls])
         (unless (loop d)
           (print-derivation-error d)))
-      (unless (f d)
+      (unless (if (checkable-derivation d)
+                  (f d)
+                  #t)
         (print-derivation-error d)))))
 
 (define (test-modeless-jf/proc jf jf-pred derivation val srcinfo)
@@ -3176,7 +3187,7 @@
        (pretty-print derivation (current-error-port)))
      (when (not (null? (derivation-subs derivation)))
        (eprintf"  because the following sub-derivations fail:\n")
-       (print-failing-subderivations jf-pred derivation))]))
+       (print-failing-subderivations jf jf-pred derivation))]))
 
 (define (test-judgment-holds/proc thunk name lang pat srcinfo is-relation?)
   (define results (thunk))
