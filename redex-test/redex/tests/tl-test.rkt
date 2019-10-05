@@ -187,6 +187,47 @@
 
 (let ()
   (define-judgment-form empty-language
+    [----------- "Base"
+     (J natural 1)]
+
+    [(J any_1 any_3)
+     -------------- "Pair"
+     (J (any_1 any_2) any_3)])
+
+  (test
+   (capture-output
+    (test-judgment-holds J (derivation `(J (x 0) 0) "Pair"
+                                       (list
+                                        (derivation `(J x 0) "Base" (list))))))
+   (regexp (regexp-quote "because the following sub-derivations fail:\n    (derivation '(J x 0) \"Base\" '())\n    (derivation '(J (x 0) 0) \"Pair\" (list (derivation '(J x 0) \"Base\" '())))\n")))
+
+  (test
+   (capture-output
+    (test-judgment-holds J (derivation `(J (1 x) 0) "Pair"
+                                       (list
+                                        (derivation `(J 1 0) "Base" (list))))))
+   (regexp (regexp-quote "because the following sub-derivations fail:\n    (derivation '(J 1 0) \"Base\" '())\n    (derivation '(J (1 x) 0) \"Pair\" (list (derivation '(J 1 0) \"Base\" '())))\n")))
+
+  (test
+   (capture-output
+    (test-judgment-holds J (derivation `(J x 0) "Base" (list))))
+   (regexp
+    (string-append
+     (regexp-quote "derivation does not satisfy J\n  (derivation '(J x 0) \"Base\" '())\n")
+     "$")))
+
+  (test
+   (capture-output
+    (test-judgment-holds J (derivation `(J (1 x) 1) "Pair"
+                                       (list
+                                        (derivation `(J 1 1) "Base" (list))))))
+   "")
+
+  (test (capture-output (test-results))
+        "3 tests failed (out of 4 total).\n"))
+
+(let ()
+  (define-judgment-form empty-language
     #:mode (broken-swap I I O O)
     [-------
      (broken-swap any_1 any_2 any_1 any_2)])
