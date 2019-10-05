@@ -52,8 +52,8 @@
 
 (provide shadow nothing)
 
-(provide (rename-out [test-match redex-match])
-         (rename-out [test-match? redex-match?])
+(provide redex-match
+         redex-match?
          term-match
          term-match/single
          redex-let

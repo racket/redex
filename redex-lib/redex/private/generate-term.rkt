@@ -164,7 +164,7 @@
                                                        property)))])
                 (quasisyntax/loc orig-stx
                   (let ([term-match (λ (generated)
-                                      (cond [(test-match #,lang #,args-stx (cdr generated)) => values]
+                                      (cond [(redex-match #,lang #,args-stx (cdr generated)) => values]
                                             [else (give-up-match-result)]))])
                     syncheck-exp
                     (let ([default-attempt-size (λ (s) (add1 (default-attempt-size s)))])
@@ -203,7 +203,7 @@
                                                        property)))])
                 (quasisyntax/loc orig-stx
                   (let ([term-match (λ (generated)
-                                      (cond [(test-match #,lang (#,args-stx #,res-stx)
+                                      (cond [(redex-match #,lang (#,args-stx #,res-stx)
                                                          (list (cdr (list-ref generated 0))
                                                                (list-ref generated 2)))
                                              => values]
@@ -245,7 +245,7 @@
               [fix #,fix-stx]
               [keep-going? #,keep-going-stx]
               [term-match (λ (generated)
-                            (cond [(test-match #,lang #,pat generated) => values]
+                            (cond [(redex-match #,lang #,pat generated) => values]
                                   [else (give-up-match-result)]))])
           syncheck-exp
           (parameterize ([attempt->size #,size-stx])
