@@ -186,8 +186,8 @@ Tests to see if the value of @racket[e] @emph{does not match}, via @racket[redex
 (define-language L
   (n natural))
 
-(test-match L n (term 1))
-(test-match L n (term #t))
+(test-no-match L n (term 1))
+(test-no-match L n (term #t))
 (test-results)
 ]
 }
