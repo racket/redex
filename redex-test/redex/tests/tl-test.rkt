@@ -228,6 +228,69 @@
 
 (let ()
   (define-judgment-form empty-language
+    [----------- "Base"
+     (J1 natural 1)])
+
+  (define-judgment-form empty-language
+    [----------- "Base"
+     (J2 natural 1)]
+
+    [(J1 any_1 any_2)
+     (J2 any_1 any_3)
+     -------------- "Pair"
+     (J2 (any_1 any_2) any_3)])
+
+  (test
+   (capture-output
+    (test-judgment-holds J2 (derivation `(J2 (1 x) 1) "Pair"
+                                        (list
+                                         (derivation `(J1 1 x) "Base"
+                                                     (list))
+                                         (derivation `(J2 1 1) "Base"
+                                                     (list))))))
+   (regexp
+    (regexp-quote "because the following sub-derivations fail:
+    (derivation '(J1 1 x) \"Base\" '())
+    (derivation
+       '(J2 (1 x) 1)
+       \"Pair\"
+       (list
+          (derivation '(J1 1 x) \"Base\" '())
+          (derivation '(J2 1 1) \"Base\" '())))")))
+
+  (test
+   (capture-output
+    (test-judgment-holds J2 (derivation `(J2 (1 1) 2) "Pair"
+                                        (list
+                                         (derivation `(J1 1 1) "Base"
+                                                     (list))
+                                         (derivation `(J2 1 2) "Base"
+                                                     (list))))))
+   (regexp
+    (regexp-quote "because the following sub-derivations fail:
+    (derivation '(J2 1 2) \"Base\" '())
+    (derivation
+       '(J2 (1 1) 2)
+       \"Pair\"
+       (list
+          (derivation '(J1 1 1) \"Base\" '())
+          (derivation '(J2 1 2) \"Base\" '())))")))
+
+  (test
+   (capture-output
+    (test-judgment-holds J2 (derivation `(J2 (2 1) 1) "Pair"
+                                        (list
+                                         (derivation `(J1 2 1) "Base"
+                                                     (list))
+                                         (derivation `(J2 2 1) "Base"
+                                                     (list))))))
+   "")
+
+  (test (capture-output (test-results))
+        "2 tests failed (out of 3 total).\n"))
+
+(let ()
+  (define-judgment-form empty-language
     #:mode (broken-swap I I O O)
     [-------
      (broken-swap any_1 any_2 any_1 any_2)])
