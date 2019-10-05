@@ -3072,7 +3072,7 @@
                            "expected a modeless judgment-form"
                            #'jf))
      #`(let ([derivation e])
-         (test-modeless-jf/proc 'jf (lambda (x) (judgment-holds jf x)) derivation (judgment-holds jf derivation) #,(get-srcloc stx)))]
+         (test-modeless-jf/proc 'jf derivation (judgment-holds jf derivation) #,(get-srcloc stx)))]
     [(_ (jf . rest))
      (unless (judgment-form-id? #'jf)
        (raise-syntax-error 'test-judgment-holds
@@ -3141,30 +3141,7 @@
         ;; this case should always result in a syntax error
         #`(judgment-holds #,orig-jf-stx)])]))
 
-(define (derivation-pretty-printer pad)
-  (λ (new-line-number op old-len col)
-    (cond
-      [(number? new-line-number)
-       (unless (= new-line-number 0) (newline op))
-       (display pad op)
-       2]
-      [else
-       (newline op)
-       0])))
-
-(define (print-failing-subderivations f d)
-  (define (print-derivation-error d)
-    (parameterize ([pretty-print-print-line (derivation-pretty-printer "    ")])
-      (pretty-print d (current-error-port))))
-  (let loop ([d d])
-    (let ([ls (derivation-subs d)])
-      (for ([d ls])
-        (unless (loop d)
-          (print-derivation-error d)))
-      (unless (f d)
-        (print-derivation-error d)))))
-
-(define (test-modeless-jf/proc jf jf-pred derivation val srcinfo)
+(define (test-modeless-jf/proc jf derivation val srcinfo)
   (cond
     [val
      (inc-successes)]
@@ -3172,11 +3149,17 @@
      (inc-failures)
      (print-failed srcinfo)
      (eprintf "  derivation does not satisfy ~a\n" jf)
-     (parameterize ([pretty-print-print-line (derivation-pretty-printer "  ")])
-       (pretty-print derivation (current-error-port)))
-     (when (not (null? (derivation-subs derivation)))
-       (eprintf"  because the following sub-derivations fail:\n")
-       (print-failing-subderivations jf-pred derivation))]))
+     (parameterize ([pretty-print-print-line
+                     (λ (new-line-number op old-len col)
+                       (cond
+                         [(number? new-line-number)
+                          (unless (= new-line-number 0) (newline op))
+                          (display "  " op)
+                          2]
+                         [else
+                          (newline op)
+                          0]))])
+       (pretty-print derivation (current-error-port)))]))
 
 (define (test-judgment-holds/proc thunk name lang pat srcinfo is-relation?)
   (define results (thunk))
