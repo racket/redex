@@ -3060,7 +3060,8 @@
 
 (define-syntax (test-judgment-holds stx)
   (syntax-parse stx
-    [(_ jf e:expr)
+    [(_ jf e:expr (~optional (~seq #:mutuals (mjf:id ...))
+                             #:defaults ([(mjf 1) '()])))
      (unless (judgment-form-id? #'jf)
        (raise-syntax-error 'test-judgment-holds
                            "expected a modeless judgment-form"
@@ -3072,7 +3073,13 @@
                            "expected a modeless judgment-form"
                            #'jf))
      #`(let ([derivation e])
-         (test-modeless-jf/proc 'jf (lambda (x) (judgment-holds jf x)) derivation (judgment-holds jf derivation) #,(get-srcloc stx)))]
+         (test-modeless-jf/proc 'jf
+                                (make-hasheq
+                                 `((jf . ,(lambda (x) (judgment-holds jf x)))
+                                   #,@(for/list ([jf (attribute mjf)])
+                                        `(,jf . ,#`,(lambda (x) (judgment-holds #,jf x))))))
+                                derivation (judgment-holds jf derivation)
+                                #,(get-srcloc stx)))]
     [(_ (jf . rest))
      (unless (judgment-form-id? #'jf)
        (raise-syntax-error 'test-judgment-holds
@@ -3152,19 +3159,31 @@
        (newline op)
        0])))
 
-(define (print-failing-subderivations f d)
+;; Takes a judgment-form name `jf`, a sub-derivation predicate for testing whether a
+;; sub-derivation of `jf` is valid.
+;; The derivation predicate will only be called on sub-derivations of the
+;; judgment `jf`.
+;; Sub-derivations from other judgments get ignored.
+;; TODO: Can we create a generic sub-derivation checker that does not,
+;; statically, know the name of the judgment it is checking?
+(define (print-failing-subderivations jf jf-pred-hash d)
   (define (print-derivation-error d)
     (parameterize ([pretty-print-print-line (derivation-pretty-printer "    ")])
       (pretty-print d (current-error-port))))
+  (define (check-derivation d)
+    (define f (hash-ref jf-pred-hash (car (derivation-term d)) (lambda () #f)))
+    (if f
+        (f d)
+        #t))
   (let loop ([d d])
     (let ([ls (derivation-subs d)])
       (for ([d ls])
         (unless (loop d)
           (print-derivation-error d)))
-      (unless (f d)
+      (unless (check-derivation d)
         (print-derivation-error d)))))
 
-(define (test-modeless-jf/proc jf jf-pred derivation val srcinfo)
+(define (test-modeless-jf/proc jf jf-preds derivation val srcinfo)
   (cond
     [val
      (inc-successes)]
@@ -3176,7 +3195,7 @@
        (pretty-print derivation (current-error-port)))
      (when (not (null? (derivation-subs derivation)))
        (eprintf"  because the following sub-derivations fail:\n")
-       (print-failing-subderivations jf-pred derivation))]))
+       (print-failing-subderivations jf jf-preds derivation))]))
 
 (define (test-judgment-holds/proc thunk name lang pat srcinfo is-relation?)
   (define results (thunk))

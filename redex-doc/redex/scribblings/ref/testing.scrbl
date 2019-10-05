@@ -153,11 +153,51 @@ relation @racket[rel-expr] to a term specified by @racket[goal-expr] in
        
        (test-results)]
 
-@defform*[((test-judgment-holds (judgment-form-or-relation pat/term ...))
-           (test-judgment-holds modeless-judgment-form derivation-expr))]{
+@defform*/subs[((test-judgment-holds (judgment-form-or-relation pat/term ...) mutuals)
+                (test-judgment-holds modeless-judgment-form derivation-expr))
+                ([mutuals (code:line)
+                          (code:line #:mutuals (judgment-form-id ...))])]{
  In the first form, tests to see if @racket[(judgment-form-or-relation pat/term ...)] holds.
  In the second form, tests to see if the result of @racket[derivation-expr] is a derivation and,
  if so, that it is derivable using @racket[modeless-judgment-form].
+
+ For modeless judgments, if the derivation is invalid, the test will report the
+ all the proper sub-derivations of @racket[modeless-judgment-form] that fail to hold.
+ If @racket[modeless-judgment-form] has other judgment premises, these
+ identifiers can be supplied in the optional #racket[#:mutuals] arguments, and
+ the form will report each invalid sub-derivations from all the specified judgment forms.
+
+@examples[
+#:eval redex-eval
+(define-language L)
+(define-judgment-form L
+  [----------- "Base"
+   (J1 natural 1)])
+
+(define-judgment-form L
+  [----------- "Base"
+   (J2 natural 1)]
+
+  [(J1 any_1 any_2)
+   (J2 any_1 any_3)
+   -------------- "Pair"
+   (J2 (any_1 any_2) any_3)])
+
+(test-judgment-holds J2 (derivation `(J2 (1 x) 1) "Pair"
+                                    (list
+                                     (derivation `(J1 1 x) "Base"
+                                                 (list))
+                                     (derivation `(J2 1 1) "Base"
+                                                 (list)))))
+
+(test-judgment-holds J2 (derivation `(J2 (1 x) 1) "Pair"
+                                    (list
+                                     (derivation `(J1 1 x) "Base"
+                                                 (list))
+                                     (derivation `(J2 1 1) "Base"
+                                                 (list))))
+                     #:mutuals (J1))
+]
 }
 
 @defform[(test-predicate p? e)]{
