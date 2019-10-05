@@ -259,6 +259,25 @@
 
   (test
    (capture-output
+    (test-judgment-holds J2 (derivation `(J2 (1 x) 1) "Pair"
+                                        (list
+                                         (derivation `(J1 1 x) "Base"
+                                                     (list))
+                                         (derivation `(J2 1 1) "Base"
+                                                     (list))))
+                         #:mutuals (J1)))
+   (regexp
+    (regexp-quote "because the following sub-derivations fail:
+    (derivation '(J1 1 x) \"Base\" '())
+    (derivation
+       '(J2 (1 x) 1)
+       \"Pair\"
+       (list
+          (derivation '(J1 1 x) \"Base\" '())
+          (derivation '(J2 1 1) \"Base\" '())))")))
+
+  (test
+   (capture-output
     (test-judgment-holds J2 (derivation `(J2 (1 1) 2) "Pair"
                                         (list
                                          (derivation `(J1 1 1) "Base"
@@ -286,7 +305,7 @@
    "")
 
   (test (capture-output (test-results))
-        "2 tests failed (out of 3 total).\n"))
+        "3 tests failed (out of 4 total).\n"))
 
 (let ()
   (define-judgment-form empty-language
