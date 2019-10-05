@@ -3058,77 +3058,92 @@
          (newline (current-error-port)))]
       [else (inc-successes)])))
 
+(begin-for-syntax
+  (define (figure-out-how-to-apply-this-judgment orig-jf-stx)
+    (define jf-list (syntax->list orig-jf-stx))
+    (define a-judgment-form (syntax-local-value (car jf-list)))
+    (define mode (judgment-form-mode a-judgment-form))
+    (define suffix 0)
+    (let loop ([stx (cdr jf-list)])
+      (cond
+        [(pair? stx) (loop (car stx)) (loop (cdr stx))]
+        [(symbol? stx)
+         (define str (symbol->string stx))
+         (define m (regexp-match #rx"^any_([0-9]+)$" (symbol->string stx)))
+         (when m
+           (set! suffix (max suffix (string->number (list-ref m 1)))))]
+        [else (void)]))
+    (define syncheck-exprs #'(void))
+    (define pats '())
+    (define any-vars '())
+    (define jf-stx
+      (cond
+        [mode
+         (forward-errortrace-prop
+          orig-jf-stx
+          (quasisyntax/loc orig-jf-stx
+            (jf #,@
+             (for/list ([IO (in-list mode)]
+                        [arg (cdr jf-list)]
+                        [i (in-naturals 1)])
+               (cond
+                 [(equal? IO 'I) arg]
+                 [else
+                  (set! suffix (+ suffix 1))
+                  (with-syntax ([(syncheck-expr side-conditions-rewritten
+                                                (names ...) (names/ellipses ...))
+                                 (rewrite-side-conditions/check-errs
+                                  (judgment-form-lang a-judgment-form)
+                                  'test-judgment-holds #t arg)])
+                    (define any-var (string->symbol (format "any_~a" (+ i suffix))))
+                    (set! syncheck-exprs #`(begin syncheck-expr #,syncheck-exprs))
+                    (set! pats (cons #'side-conditions-rewritten pats))
+                    (set! any-vars (cons any-var any-vars))
+                    any-var)])))))]
+        [else orig-jf-stx]))
+    (values jf-stx any-vars pats syncheck-exprs))
+
+  (define (try-test-modeless-jf/proc who stx jf e)
+    (unless (judgment-form-id? jf)
+      (raise-syntax-error who
+                          "expected a modeless judgment-form"
+                          jf))
+    (define a-judgment-form (syntax-local-value jf))
+    (define mode (judgment-form-mode a-judgment-form))
+    (unless (number? mode)
+      (raise-syntax-error who
+                          "expected a modeless judgment-form"
+                          jf))
+    #`(let ([derivation #,e])
+        (test-modeless-jf/proc '#,jf (lambda (x) (judgment-holds #,jf x)) derivation (judgment-holds #,jf derivation) #,(get-srcloc stx))))
+
+  (define (validate-moded-judgment-test who stx jf rest)
+    (unless (judgment-form-id? jf)
+      (raise-syntax-error who
+                          "expected a name introduced by define-judgment-form or define-relation"
+                          jf))
+    (define a-judgment-form (syntax-local-value jf))
+    (define mode (judgment-form-mode a-judgment-form))
+    (when (number? mode)
+      (raise-syntax-error who
+                          (string-append
+                           "modeless judgment forms should supply only the their name"
+                           " as the first argument")
+                          stx
+                          (stx-car (stx-cdr stx))))
+    (define orig-jf-stx (list-ref (syntax->list stx) 1))
+    (define jf-list (syntax->list #`(#,jf . #,rest)))
+    (or (not mode) (and jf-list (= (length jf-list) (+ 1 (length mode)))))))
+
 (define-syntax (test-judgment-holds stx)
   (syntax-parse stx
     [(_ jf e:expr)
-     (unless (judgment-form-id? #'jf)
-       (raise-syntax-error 'test-judgment-holds
-                           "expected a modeless judgment-form"
-                           #'jf))
-     (define a-judgment-form (syntax-local-value #'jf))
-     (define mode (judgment-form-mode a-judgment-form))
-     (unless (number? mode)
-       (raise-syntax-error 'test-judgment-holds
-                           "expected a modeless judgment-form"
-                           #'jf))
-     #`(let ([derivation e])
-         (test-modeless-jf/proc 'jf (lambda (x) (judgment-holds jf x)) derivation (judgment-holds jf derivation) #,(get-srcloc stx)))]
+     (try-test-modeless-jf/proc 'test-judgment-holds stx #'jf #'e)]
     [(_ (jf . rest))
-     (unless (judgment-form-id? #'jf)
-       (raise-syntax-error 'test-judgment-holds
-                           "expected a name introduced by define-judgment-form or define-relation"
-                           #'jf))
-     (define a-judgment-form (syntax-local-value #'jf))
-     (define mode (judgment-form-mode a-judgment-form))
-     (when (number? mode)
-       (raise-syntax-error 'test-judgment-holds
-                           (string-append
-                            "modeless judgment forms should supply only the their name"
-                            " as the first argument")
-                           stx
-                           (stx-car (stx-cdr stx))))
-     (define orig-jf-stx (list-ref (syntax->list stx) 1))
-     (define jf-list (syntax->list #'(jf . rest)))
      (cond
-       [(or (not mode) (and jf-list (= (length jf-list) (+ 1 (length mode)))))
-        (define suffix 0)
-        (let loop ([stx (syntax->datum #'rest)])
-          (cond
-            [(pair? stx) (loop (car stx)) (loop (cdr stx))]
-            [(symbol? stx)
-             (define str (symbol->string stx))
-             (define m (regexp-match #rx"^any_([0-9]+)$" (symbol->string stx)))
-             (when m
-               (set! suffix (max suffix (string->number (list-ref m 1)))))]
-            [else (void)]))
-        (define syncheck-exprs #'(void))
-        (define pats '())
-        (define any-vars '())
-        (define jf-stx
-          (cond
-            [mode
-             (forward-errortrace-prop
-              orig-jf-stx
-              (quasisyntax/loc orig-jf-stx
-                (jf #,@
-                    (for/list ([IO (in-list mode)]
-                               [arg (cdr jf-list)]
-                               [i (in-naturals 1)])
-                      (cond
-                        [(equal? IO 'I) arg]
-                        [else
-                         (set! suffix (+ suffix 1))
-                         (with-syntax ([(syncheck-expr side-conditions-rewritten
-                                                       (names ...) (names/ellipses ...))
-                                        (rewrite-side-conditions/check-errs
-                                         (judgment-form-lang a-judgment-form)
-                                         'test-judgment-holds #t arg)])
-                           (define any-var (string->symbol (format "any_~a" (+ i suffix))))
-                           (set! syncheck-exprs #`(begin syncheck-expr #,syncheck-exprs))
-                           (set! pats (cons #'side-conditions-rewritten pats))
-                           (set! any-vars (cons any-var any-vars))
-                           any-var)])))))]
-            [else orig-jf-stx]))
+       [(validate-moded-judgment-test 'test-judgment-holds stx #'jf #'rest)
+        (define-values (jf-stx any-vars pats syncheck-exprs)
+          (figure-out-how-to-apply-this-judgment orig-jf-stx))
         #`(begin
             #,syncheck-exprs
             (test-judgment-holds/proc (λ () (judgment-holds #,jf-stx (#,@(reverse any-vars))))
@@ -3136,7 +3151,8 @@
                                       #,(judgment-form-lang a-judgment-form)
                                       `(list #,@(reverse pats))
                                       #,(get-srcloc stx)
-                                      #,(not mode)))]
+                                      #,(not mode)
+                                      #f))]
        [else
         ;; this case should always result in a syntax error
         #`(judgment-holds #,orig-jf-stx)])]))
@@ -3164,6 +3180,14 @@
       (unless (f d)
         (print-derivation-error d)))))
 
+(define (report-bad-derivation jf jf-pred derivation)
+  (eprintf "  derivation does not satisfy ~a\n" jf)
+  (parameterize ([pretty-print-print-line (derivation-pretty-printer "  ")])
+    (pretty-print derivation (current-error-port)))
+  (when (not (null? (derivation-subs derivation)))
+    (eprintf"  because the following sub-derivations fail:\n")
+    (print-failing-subderivations jf-pred derivation)))
+
 (define (test-modeless-jf/proc jf jf-pred derivation val srcinfo)
   (cond
     [val
@@ -3171,14 +3195,10 @@
     [else
      (inc-failures)
      (print-failed srcinfo)
-     (eprintf "  derivation does not satisfy ~a\n" jf)
-     (parameterize ([pretty-print-print-line (derivation-pretty-printer "  ")])
-       (pretty-print derivation (current-error-port)))
-     (when (not (null? (derivation-subs derivation)))
-       (eprintf"  because the following sub-derivations fail:\n")
-       (print-failing-subderivations jf-pred derivation))]))
+     (report-bad-derivation jf jf-pred derivation)]))
 
-(define (test-judgment-holds/proc thunk name lang pat srcinfo is-relation?)
+(define (test-judgment-holds/proc thunk name lang pat srcinfo is-relation?
+                                  d)
   (define results (thunk))
   (cond
     [(null? results)
@@ -3192,6 +3212,11 @@
      (define one-matched?
        (for/or ([result (in-list results)])
          (match-pattern? cpat result)))
+     (define (deriv-pred d)
+       (and
+        ; NOTE: This seems bad, but not sure how to do it otherwise.
+        (member d (eval `(build-derivations ,(derivation-term d))))
+        #t))
      (cond [(not one-matched?)
             (inc-failures)
             (print-failed srcinfo)
@@ -3203,7 +3228,34 @@
                 (unless (= i 0) (eprintf " "))
                 (eprintf "~s" ele))
               (eprintf "\n"))]
+           [(and d (not (deriv-pred d)))
+            (inc-failures)
+            (print-failed srcinfo)
+            (report-bad-derivation name deriv-pred d)]
            [else (inc-successes)])]))
+
+#;(define-syntax (test-derivation stx)
+  (syntax-parse stx
+    [(_ jf:id e)
+     (try-test-modeless-jf/proc 'test-derivation stx #'jf #'e)]
+    [(_ (jf:id . rest) d)
+     (cond
+       [(validate-moded-judgment-test 'test-judgment-holds stx #'jf #'rest)
+        (define-values (jf-stx any-vars pats syncheck-exprs)
+          (figure-out-how-to-apply-this-judgment orig-jf-stx))
+        #`(begin
+            #,syncheck-exprs
+            (test-judgment-holds/proc (λ () (judgment-holds #,jf-stx (#,@(reverse any-vars))))
+                                      'jf
+                                      #,(judgment-form-lang a-judgment-form)
+                                      `(list #,@(reverse pats))
+                                      #,(get-srcloc stx)
+                                      #,(not mode)
+                                      #,d))]
+       [else
+        ;; this case should always result in a syntax error
+        #`(judgment-holds #,orig-jf-stx)])
+     ]))
 
 (define-syntax (test-predicate stx)
   (syntax-case stx ()
