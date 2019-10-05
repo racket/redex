@@ -67,6 +67,8 @@
          test-->
          test-->>∃ (rename-out [test-->>∃ test-->>E])
          test-predicate
+         test-match
+         test-no-match
          test-judgment-holds
          test-results
 

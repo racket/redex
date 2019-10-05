@@ -1,6 +1,8 @@
 #lang racket
 
-(require redex/reduction-semantics)
+(require (rename-in redex/reduction-semantics
+                    [test-match test-match/redex]
+                    [test-no-match test-no-match/redex]))
 
 ;; Ariola and Felleisen's formulation:
 ;;
@@ -60,17 +62,10 @@
    ,(and (not (member (term x) (term (x_0 ... x_i x_i+1 ...))))
          (term (does-not-bind? E_i x)))])
 
-(define-syntax-rule (test-match t p)
-  (test-match/count t p 1))
-(define-syntax-rule (test-no-match t p)
-  (test-match/count t p 0))
-(define-syntax (test-match/count stx)
-  (syntax-case stx ()
-    [(_ p t n)
-     #`(let ([matches (redex-match cbn-letrec p (term t))])
-         #,(syntax/loc stx
-             (test-equal (if matches (length matches) 0) 
-                         n)))]))
+(define-syntax-rule (test-match p t)
+  (test-match/redex cbn-letrec p (term t)))
+(define-syntax-rule (test-no-match p t)
+  (test-no-match/redex cbn-letrec p (term t)))
 
 (test-match E (hole (λ x x)))
 (test-no-match E ((λ x x) hole))

@@ -3210,6 +3210,35 @@
     [(_ p arg)
      #`(test-predicate/proc p arg #,(get-srcloc stx))]))
 
+(define-syntax (test-match stx)
+  (syntax-parse stx
+    [(_ lang:id
+        ; TODO: Make redex-match? respect default-language?
+        #;(~optional (~seq #:lang lang:id)
+                   #:defaults ([lang #'(default-language)])) p arg)
+     #`(test-match/proc values (redex-match? lang p) 'p arg #,(get-srcloc stx))]))
+
+(define-syntax (test-no-match stx)
+  (syntax-parse stx
+    [(_ lang:id p arg)
+     #`(test-match/proc not (redex-match? lang p) 'p arg #,(get-srcloc stx))]))
+
+(define (test-match/proc inv pred pat arg srcinfo)
+  ; inv is a test inversion operation:
+  ; if (inv #t) = #t, not matching is failure
+  ; if (inv #t) = #f, matching is failure
+  (cond
+    [(inv (pred arg)) (inc-successes)]
+    [else
+     (inc-failures)
+     (print-failed srcinfo)
+     (eprintf/value-at-end (format "  did~amatch pattern \"~a\""
+                                   (if (inv #t)
+                                       " not "
+                                       " ")
+                                   pat)
+                           arg)]))
+
 (define (test-predicate/proc pred arg srcinfo)
   (cond
     [(pred arg) (inc-successes)]
@@ -3393,6 +3422,8 @@
          test-->
          test-->>∃ (rename-out [test-->>∃ test-->>E])
          test-predicate
+         test-match
+         test-no-match
          test-judgment-holds
          test-results
          default-equiv
