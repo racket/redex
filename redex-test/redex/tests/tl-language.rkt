@@ -327,7 +327,7 @@
 ;; make sure redex-match? does the equality check
 (test (redex-match? empty-language (any_0 any_0) (term (1 2))) #f)
 
-(define-syntax (test-match stx)
+(define-syntax (test-match-bindings stx)
   (syntax-case stx ()
     [(_ actual (((var val) ...) ...))
      (syntax/loc stx
@@ -348,7 +348,7 @@
     (E hole
        (e ... E e ...))
     (x variable-not-otherwise-mentioned))
-  (test-match 
+  (test-match-bindings
    (redex-match 
     L 
     (in-hole (cross e) e)
@@ -372,7 +372,7 @@
   ;; no "found two holes" error
   (test (redex-match L (cross e) (term (cont ((λ (x) x) hole)))) #f)
   
-  (test-match 
+  (test-match-bindings
    (redex-match 
     L 
     (in-hole (cross e) e)
