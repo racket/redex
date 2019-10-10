@@ -245,9 +245,13 @@
 ;;                              hash[rulename -o> (listof modeless-jf-clause?)]
 ;;                              compiled-pattern
 ;;                              derivation
-;;                           -> match or #f
+;;                              boolean
+;;                              fail: (list/c derivation?) -> any/c
+;;                           -> match or any/c
+;; a list of derivations indicates the list of sub-derivations that did not match.
 (define (call-modeless-judgment-form lang jf-name modeless-jf-clause-table contract-cp deriv
-                                     only-check-contracts?)
+                                     only-check-contracts?
+                                     [fail (λ _ #f)])
   (match deriv
     [(derivation (cons deriv-jf-name jf-args) rule-name sub-derivations)
      (cond
@@ -262,7 +266,7 @@
               rules
               jf-args
               sub-derivations
-              (λ () #f))]
+              fail)]
             [else
              (define known-rules (sort (hash-keys modeless-jf-clause-table) string<?))
              (error jf-name "unknown rule in derivation\n  rule: ~.s\n  known rules:~a"
@@ -270,8 +274,8 @@
                     (apply string-append
                            (for/list ([rule (in-list known-rules)])
                              (format "\n   ~s" rule))))]))]
-       [else #f])]
-    [_ #f]))
+       [else (fail (list deriv))])]
+    [_ (fail (list deriv))]))
 
 (define (modeless-judgment-form-check-contract jf-name contract-cp jf-args)
   (when contract-cp
@@ -300,9 +304,9 @@
               first-set-of-args
               maybe-more-args)))))
 
-(define (modeless-jf-process-rule-candidates lang candidates jf-args sub-derivations fail)
+(define (modeless-jf-process-rule-candidates lang candidates jf-args sub-derivations fail [bad-derivs '()])
   (match candidates
-    [`() (fail)]
+    [`() (fail (cons sub-derivations bad-derivs))]
     [(cons (modeless-jf-clause conclusion-compiled-pattern
                                conclusion-ids-to-duplicate
                                premises-compiled-pattern
@@ -313,12 +317,13 @@
                                premise-jf-procs)
            more-candidates)
      (define conc-mtch (match-pattern conclusion-compiled-pattern jf-args))
-     (define (fail-to-next-candidate)
+     (define (fail-to-next-candidate bad-subderivs)
        (modeless-jf-process-rule-candidates lang
                                             more-candidates
                                             jf-args
                                             sub-derivations
-                                            fail))
+                                            fail
+                                            (append bad-subderivs bad-derivs)))
      (cond
        [conc-mtch
         (define sub-derivations-arguments-term-list
@@ -363,9 +368,10 @@
                                                   (mtch-bindings sub-derivations-mtch)
                                                   premises-repeat-names
                                                   premise-jf-procs
-                                                  #t)))
-           (fail-to-next-candidate)])]
-       [else (fail-to-next-candidate)])]))
+                                                  #t
+                                                  (λ _ #f))))
+           (fail-to-next-candidate '())])]
+       [else (fail-to-next-candidate '())])]))
 
 
 (define (modeless-jf-process-other-conditions lang
@@ -376,7 +382,8 @@
                                               premise-jf-procs
                                               fail)
   (match conc+sub-bindings
-    [`() (fail)]
+    ; TODO: Should this include some additional subderivations?
+    [`() (fail '())]
     [(cons conc+sub-binding conc+sub-bindings)
      (cond
        [(and (not-failure-value? (other-conditions conc+sub-binding))
@@ -385,7 +392,8 @@
                                                 conc+sub-binding
                                                 premises-repeat-names
                                                 premise-jf-procs
-                                                #f))
+                                                #f
+                                                fail))
         #t]
        [else
         (modeless-jf-process-other-conditions lang
@@ -406,7 +414,8 @@
                                            conc+sub-binding
                                            premises-repeat-names
                                            premise-jf-procs
-                                           contract-checking-only?)
+                                           contract-checking-only?
+                                           fail)
   (let loop ([premise-jf-procs premise-jf-procs]
              [premises-repeat-names premises-repeat-names]
              [sub-derivations sub-derivations])
@@ -430,7 +439,7 @@
                (cond
                  [(premise-jf-proc sub-derivation contract-checking-only?)
                   (n-loop (- n 1) sub-derivations)]
-                 [else #f])]
+                 [else (fail sub-derivation)])]
               [_ #f])]))])))
 
 (struct modeless-jf-clause (conclusion-compiled-pattern
