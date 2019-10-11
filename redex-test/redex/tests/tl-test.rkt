@@ -199,14 +199,14 @@
     (test-judgment-holds J (derivation `(J (x 0) 0) "Pair"
                                        (list
                                         (derivation `(J x 0) "Base" (list))))))
-   (regexp (regexp-quote "because the following sub-derivations fail:\n    (derivation '(J x 0) \"Base\" '())\n    (derivation '(J (x 0) 0) \"Pair\" (list (derivation '(J x 0) \"Base\" '())))\n")))
+   (regexp (regexp-quote "because the following sub-derivations fail:\n    (derivation '(J x 0) \"Base\" '())")))
 
   (test
    (capture-output
     (test-judgment-holds J (derivation `(J (1 x) 0) "Pair"
                                        (list
                                         (derivation `(J 1 0) "Base" (list))))))
-   (regexp (regexp-quote "because the following sub-derivations fail:\n    (derivation '(J 1 0) \"Base\" '())\n    (derivation '(J (1 x) 0) \"Pair\" (list (derivation '(J 1 0) \"Base\" '())))\n")))
+   (regexp (regexp-quote "because the following sub-derivations fail:\n    (derivation '(J 1 0) \"Base\" '())")))
 
   (test
    (capture-output
@@ -250,12 +250,7 @@
                                                      (list))))))
    (regexp
     (regexp-quote "because the following sub-derivations fail:
-    (derivation
-       '(J2 (1 x) 1)
-       \"Pair\"
-       (list
-          (derivation '(J1 1 x) \"Base\" '())
-          (derivation '(J2 1 1) \"Base\" '())))")))
+    (derivation '(J1 1 x) \"Base\" '())")))
 
   (test
    (capture-output
@@ -264,17 +259,10 @@
                                          (derivation `(J1 1 x) "Base"
                                                      (list))
                                          (derivation `(J2 1 1) "Base"
-                                                     (list))))
-                         #:mutuals (J1)))
+                                                     (list))))))
    (regexp
     (regexp-quote "because the following sub-derivations fail:
-    (derivation '(J1 1 x) \"Base\" '())
-    (derivation
-       '(J2 (1 x) 1)
-       \"Pair\"
-       (list
-          (derivation '(J1 1 x) \"Base\" '())
-          (derivation '(J2 1 1) \"Base\" '())))")))
+    (derivation '(J1 1 x) \"Base\" '())")))
 
   (test
    (capture-output
@@ -286,13 +274,7 @@
                                                      (list))))))
    (regexp
     (regexp-quote "because the following sub-derivations fail:
-    (derivation '(J2 1 2) \"Base\" '())
-    (derivation
-       '(J2 (1 1) 2)
-       \"Pair\"
-       (list
-          (derivation '(J1 1 1) \"Base\" '())
-          (derivation '(J2 1 2) \"Base\" '())))")))
+    (derivation '(J2 1 2) \"Base\" '())")))
 
   (test
    (capture-output

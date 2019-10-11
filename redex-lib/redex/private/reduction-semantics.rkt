@@ -8,6 +8,7 @@
          "loc-wrapper.rkt"
          "error.rkt"
          "judgment-form.rkt"
+         "modeless-jf.rkt"
          "search.rkt"
          "enum.rkt"
          (only-in "binding-forms.rkt"
@@ -3072,13 +3073,18 @@
        (raise-syntax-error 'test-judgment-holds
                            "expected a modeless judgment-form"
                            #'jf))
+     (define judgment-form-record (lookup-judgment-form-id #'jf))
      #`(let ([derivation e])
-         (test-modeless-jf/proc 'jf
-                                (make-hasheq
-                                 `((jf . ,(lambda (x) (judgment-holds jf x)))
-                                   #,@(for/list ([jf (attribute mjf)])
-                                        `(,jf . ,#`,(lambda (x) (judgment-holds #,jf x))))))
-                                derivation (judgment-holds jf derivation)
+         (test-modeless-jf/proc 'jf derivation
+                                ; Circumvents some of the error checking and judgment tracing of judgment-holds
+                                (call-modeless-judgment-form #,(judgment-form-lang judgment-form-record)
+                                                             'jf
+                                                             #,(judgment-form-proc judgment-form-record)
+                                                             #,(judgment-form-compiled-input-contract-pat-id
+                                                                judgment-form-record)
+                                                             derivation
+                                                             #f
+                                                             values)
                                 #,(get-srcloc stx)))]
     [(_ (jf . rest))
      (unless (judgment-form-id? #'jf)
@@ -3159,33 +3165,15 @@
        (newline op)
        0])))
 
-;; Takes a judgment-form name `jf`, a sub-derivation predicate for testing whether a
-;; sub-derivation of `jf` is valid.
-;; The derivation predicate will only be called on sub-derivations of the
-;; judgment `jf`.
-;; Sub-derivations from other judgments get ignored.
-;; TODO: Can we create a generic sub-derivation checker that does not,
-;; statically, know the name of the judgment it is checking?
-(define (print-failing-subderivations jf jf-pred-hash d)
-  (define (print-derivation-error d)
-    (parameterize ([pretty-print-print-line (derivation-pretty-printer "    ")])
-      (pretty-print d (current-error-port))))
-  (define (check-derivation d)
-    (define f (hash-ref jf-pred-hash (car (derivation-term d)) (lambda () #f)))
-    (if f
-        (f d)
-        #t))
-  (let loop ([d d])
-    (let ([ls (derivation-subs d)])
-      (for ([d ls])
-        (unless (loop d)
-          (print-derivation-error d)))
-      (unless (check-derivation d)
-        (print-derivation-error d)))))
 
-(define (test-modeless-jf/proc jf jf-preds derivation val srcinfo)
+(define (print-failing-subderivations bad-sub-derivations)
+  (parameterize ([pretty-print-print-line (derivation-pretty-printer "    ")])
+    (for ([d (remove-duplicates bad-sub-derivations)])
+      (pretty-print d (current-error-port)))))
+
+(define (test-modeless-jf/proc jf derivation val srcinfo)
   (cond
-    [val
+    [(equal? #t val)
      (inc-successes)]
     [else
      (inc-failures)
@@ -3193,9 +3181,10 @@
      (eprintf "  derivation does not satisfy ~a\n" jf)
      (parameterize ([pretty-print-print-line (derivation-pretty-printer "  ")])
        (pretty-print derivation (current-error-port)))
-     (when (not (null? (derivation-subs derivation)))
+     ; A list indicates a list of bad sub-derivations
+     (when (and val (not (null? val)))
        (eprintf"  because the following sub-derivations fail:\n")
-       (print-failing-subderivations jf jf-preds derivation))]))
+       (print-failing-subderivations val))]))
 
 (define (test-judgment-holds/proc thunk name lang pat srcinfo is-relation?)
   (define results (thunk))
