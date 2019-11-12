@@ -590,8 +590,10 @@
   (and/fail
    (check-nt p L u e)
    (if (hash-has-key? (compiled-lang-collapsible-nts L) p)
-       (maybe-let ([bn-res (bind-names (fresh-pat-vars (hash-ref (compiled-lang-collapsible-nts L) p) (make-hash)) e L)])
-         (unify* (p*e-p bn-res) u (p*e-e bn-res) L))
+       (begin
+         (printf "fpv call.2\n")
+         (maybe-let ([bn-res (bind-names (fresh-pat-vars (hash-ref (compiled-lang-collapsible-nts L) p) (make-hash)) e L)])
+                    (unify* (p*e-p bn-res) u (p*e-e bn-res) L)))
        ;; removed a unification of u with itself here
        ;; (the reason for which was mysterious)
        (p*e `(cstr (,p) ,u) e))))
@@ -865,7 +867,9 @@
                   (λ ()
                     (define pat-ok?
                       (for/or ([pat (in-list (nt-pats nt clang))])
+                        
                         (define ntp (normalize-pat clang e pat))
+                        (printf "fpv call.1\n")
                         (define ntp* (bind-names (fresh-pat-vars ntp (make-hash)) e clang))
                         (not-failed? (unify* npat (p*e-p ntp*) (p*e-e ntp*) clang))))
                     (hash-set! memo (list nt clang npat) pat-ok?)
@@ -964,6 +968,7 @@
 ;; w/r/t macro expansion
 ;; (use free-id-table)
 (define (fresh-pat-vars pre-pat instantiations)
+  (printf "fresh-pat-vars ~s\n" pre-pat)
   (match pre-pat
     [`(name ,id ,pat)
      (define new-id (hash-ref instantiations id
@@ -972,6 +977,8 @@
                                 (hash-set! instantiations id unique-id)
                                 unique-id)))
      `(name ,new-id ,(fresh-pat-vars pat instantiations))]
+    [`(mismatch-name ,id ,pat)
+     `(mismatch-name ,id ,(fresh-pat-vars pat instantiations))]
     [`(list ,pats ...)
      `(list ,@(for/list ([p (in-list pats)]) (fresh-pat-vars p instantiations)))]
     [`(variable-not-in ,pat ,s)
