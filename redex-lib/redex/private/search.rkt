@@ -72,12 +72,10 @@
   (pushdown-count (add1 (pushdown-count))))
 
 (define (search/next clauses input bound lang)
-  (printf "search/next\n") ((dynamic-require 'racket/pretty 'pretty-write) clauses)
   (parameterize ([depth-dependent-order? (if (equal? (depth-dependent-order?) 'random)
                                              (> 0.5 (random))
                                              (depth-dependent-order?))])
     (define name-nums 0)
-    (printf "fpv call.4\n")
     (define fresh-pat (parameterize ([unique-name-nums 0])
                         (begin0
                           (fresh-pat-vars input (make-hash))
@@ -270,9 +268,7 @@
     [else #f]))
 
 (define (fresh-clause-vars clause-raw)
-  (printf "fresh-clause-vars ~s\n" (clause-eq/dqs clause-raw))
   (define instantiations (make-hash))
-  (printf "fpv call.3\n")
   (struct-copy clause clause-raw
                [head-pat (fresh-pat-vars (clause-head-pat clause-raw) instantiations)]
                [eq/dqs (for/list ([eq/dq (in-list (clause-eq/dqs clause-raw))])
