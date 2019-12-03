@@ -105,22 +105,19 @@
                                  (atomic-rewrite-table))])
            e)]))
   
-  ;; compound-rewrite-table : (listof lw) -> (listof (union lw pict string))
-  (define compound-rewrite-table 
-    (make-parameter 
-     `((in-hole ,(λ (args)
-                   (let ([context (list-ref args 2)]
-                         [thing-in-hole (list-ref args 3)])
-                     (if (and (lw? thing-in-hole)
-                              (equal? (lw-e thing-in-hole) 'hole))
-                         (list (blank) context (blank))
-                         (list (blank) 
-                               context 
-                               "" 
-                               (basic-text "[" (default-style))
-                               thing-in-hole
-                               (basic-text "]" (default-style)))))))
-       (hide-hole ,(λ (args)
+;; compound-rewrite-table : (listof lw) -> (listof (union lw pict string))
+(define compound-rewrite-table 
+  (make-parameter 
+   `((in-hole ,(λ (args)
+                 (let ([context (list-ref args 2)]
+                       [thing-in-hole (list-ref args 3)])
+                   (list (blank)
+                         context
+                         ""
+                         (basic-text "[" (default-style))
+                         thing-in-hole
+                         (basic-text "]" (default-style))))))
+     (hide-hole ,(λ (args)
                      (list (blank)
                            (list-ref args 2)
                            (blank))))
