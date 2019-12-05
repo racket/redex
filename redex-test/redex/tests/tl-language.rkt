@@ -6,6 +6,7 @@
                   compiled-lang-lang compiled-lang-cclang
                   nt-rhs nt-name rhs-pattern)
          racket/match
+         syntax/macro-testing
          (for-syntax redex/private/term-fn racket/base))
 
 (define-namespace-anchor ns-anchor)
@@ -43,6 +44,16 @@
              (loop pat))]
           [_ (void)]))))
   not-really-nts)
+
+(test
+ (void)
+ (with-handlers ([exn:fail? values])
+   (convert-compile-time-error
+    (let ()
+      (define-language base-language
+        [NT ALIAS ::= hole])
+      (define-extended-language extended-language base-language)
+      (void)))))
 
 (define-language empty-language)
 
