@@ -32,7 +32,8 @@
             (equal? nt nt2))))
       (unless in-ntss?
         (hash-set! nt-hole-at-top nt ans)
-        (hash-set! nt-neighbors nt (hash-ref parent-language-nt-neighbors nt)))))
+        (hash-set! nt-neighbors nt (hash-ref parent-language-nt-neighbors
+                                             (hash-ref aliases nt nt))))))
 
   (when parent-language-nt-neighbors
     (for ([(nt _) (in-hash parent-language-nt-neighbors)])
