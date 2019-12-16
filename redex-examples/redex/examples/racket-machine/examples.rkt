@@ -95,5 +95,8 @@
 ;; Test mode: no windows:
 (module test racket/base
   (require syntax/location)
-  (parameterize ([current-command-line-arguments (vector "--no-pop-ups")])
-    (dynamic-require (quote-module-path "..") #f)))
+  ;; Only run the test on the traditional Racket VM, since the model
+  ;; is about that VM and needs its bytecode to compare
+  (when (eq? 'racket (system-type 'vm))
+    (parameterize ([current-command-line-arguments (vector "--no-pop-ups")])
+      (dynamic-require (quote-module-path "..") #f))))
