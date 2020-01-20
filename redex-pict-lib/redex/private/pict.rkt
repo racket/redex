@@ -650,23 +650,25 @@
 ;; raw-info : language-pict-info
 ;; nts : (listof symbol) -- the nts that the user expects to see
 (define (make-grammar-pict raw-info nts all-nts)
-  (let* ([info (remove-unwanted-nts nts (flatten-grammar-info raw-info all-nts nts))]
-         [term-space 
-          (launder
-           (ghost
-            (apply cc-superimpose (map (λ (x) (sequence-of-non-terminals (car x)))
-                                       info))))])
-    (apply vl-append
-           (non-terminal-gap-space)
-           (map (λ (line)
-                  ((adjust 'language-production)
-                   (htl-append 
-                    (rc-superimpose term-space (sequence-of-non-terminals (car line)))
-                    (lw->pict
-                     all-nts
-                     (find-enclosing-loc-wrapper (add-bars-and-::= (cdr line)))
-                     (adjust 'language-line)))))
-                info))))
+  (define info (remove-unwanted-nts nts (flatten-grammar-info raw-info all-nts nts)))
+  (cond
+    [(null? info) (blank)]
+    [else
+     (define term-space
+       (launder
+        (ghost
+         (apply cc-superimpose (map (λ (x) (sequence-of-non-terminals (car x)))
+                                    info)))))
+     (apply vl-append
+            (non-terminal-gap-space)
+            (for/list ([line (in-list info)])
+              ((adjust 'language-production)
+               (htl-append
+                (rc-superimpose term-space (sequence-of-non-terminals (car line)))
+                (lw->pict
+                 all-nts
+                 (find-enclosing-loc-wrapper (add-bars-and-::= (cdr line)))
+                 (adjust 'language-line))))))]))
 
 (define (sequence-of-non-terminals nts)
   (let ([draw-nt (lambda (nt)

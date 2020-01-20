@@ -129,4 +129,23 @@
 (void
  (render-term/pretty-write empty-language (term (1 2 (((hole))) 3 4))))
 
+(let ()
+  (define-language L1)
+  (check-true (pict? (render-language L1)))
+  (define-union-language L2 L1)
+  (check-exn
+   (λ (x)
+     (and (exn:fail? x)
+          (regexp-match? #rx"cannot render the result of define-union-language"
+                         (exn-message x))))
+   (λ () (render-language L2)))
+  (define-extended-language L3 L2
+    (e ::= a b))
+  (check-true (pict? (render-language L3)))
+
+  (check-true (pict? (render-language L3 #:nts '())))
+
+  (define-extended-language L4 L2)
+  (check-true (pict? (render-language L4))))
+
 (printf "pict-test.rkt done\n")

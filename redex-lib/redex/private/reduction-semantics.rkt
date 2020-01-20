@@ -2480,8 +2480,10 @@
         [else
          (hash-set! new-ht (nt-name nt) nt)]))
     
-    (compile-language (vector (compiled-lang-pict-builder old-lang)
-                              new-pict-infos)
+    (compile-language (let ([pb (compiled-lang-pict-builder old-lang)])
+                        (if pb
+                            (vector pb new-pict-infos)
+                            new-pict-infos))
                       (hash-map new-ht (λ (x y) y))
                       (append (for/list ([bf-table-entry (in-list (compiled-lang-binding-table
                                                                    old-lang))])
