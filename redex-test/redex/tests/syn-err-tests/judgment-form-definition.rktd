@@ -221,3 +221,18 @@
       -------------
       (T)])
    (void)))
+
+(#rx"judgment form extension must extend a different judgment form"
+ ([f1 f]
+  [f2 f])
+ (let ()
+   (define-language L)
+   (define-judgment-form L
+     #:mode (f)
+     [---
+      (f)])
+
+   (let ()
+     (define-extended-judgment-form L f1
+       #:mode (f2))
+     (void))))

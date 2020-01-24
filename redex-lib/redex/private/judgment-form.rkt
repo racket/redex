@@ -885,6 +885,13 @@
                   mode-stx mode
                   position-contracts invariant clauses rule-names)
     (parse-judgment-form-body body syn-err-name stx (identifier? orig) orig-mode is-relation?))
+  (when (and (identifier? orig)
+             (free-identifier=? judgment-form-name orig))
+    (raise-syntax-error syn-err-name
+                        "judgment form extension must extend a different judgment form, not itself"
+                        stx
+                        orig
+                        (list judgment-form-name)))
   (define definitions
     (with-syntax ([judgment-form-runtime-proc
                    (syntax-property (forward-errortrace-prop
