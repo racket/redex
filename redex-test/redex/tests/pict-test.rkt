@@ -131,7 +131,12 @@
 
 (let ()
   (define-language L1)
-  (check-true (pict? (render-language L1)))
+  (check-exn
+   (λ (x)
+     (and (exn:fail? x)
+          (regexp-match? #rx"expected some non-terminals to render"
+                         (exn-message x))))
+   (λ () (render-language L1)))
   (define-union-language L2 L1)
   (check-exn
    (λ (x)
@@ -143,9 +148,15 @@
     (e ::= a b))
   (check-true (pict? (render-language L3)))
 
-  (check-true (pict? (render-language L3 #:nts '())))
+  (check-exn
+   (λ (x)
+     (and (exn:fail? x)
+          (regexp-match? #rx"expected some non-terminals to render"
+                         (exn-message x))))
+   (λ () (render-language L3 #:nts '())))
 
-  (define-extended-language L4 L2)
+  (define-extended-language L4 L2
+    (e ::= 1 2))
   (check-true (pict? (render-language L4))))
 
 (printf "pict-test.rkt done\n")

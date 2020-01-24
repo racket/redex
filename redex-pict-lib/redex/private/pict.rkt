@@ -18,12 +18,14 @@
          redex/private/lang-struct
          redex/private/arrow
          "core-layout.rkt")
+
 (require (prefix-in lw/ct: redex/private/loc-wrapper-ct)
          (prefix-in lw/rt: redex/private/loc-wrapper-rt))
 
 (require (for-syntax racket/base
                      redex/private/term-fn
                      syntax/parse))
+(module+ test (require rackunit))
 
 (provide render-term 
          term->pict
@@ -588,7 +590,8 @@
   (define all-non-terminals (pict-info->all-nonterminals pict-info))
   (when specd-non-terminals
     (check-non-terminals what specd-non-terminals lang))
-  (make-grammar-pict pict-info
+  (make-grammar-pict what
+                     pict-info
                      (or specd-non-terminals all-non-terminals)
                      all-non-terminals))
 
@@ -649,10 +652,17 @@
 
 ;; raw-info : language-pict-info
 ;; nts : (listof symbol) -- the nts that the user expects to see
-(define (make-grammar-pict raw-info nts all-nts)
+(define (make-grammar-pict what raw-info nts all-nts)
   (define info (remove-unwanted-nts nts (flatten-grammar-info raw-info all-nts nts)))
   (cond
-    [(null? info) (blank)]
+    [(null? info)
+     (error what
+            (string-append
+             "expected some non-terminals to render, but there were none\n"
+             "  language's nts: ~a\n"
+             "  requested nts: ~a")
+            (nts->str all-nts)
+            (nts->str nts))]
     [else
      (define term-space
        (launder
@@ -669,6 +679,33 @@
                  all-nts
                  (find-enclosing-loc-wrapper (add-bars-and-::= (cdr line)))
                  (adjust 'language-line))))))]))
+
+
+(define (nts->str nts)
+  (cond
+    [(null? nts) "<<none>>"]
+    [(null? (cdr nts)) (format "~a" (car nts))]
+    [(null? (cddr nts)) (format "~a and ~a"
+                                (list-ref nts 0)
+                                (list-ref nts 1))]
+    [else
+     (define len (length nts))
+     (apply
+      string-append
+      (for/list ([nt (in-list nts)]
+                 [i (in-naturals)])
+        (string-append
+         (format "~a" nt)
+         (cond
+           [(= i (- len 2)) ", and "]
+           [(= i (- len 1)) ""]
+           [else ", "]))))]))
+(module+ test
+  (check-equal? (nts->str '()) "<<none>>")
+  (check-equal? (nts->str '(x)) "x")
+  (check-equal? (nts->str '(x y)) "x and y")
+  (check-equal? (nts->str '(x y z)) "x, y, and z")
+  (check-equal? (nts->str '(x y z w)) "x, y, z, and w"))
 
 (define (sequence-of-non-terminals nts)
   (let ([draw-nt (lambda (nt)
