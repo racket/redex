@@ -9,7 +9,7 @@
          redex/pict
          redex/reduction-semantics)
 
-(provide btest done show-bitmap-test-gui?)
+(provide btest done show-bitmap-test-gui? bitmaps-same?)
 
 (define show-bitmap-test-gui? (make-parameter #t))
 

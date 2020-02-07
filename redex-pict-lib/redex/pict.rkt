@@ -7,7 +7,8 @@
          redex/private/struct
          redex/private/loc-wrapper
          redex/reduction-semantics
-         texpict/mrpict)
+         texpict/mrpict
+         (only-in pict/convert pict-convertible?))
 
 (define reduction-rule-style/c
   (or/c 'vertical 
@@ -16,7 +17,7 @@
         'horizontal
         'horizontal-left-align
         'horizontal-side-conditions-same-line
-        (-> (listof rule-pict-info?) pict?)))
+        (-> (listof rule-pict-info?) pict-convertible?)))
 
 (provide reduction-rule-style/c render-term term->pict
          term->pict/pretty-write
@@ -31,16 +32,16 @@
        [result (file)
                (if (path-string? file)
                    void?
-                   pict?)])]
+                   pict-convertible?)])]
  [reduction-relation->pict (->* (reduction-relation?)
                                 (#:style reduction-rule-style/c)
-                                pict?)]
+                                pict-convertible?)]
  [render-reduction-relation-rules 
   (parameter/c (or/c #f (listof (or/c symbol? string? exact-nonnegative-integer?))))]
  
  [language->pict (->* (compiled-lang?)
                       (#:nts (or/c #f (listof (or/c string? symbol?))))
-                      pict?)]
+                      pict-convertible?)]
  [render-language
   (->i ([lang compiled-lang?])
        ([file (or/c false/c path-string?)]
@@ -49,15 +50,15 @@
        [result (file)
                (if (path-string? file)
                    void?
-                   pict?)])]
- [derivation->pict (-> compiled-lang? derivation? pict?)]
+                   pict-convertible?)])]
+ [derivation->pict (-> compiled-lang? derivation? pict-convertible?)]
  
  [rule-pict-info-arrow (-> rule-pict-info? symbol?)]
- [rule-pict-info-lhs (-> rule-pict-info? pict?)]
- [rule-pict-info-rhs (-> rule-pict-info? pict?)]
+ [rule-pict-info-lhs (-> rule-pict-info? pict-convertible?)]
+ [rule-pict-info-rhs (-> rule-pict-info? pict-convertible?)]
  [rule-pict-info-label (-> rule-pict-info? (or/c symbol? #f))]
- [rule-pict-info-computed-label (-> rule-pict-info? (or/c pict? #f))]
- [rule-pict-info->side-condition-pict (->* (rule-pict-info?) ((and/c positive? real?)) pict?)]
+ [rule-pict-info-computed-label (-> rule-pict-info? (or/c pict-convertible? #f))]
+ [rule-pict-info->side-condition-pict (->* (rule-pict-info?) ((and/c positive? real?)) pict-convertible?)]
  [rule-pict-info? (-> any/c boolean?)])
 
 ; syntax
@@ -75,14 +76,14 @@
  [render-language-nts (parameter/c (or/c false/c (listof (or/c string? symbol?))))]
  [extend-language-show-union (parameter/c boolean?)]
  [extend-language-show-extended-order (parameter/c boolean?)]
- [current-text (parameter/c (-> string? text-style/c number? pict?))])
+ [current-text (parameter/c (-> string? text-style/c number? pict-convertible?))])
 
 (provide/contract
  [non-terminal-gap-space (parameter/c real?)]
  [metafunction-gap-space (parameter/c real?)]
  [metafunction-rule-gap-space (parameter/c real?)]
  [metafunction-line-gap-space (parameter/c real?)]
- [metafunction-combine-contract-and-rules (parameter/c (pict? pict? . -> . pict?))]
+ [metafunction-combine-contract-and-rules (parameter/c (pict-convertible? pict-convertible? . -> . pict-convertible?))]
  [metafunction-fill-acceptable-width (parameter/c real?)]
  [label-style (parameter/c text-style/c)]
  [literal-style (parameter/c text-style/c)]
@@ -99,12 +100,12 @@
  [white-bracket-sizing (parameter/c
                         (-> string? number? (values number? number? number? number?)))]
  [horizontal-bar-spacing (parameter/c exact-nonnegative-integer?)]
- [relation-clauses-combine (parameter/c (-> (listof pict?) pict?))]
- [relation-clause-combine (parameter/c (-> (listof (listof pict?)) pict? (or/c string? #f) pict?))]
- [default-relation-clause-combine (-> (listof (listof pict?)) pict? (or/c string? #f) pict?)]
- [metafunction-arrow-pict (parameter/c (-> pict?))]
- [where-make-prefix-pict (parameter/c (-> pict?))]
- [where-combine (parameter/c (-> pict? pict? pict?))])
+ [relation-clauses-combine (parameter/c (-> (listof pict-convertible?) pict-convertible?))]
+ [relation-clause-combine (parameter/c (-> (listof (listof pict-convertible?)) pict-convertible? (or/c string? #f) pict-convertible?))]
+ [default-relation-clause-combine (-> (listof (listof pict-convertible?)) pict-convertible? (or/c string? #f) pict-convertible?)]
+ [metafunction-arrow-pict (parameter/c (-> pict-convertible?))]
+ [where-make-prefix-pict (parameter/c (-> pict-convertible?))]
+ [where-combine (parameter/c (-> pict-convertible? pict-convertible? pict-convertible?))])
 
 
 (provide/contract
@@ -129,9 +130,9 @@
  
  [delimit-ellipsis-arguments? (parameter/c any/c)]
  
- [default-white-square-bracket (-> boolean? pict?)]
- [homemade-white-square-bracket (-> boolean? pict?)]
- [white-square-bracket (parameter/c (-> boolean? pict?))])
+ [default-white-square-bracket (-> boolean? pict-convertible?)]
+ [homemade-white-square-bracket (-> boolean? pict-convertible?)]
+ [white-square-bracket (parameter/c (-> boolean? pict-convertible?))])
 
 (provide/contract
  [label-font-size (parameter/c (and/c (between/c 1 255) integer?))]
@@ -141,7 +142,7 @@
  [reduction-relation-rule-extra-separation (parameter/c real?)]
  [reduction-relation-rule-line-separation (parameter/c real?)]
 
- [current-render-pict-adjust (parameter/c (pict? symbol? . -> . pict?))])
+ [current-render-pict-adjust (parameter/c (pict-convertible? symbol? . -> . pict-convertible?))])
 
 (provide
  lw
@@ -162,12 +163,12 @@
  [build-lw
   (-> (or/c string?
             symbol?
-            pict?
+            pict-convertible?
             (listof (or/c 'spring lw?)))
       pnum pnum pnum pnum lw?)]
- [just-before (-> (or/c pict? string? symbol?) lw? lw?)]
- [just-after (-> (or/c pict? string? symbol?) lw? lw?)]
- [fill-between (-> (or/c pict? string? symbol?) lw? lw? lw?)])
+ [just-before (-> (or/c pict-convertible? string? symbol?) lw? lw?)]
+ [just-after (-> (or/c pict-convertible? string? symbol?) lw? lw?)]
+ [fill-between (-> (or/c pict-convertible? string? symbol?) lw? lw? lw?)])
 (provide with-unquote-rewriter
          with-compound-rewriter
          with-compound-rewriters
@@ -175,10 +176,10 @@
          with-atomic-rewriters)
 
 (provide/contract
- [set-arrow-pict! (-> symbol? (-> pict?) void?)]
- [arrow->pict (-> symbol? pict?)]
+ [set-arrow-pict! (-> symbol? (-> pict-convertible?) void?)]
+ [arrow->pict (-> symbol? pict-convertible?)]
  
  [lw->pict
-  (-> (or/c (listof symbol?) compiled-lang?) lw? pict?)]
+  (-> (or/c (listof symbol?) compiled-lang?) lw? pict-convertible?)]
  [render-lw
-  (-> (or/c (listof symbol?) compiled-lang?) lw? pict?)])
+  (-> (or/c (listof symbol?) compiled-lang?) lw? pict-convertible?)])

@@ -8,6 +8,7 @@
          
          texpict/utils
          texpict/mrpict
+         (only-in pict/convert pict-convertible?)
         
          racket/match
          racket/draw
@@ -63,7 +64,7 @@
          left-curly-bracket-lower-hook
          curly-bracket-extension
          (contract-out
-          [apply-atomic-rewrite (-> symbol? (or/c string? pict? symbol?))])
+          [apply-atomic-rewrite (-> symbol? (or/c string? pict-convertible? symbol?))])
 
          current-render-pict-adjust
          adjust
@@ -98,7 +99,7 @@
        (expr/c #'symbol?
                #:name "atomic-rewriter name")
        #:declare transformer
-       (expr/c #'(or/c (-> pict?) string?)
+       (expr/c #'(or/c (-> pict-convertible?) string?)
                #:name "atomic-rewriter rewrite")
        #`(parameterize ([atomic-rewrite-table
                          (append (list (list name.c transformer.c) ...)
@@ -140,7 +141,7 @@
       [(_ ([name rewriter] ...) body:expr)
        #:declare name (expr/c #'symbol? #:name "compound-rewriter name")
        #:declare rewriter (expr/c #'(-> (listof lw?)
-                                        (listof (or/c lw? string? pict?)))
+                                        (listof (or/c lw? string? pict-convertible?)))
                                   #:name "compound-rewriter transformer")
        #'(parameterize ([compound-rewrite-table
                          (append (reverse (list (list name rewriter.c) ...))
@@ -241,7 +242,7 @@
       (cond
         [(symbol? e) e]
         [(string? e) e]
-        [(pict? e) e]
+        [(pict-convertible? e) e]
         [(and (pair? e)
               (lw? (car e))
               (member (lw-e (car e)) '("(" "[" "{")) ;; ensures we're really beginning a sequence
@@ -573,7 +574,7 @@
       (cond
         [(symbol? obj) (eject line line-span col col-span obj unquoted?)]
         [(string? obj) (eject line line-span col col-span obj unquoted?)]
-        [(pict? obj) (eject line line-span col col-span obj unquoted?)]
+        [(pict-convertible? obj) (eject line line-span col col-span obj unquoted?)]
         [(not obj) (eject line line-span col col-span (blank) unquoted?)]
         [else
          (for-each (λ (x) (handle-loc-wrapped x))
@@ -769,7 +770,7 @@
   
   (define (atom->tokens col span atom all-nts unquoted?)
     (cond
-      [(pict? atom)
+      [(pict-convertible? atom)
        (list (make-pict-token col span atom))]
       [unquoted?
        (list (make-pict-token col span 
@@ -810,7 +811,7 @@
     (define str/pict/sym (apply-atomic-rewrite e))
     (cond
      [(string? str/pict/sym) (make-string-token col span str/pict/sym (get-style))]
-     [(pict? str/pict/sym) (make-pict-token col span str/pict/sym)]
+     [(pict-convertible? str/pict/sym) (make-pict-token col span str/pict/sym)]
      [(symbol? str/pict/sym) #f]))
 
 (define (apply-atomic-rewrite e)
@@ -975,7 +976,7 @@
       (cond
         [(symbol? e) (void)]
         [(string? e) (void)]
-        [(pict? e) (void)]
+        [(pict-convertible? e) (void)]
         [else (for-each find/lw e)]))
     
     (find/e in-lws)

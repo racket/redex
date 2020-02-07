@@ -4,6 +4,7 @@
           racket/port
           (for-syntax racket/base)
           (for-label racket/base
+                     (only-in pict/convert pict-convertible?)
                      (except-in racket/gui make-color)
                      racket/pretty
                      racket/contract
@@ -145,7 +146,7 @@ sets @racket[dc-for-text-size] and the latter does not.
           [term any/c]
           [filename (or/c path-string? #f) #f]
           [#:width width (or/c exact-positive-integer? 'infinity) (pretty-print-columns)])
-         (or/c void? pict?)]{
+         (or/c void? pict-convertible?)]{
   Like @racket[render-term], except that the @racket[term] argument is evaluated,
   and expected to return a term. Then, @racket[pretty-write] is used
   to determine where the line breaks go, using the @racket[width] argument
@@ -161,7 +162,7 @@ sets @racket[dc-for-text-size] and the latter does not.
           [lang compiled-lang?]
           [term any/c]
           [#:width width (or/c exact-positive-integer? 'infinity) (pretty-print-columns)])
-         pict?]{
+         pict-convertible?]{
   Like @racket[term->pict], but with the same change that
   @racket[render-term/pretty-write] has from @racket[render-term].
 
@@ -172,7 +173,7 @@ sets @racket[dc-for-text-size] and the latter does not.
                           [file (or/c #f path-string?) #f]
                           [#:nts nts (or/c #f (listof (or/c string? symbol?)))
                            (render-language-nts)])
-         (if file void? pict?)]{
+         (if file void? pict-convertible?)]{
 
 Renders a language. If @racket[file] is @racket[#f],
 it produces a pict; if @racket[file] is a path, it saves
@@ -196,7 +197,7 @@ are otherwise setting @racket[dc-for-text-size].
 @defproc[(language->pict (lang compiled-lang?)
                          [#:nts nts (or/c #f (listof (or/c string? symbol?)))
                           (render-language-nts)])
-         pict?]{
+         pict-convertible?]{
 
 Produce a pict like @racket[render-language], but without
 adjusting @racket[dc-for-text-size].
@@ -212,7 +213,7 @@ together.
 @defproc[(render-reduction-relation [rel reduction-relation?]
                                     [file (or/c #f path-string?) #f]
                                     [#:style style reduction-rule-style/c (rule-pict-style)])
-         (if file void? pict?)]{
+         (if file void? pict-convertible?)]{
 
 Renders a reduction relation. If @racket[file] is @racket[#f],
 it produces a pict; if @racket[file] is a path, it saves
@@ -245,7 +246,7 @@ The following forms of arrows can be typeset:
 
 @defproc[(reduction-relation->pict (r reduction-relation?)
                                    [#:style style reduction-rule-style/c (rule-pict-style)])
-         pict?]{
+         pict-convertible?]{
 
   Produces a pict like @racket[render-reduction-relation], but 
   without setting @racket[dc-for-text-size].
@@ -401,7 +402,7 @@ This function sets @racket[dc-for-text-size]. See also
 @racket[judgment-form->pict].
 }
 
-@defproc[(derivation->pict [language compiled-lang?] [derivation derivation?]) pict?]{
+@defproc[(derivation->pict [language compiled-lang?] [derivation derivation?]) pict-convertible?]{
  Produces a pict that looks like the derivation in @racket[show-derivations],
  except that it uses @racket[term->pict/pretty-write] to draw the
  individual terms in the derivation.
@@ -512,25 +513,25 @@ A contract equivalent to
                    'horizontal
                    'horizontal-left-align
                    'horizontal-side-conditions-same-line
-                   (-> (listof rule-pict-info?) pict?))]
+                   (-> (listof rule-pict-info?) pict-convertible?))]
 
 The symbols indicate various pre-defined styles. The procedure
 implements new styles; it is give the @racket[rule-pict-info?]
 values, one for each clause in the reduction relation,
-and is expected to combine them into a single @racket[pict?]
+and is expected to combine them into a single @racket[pict-convertible?]
 }
 
 @defproc[(rule-pict-info? [x any/c]) boolean?]{
   A predicate that recognizes information about a rule for use 
-  in rendering the rule as a @racket[pict?].
+  in rendering the rule as a @racket[pict-convertible?].
 }
 @defproc[(rule-pict-info-arrow [rule-pict-info rule-pict-info?]) symbol?]{
   Extracts the arrow used for this rule. See also @racket[arrow->pict].
 }
-@defproc[(rule-pict-info-lhs [rule-pict-info rule-pict-info?]) pict?]{
+@defproc[(rule-pict-info-lhs [rule-pict-info rule-pict-info?]) pict-convertible?]{
   Extracts a pict for the left-hand side of this rule.
 }
-@defproc[(rule-pict-info-rhs [rule-pict-info rule-pict-info?]) pict?]{
+@defproc[(rule-pict-info-rhs [rule-pict-info rule-pict-info?]) pict-convertible?]{
  Extracts a pict for the right-hand side of this rule.
 }
 @defproc[(rule-pict-info-label [rule-pict-info rule-pict-info?]) (or/c symbol? #f)]{
@@ -538,13 +539,13 @@ and is expected to combine them into a single @racket[pict?]
  for the rule or @racket[_computed-label] was used,
  in which case this returns @racket[#f].
 }
-@defproc[(rule-pict-info-computed-label [rule-pict-info rule-pict-info?]) (or/c pict? #f)]{
+@defproc[(rule-pict-info-computed-label [rule-pict-info rule-pict-info?]) (or/c pict-convertible? #f)]{
   Returns a pict for the typeset version of the label of this rule, when
   @racket[_computed-label] was used. Otherwise, returns @racket[#f].
 }
 @defproc[(rule-pict-info->side-condition-pict [rule-pict-info rule-pict-info?] 
                                               [max-width real? +inf.0])
-         pict?]{
+         pict-convertible?]{
   Builds a pict for the @racket[_side-condition]s and @racket[_where] clauses
   for @racket[rule-pict-info], attempting to keep the width under @racket[max-width].
 }
@@ -617,7 +618,7 @@ precede ellipses that represent argument sequences; when it is
 @racket[#f] no commas appear in those positions.
 }
 
-@defparam[white-square-bracket make-white-square-bracket (-> boolean? pict?)]{
+@defparam[white-square-bracket make-white-square-bracket (-> boolean? pict-convertible?)]{
 This parameter controls the typesetting of the brackets in metafunction
 definitions and applications. It is called to supply the two white bracket
 picts. If @racket[#t] is supplied, the function should return the open 
@@ -630,7 +631,7 @@ It's default value is @racket[default-white-square-bracket]. See also
 @history[#:added "1.1"]
 }
 
-@defproc[(homemade-white-square-bracket [open? boolean?]) pict?]{
+@defproc[(homemade-white-square-bracket [open? boolean?]) pict-convertible?]{
  This function implements the default way that older versions
  of Redex typeset whitebrackets. It uses two overlapping
  @litchar{[} and  @litchar{]} chars with a little whitespace between them.
@@ -638,7 +639,7 @@ It's default value is @racket[default-white-square-bracket]. See also
  @history[#:added "1.1"]
 }
 
-@defproc[(default-white-square-bracket [open? boolean?]) pict?]{
+@defproc[(default-white-square-bracket [open? boolean?]) pict-convertible?]{
  This function returns picts built using
  @litchar{〚} and  @litchar{〛}
  in the style @racket[default-style], using
@@ -809,7 +810,7 @@ into @litchar{“} and @litchar{”} or are left as merely @litchar{"}.
 Defaults to @racket[#t].
 }
 
-@defparam[current-text proc (-> string? text-style/c number? pict?)]{
+@defparam[current-text proc (-> string? text-style/c number? pict-convertible?)]{
 
 A parameter whose value is a function to be called whenever Redex typesets
 some part of a grammar, reduction relation, or
@@ -817,11 +818,11 @@ metafunction. It defaults to the @racketmodname[pict]
 library's @racket[text] function.
 }
 
-@defproc[(arrow->pict [arrow symbol?]) pict?]{
+@defproc[(arrow->pict [arrow symbol?]) pict-convertible?]{
   Returns the pict corresponding to @racket[arrow].
 }
 
-@defproc[(set-arrow-pict! [arrow symbol?] [proc  (-> pict?)]) void?]{
+@defproc[(set-arrow-pict! [arrow symbol?] [proc  (-> pict-convertible?)]) void?]{
 
 Sets the pict for a given reduction-relation
 symbol. When typesetting a reduction relation that uses the
@@ -948,7 +949,7 @@ single reduction relation.
   @history[#:added "1.11"]
 }
 
-@defparam[metafunction-combine-contract-and-rules combine (pict? pict? . -> . pict?)]{
+@defparam[metafunction-combine-contract-and-rules combine (pict-convertible? pict-convertible? . -> . pict-convertible?)]{
   Controls the combination of a contract with the rules of a metafunction
   when contract rendering is enabled. The first argument to the combining function
   is a pict for the contract, and the second argument is a pict for the rules.
@@ -961,10 +962,10 @@ single reduction relation.
 
 @defparam[relation-clause-combine combine 
           (parameter/c
-           (-> (listof (listof pict?))
-               pict?
+           (-> (listof (listof pict-convertible?))
+               pict-convertible?
                (or/c string? #f)
-               pict?))]{
+               pict-convertible?))]{
 
  Controls the construction of a particular clause of a
  reduction relation or judgment form. The first argument are
@@ -980,10 +981,10 @@ single reduction relation.
 
 
 @defproc[(default-relation-clause-combine
-           [premises (listof (listof pict?))]
-           [conclusion pict?]
+           [premises (listof (listof pict-convertible?))]
+           [conclusion pict-convertible?]
            [rule-name (or/c string? #f)])
-         pict?]{
+         pict-convertible?]{
  Builds a pict for the premises as
  @racketblock[(apply vc-append 4
                      (for/list ([premises (in-list premises)])
@@ -996,31 +997,31 @@ single reduction relation.
 }
 
 @defparam[relation-clauses-combine combine
-                                   (parameter/c (-> (listof pict?) pict?))]{
+                                   (parameter/c (-> (listof pict-convertible?) pict-convertible?))]{
   The @racket[combine] function is called with the list of picts that are obtained by rendering
   a relation; it should put them together into a single pict. It defaults to
   @racket[(λ (l) (apply vc-append 20 l))]
 }
 
-@defparam[metafunction-arrow-pict make-arrow (parameter/c (-> pict?))]{
+@defparam[metafunction-arrow-pict make-arrow (parameter/c (-> pict-convertible?))]{
   Specifies the pict to use for the arrow when typesetting
   a metafunction contract.
 }
 
-@defparam[where-make-prefix-pict make-prefix (parameter/c (-> pict?))]{
+@defparam[where-make-prefix-pict make-prefix (parameter/c (-> pict-convertible?))]{
   The @racket[make-prefix] function is called with no arguments to generate a pict
   that prefixes @tech{@racket[where] clauses}. It defaults to a function that
   produces a pict for ``where'' surrounded by spaces using the default style.
 }
 
-@defparam[where-combine combine (parameter/c (-> pict? pict? pict?))]{
+@defparam[where-combine combine (parameter/c (-> pict-convertible? pict-convertible? pict-convertible?))]{
   The @racket[combine] function is called with picts for the left and right
   side of a where clause, and it should put them together into a single pict. It defaults to
   @racket[(λ (l r) (hbl-append l _=-pict r))], where @racket[_=-pict] is an equal
   sign surrounded by spaces using the default style.
 }
 
-@defparam[current-render-pict-adjust adjust (pict? symbol? . -> . pict?)]{
+@defparam[current-render-pict-adjust adjust (pict-convertible? symbol? . -> . pict-convertible?)]{
  A parameter whose value is a function to adjusts picts generated as
  various parts of a rendering. The symbol that is provided to the function
  indicates the role of the pict. A pict-adjusting function might be installed
@@ -1139,7 +1140,7 @@ during the evaluation of expression.
 
 @racket[name-symbol] is expected to evaluate to a symbol. The value
 of proc is called with a @racket[(listof lw)], and is expected to
-return a new @racket[(listof (or/c lw? string? pict?))],
+return a new @racket[(listof (or/c lw? string? pict-convertible?))],
 rewritten appropriately. 
 
 The list passed to the rewriter corresponds to the
@@ -1199,7 +1200,7 @@ Shorthand for nested @racket[with-compound-rewriter] expressions.}
                                               
 @defstruct[lw ([e (or/c string?
                         symbol?
-                        pict? 
+                        pict-convertible? 
                         (listof (or/c (symbols 'spring) lw?)))]
                [line exact-positive-integer?]
                [line-span exact-positive-integer?]
@@ -1221,7 +1222,7 @@ metafunction application. See @racket[to-lw] for the meanings of the other field
 
 @defproc[(build-lw [e (or/c string?
                             symbol?
-                            pict? 
+                            pict-convertible? 
                             (listof (or/c 'spring lw?)))]
                    [line exact-positive-integer?]
                    [line-span exact-positive-integer?]
@@ -1342,7 +1343,7 @@ the empty string and the @racket[x] in the typeset output.
 }
 
 @defproc[(render-lw (language/nts (or/c (listof symbol?) compiled-lang?))
-                    (lw lw?)) pict?]{
+                    (lw lw?)) pict-convertible?]{
 
   Produces a pict that corresponds to the @racket[lw] object
   argument, using @racket[language/nts] to determine which
@@ -1354,7 +1355,7 @@ the empty string and the @racket[x] in the typeset output.
 }
 
 @defproc[(lw->pict (language/ntw (or/c (listof symbol?) compiled-lang?))
-                   (lw lw?)) pict?]{
+                   (lw lw?)) pict-convertible?]{
 
   Produces a pict that corresponds to the @racket[lw] object
   argument, using @racket[language/nts] to determine which
@@ -1366,10 +1367,10 @@ the empty string and the @racket[x] in the typeset output.
 }
 
 @deftogether[[
-@defproc[(just-before [stuff (or/c pict? string? symbol?)]
+@defproc[(just-before [stuff (or/c pict-convertible? string? symbol?)]
                       [lw lw?])
                      lw?]{}
-@defproc[(just-after [stuff (or/c pict? string? symbol?)]
+@defproc[(just-after [stuff (or/c pict-convertible? string? symbol?)]
                      [lw lw?])
                     lw?]{}]]{
 These two helper functions build new @racket[lw]s whose contents are
@@ -1379,7 +1380,7 @@ just before or just after that argument. The line-span and
 column-span of the new lw is always zero.
 }
 
-@defproc[(fill-between [stuff (or/c pict? string? symbol?)]
+@defproc[(fill-between [stuff (or/c pict-convertible? string? symbol?)]
                        [lw-before lw?]
                        [lw-after lw?])
          lw?]{
