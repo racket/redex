@@ -47,6 +47,7 @@
      "tut-subst-test.rkt"
      "ambiguous-test.rkt"
      "enum-test.rkt"
+     "convert-test.rkt"
      "bitmap-test.rkt")
    (if test-examples?
        '("<redex-examples>/redex/examples/cbn-letrec.rkt"
