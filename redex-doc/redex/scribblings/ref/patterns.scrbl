@@ -36,7 +36,7 @@ identifier's lexical binding:
                pat:variable-except pat:variable-prefix
                pat:variable-not-otherwise-mentioned
                pat:hole pat:symbol pat:name pat:in-hole pat:hide-hole
-               pat:side-condition pat:cross
+               pat:side-condition pat:compatible-closure-context pat:cross
                pat:pattern-sequence pat:other-literal)
    [pattern pat:any
             pat:_
