@@ -101,3 +101,12 @@
      (B ::= A))
    DL
    (void)))
+(#rx"found a cycle of non-terminals that doesn't consume input"
+ ([P1 p][E1 e])
+ (let ()
+   (define-language L1
+     [P1 ::= e]
+     [e ::= 1])
+   (define-extended-language L2 L1
+     [E1 ::= .... p])
+   (void)))

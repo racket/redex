@@ -35,8 +35,10 @@
         (hash-set! nt-neighbors nt (hash-ref parent-language-nt-neighbors
                                              (hash-ref aliases nt nt))))))
 
+  (define needs-carry-forward (make-hash))
   (when parent-language-nt-neighbors
     (for ([(nt _) (in-hash parent-language-nt-neighbors)])
+      (hash-set! needs-carry-forward nt #t)
       (hash-set! nt-neighbors (hash-ref aliases nt nt) '())))
 
   (define (add-neighbors-link from/aliased to/aliased)
@@ -77,6 +79,7 @@
         [prods (in-list prodss)])
     (define base-nt (car nts))
     (hash-set! nt-neighbors base-nt '())
+    (hash-set! needs-carry-forward base-nt #f)
     (for ([prod (in-list prods)])
       (match prod
         [`(nt ,name) (add-neighbors-link base-nt name)]
@@ -92,6 +95,14 @@
                (add-neighbors-link base-nt neighbor))))]
         [_
          (void)])))
+
+  ;; in an extended langugage, if the parent's nts aren't mentioned,
+  ;; then they are carried forward automatically so we need to carry
+  ;; forward the neighbor relationships into the graph for the new language
+  (when parent-language-nt-neighbors
+    (for ([(nt neighbors) (in-hash parent-language-nt-neighbors)])
+      (when (hash-ref needs-carry-forward nt)
+        (hash-set! nt-neighbors nt neighbors))))
 
   (check-for-cycles stx nt-identifiers nt-neighbors)
 
