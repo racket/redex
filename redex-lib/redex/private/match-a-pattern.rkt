@@ -148,7 +148,7 @@ turns into this:
     [(_ to-match [pats rhs ...] ...)
      (let ()
        (check-pats (syntax->list #'(pats ...)) skip-non-recursive?)
-       #'(match to-match [pats rhs ...] ...))]))
+       (syntax/loc stx (match to-match [pats rhs ...] ...)))]))
 
 (define-syntax (match-a-pattern stx) (match-a-pattern/proc stx #f))
 (define-syntax (match-a-pattern/single-base-case stx) (match-a-pattern/proc stx #t))
