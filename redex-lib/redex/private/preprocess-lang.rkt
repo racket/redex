@@ -245,10 +245,13 @@
                     less-than?
                     #:cache-keys? #t))
             (when clang-all-ht/f
-              (define clang-all-ht-nt-vec (apply vector (hash-ref clang-all-ht/f name)))
-              (hash-set! clang-all-ht/f name
-                         (for/list ([i (in-list permutation)])
-                           (vector-ref clang-all-ht-nt-vec i))))
+              (define ent (hash-ref clang-all-ht/f name #f))
+              (when ent
+                (define clang-all-ht-nt-vec (apply vector ent))
+                (when clang-all-ht-nt-vec
+                  (hash-set! clang-all-ht/f name
+                             (for/list ([i (in-list permutation)])
+                               (vector-ref clang-all-ht-nt-vec i))))))
             (nt name
                 (for/list ([i (in-list permutation)])
                   (vector-ref production-vec i)))]

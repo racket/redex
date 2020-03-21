@@ -2,6 +2,7 @@
 (require rackunit
          redex/reduction-semantics
          (for-syntax racket/base)
+         (only-in redex/private/enum enum-test-support)
          data/enumerate/lib)
 
 (module test racket/base)
@@ -176,18 +177,22 @@
 (try-it Holes (in-hole (cons hole number_1) number_1))
 
 ;; Cross test
-(define-language CrossLang
-  (e (e e)
-     (λ (x) e)
-     x)
-  (x variable-not-otherwise-mentioned))
+(define (cross-tests)
+  (define-language CrossLang
+    (e (e e)
+       (λ (x) e)
+       x)
+    (x variable-not-otherwise-mentioned))
 
-(try-it CrossLang e)
-(try-it CrossLang x)
-(try-it CrossLang (cross e))
-(try-it CrossLang (cross x))
-(try-it CrossLang (in-hole (cross x) e))
-(try-it CrossLang (in-hole (cross e) x))
+  (try-it CrossLang e)
+  (try-it CrossLang x)
+  (try-it CrossLang (cross e))
+  (try-it CrossLang (cross x))
+  (try-it CrossLang (in-hole (cross x) e))
+  (try-it CrossLang (in-hole (cross e) x)))
+(cross-tests)
+(parameterize ([enum-test-support #t])
+  (cross-tests))
 
 (let ()
   (define-language ambiguous
@@ -222,3 +227,12 @@
     (e ::= (f) 1)
     (f ::= e (e ...)))
   (try-it L m))
+
+(let ()
+  (define-language L
+    (e ::= n)
+    (n ::= (or v v))
+    (v ::= true false)
+    [C ::= (compatible-closure-context e)])
+
+  (try-it L e))

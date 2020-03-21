@@ -102,14 +102,15 @@
                  ns2
                  (λ (_ v1 v2)
                     (unless (equal? v1 v2)
-                      (redex-error 'generate-term-#:ith "named patterns must be the same pattern"))
+                      (redex-error 'generate-term-#:ith "named patterns must be the same pattern, saw ~s and ~s"
+                                   v1 v2))
                     v1)))
 
    (: mis-combo : Symbol (Pairof Pattern (Setof Tag)) (Pairof Pattern (Setof Tag)) -> (Pairof Pattern (Setof Tag)))
    (define/match (mis-combo k pts1 pts2)
      [(_ (cons p1 ts1) (cons p2 ts2))
       (unless (equal? p1 p2)
-        (redex-error 'generate-term-#:ith "mismatch named patterns must be the same pattern"))
+        (redex-error 'generate-term-#:ith "mismatch named patterns must be the same pattern, saw ~s and ~s" p1 p2))
       (cons p1 (set-union ts1 ts2))])
    
    (: misnames-union : (HashTable Symbol (Pairof Pattern (Setof Tag))))

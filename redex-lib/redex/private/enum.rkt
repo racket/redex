@@ -18,7 +18,8 @@
          "preprocess-lang.rkt"
          "ambiguous.rkt")
 
-(provide 
+(provide
+ enum-test-support
  enum-count
  finite-enum?
  (contract-out
@@ -40,6 +41,8 @@
   [lang-enum? (-> any/c boolean?)]
   [enum? (-> any/c boolean?)]))
 
+(define enum-test-support (make-parameter #f))
+
 ;; nt-enums : hash[sym -o> (or/c #f enum)]
 ;; cc-enums : promise/c (hash[sym -o> (or/c #f enum)])
 ;; unused-var/e : enum
@@ -57,30 +60,73 @@
 
 (define (lang-enumerators lang orig-clang-all-ht cc-lang call-nt-proc/bool)
   (define clang-all-ht (hash-copy orig-clang-all-ht))
-  (define nt-enums (make-hash))
-  (define cc-enums (make-hash))
   (define unused-var/e
     (apply except/e
            symbol/e
            (used-vars lang)))
-  (define filled-cc-enums
-    (delay (let-values ([(fin-cc-lang rec-cc-lang cant-enumerate-cc-table)
-                         (sep-lang (force cc-lang) #f)])
-             (make-lang-table! l-enum cc-enums fin-cc-lang rec-cc-lang cant-enumerate-cc-table
-                               #:i-am-cross? #t)
-             cc-enums)))
+  (cond
+    ;; when the language itself has a `(cross ...) pattern, then we
+    ;; cannot assume that there are no references from the main language
+    ;; to the compatible closure language, so we just combine them here
+    ;; and process them and then separate them back out later, giving up
+    ;; on the laziness in computing the compatible closure-related stuff
+    [(or (enum-test-support) (has-cross? lang))
 
-  (define-values (fin-lang rec-lang cant-enumerate-table) (sep-lang lang clang-all-ht))
-  (define unparse-term+pat-nt-ht
-    (build-nt-unparse-term+pat (append fin-lang rec-lang)
-                               ;; recombine the productions to make sure they are in
-                               ;; the same order as they are in the forwards enumeration
-                               clang-all-ht
-                               call-nt-proc/bool))
-  (define l-enum
-    (lang-enum nt-enums filled-cc-enums unused-var/e unparse-term+pat-nt-ht))
-  (make-lang-table! l-enum nt-enums fin-lang rec-lang cant-enumerate-table)
-  l-enum)
+     (define forced-cc-lang (force cc-lang))
+
+     ;; do a check that might not actually be necessary but if this
+     ;; were to fail, things would be go wrong in a confusing way later
+     (let ()
+       (define all-nts (make-hash))
+       (for ([nt (in-list lang)])
+         (hash-set! all-nts (nt-name nt) #t))
+       (for ([nt (in-list forced-cc-lang)])
+         (when (hash-ref all-nts (nt-name nt) #f)
+           (error 'enum.rkt
+                  "cannot cope with the non-terminal ~s, as it collides with on from the compatible closure language"
+                  (nt-name nt)))))
+
+     ;; we combine everything here and dump all enums into `all-enums`
+     (define all-enums (make-hash))
+
+     (define-values (fin-lang rec-lang cant-enumerate-table)
+       (sep-lang (append lang forced-cc-lang)
+                 clang-all-ht))
+     (define unparse-term+pat-nt-ht
+       (build-nt-unparse-term+pat (append fin-lang rec-lang)
+                                  ;; recombine the productions to make sure they are in
+                                  ;; the same order as they are in the forwards enumeration
+                                  clang-all-ht
+                                  call-nt-proc/bool))
+
+     (define l-enum
+       ;; here we just use `all-enums` in both places
+       (lang-enum all-enums (delay all-enums) unused-var/e unparse-term+pat-nt-ht))
+     (make-lang-table! l-enum all-enums fin-lang rec-lang cant-enumerate-table)
+
+     l-enum]
+    [else
+     (define nt-enums (make-hash))
+     (define cc-enums (make-hash))
+
+     (define filled-cc-enums
+       (delay (let-values ([(fin-cc-lang rec-cc-lang cant-enumerate-cc-table)
+                            (sep-lang (force cc-lang) #f)])
+                (make-lang-table! l-enum cc-enums fin-cc-lang rec-cc-lang cant-enumerate-cc-table
+                                  #:i-am-cross? #t)
+                cc-enums)))
+
+     (define-values (fin-lang rec-lang cant-enumerate-table) (sep-lang lang clang-all-ht))
+     (define unparse-term+pat-nt-ht
+       (build-nt-unparse-term+pat (append fin-lang rec-lang)
+                                  ;; recombine the productions to make sure they are in
+                                  ;; the same order as they are in the forwards enumeration
+                                  clang-all-ht
+                                  call-nt-proc/bool))
+     (define l-enum
+       (lang-enum nt-enums filled-cc-enums unused-var/e unparse-term+pat-nt-ht))
+     (make-lang-table! l-enum nt-enums fin-lang rec-lang cant-enumerate-table)
+     l-enum]))
 
 (define (make-lang-table! l-enum ht fin-lang rec-lang cant-enumerate-table
                           #:i-am-cross? [i-am-cross? #f])
@@ -270,6 +316,38 @@
      [(? (compose not pair?)) 
       (single/e pat)]))
   (loop pat))
+
+(define (has-cross? lang)
+  (for/or ([nt (in-list lang)])
+    (for/or ([pat (in-list (nt-rhs nt))])
+      (let loop ([pat (rhs-pattern pat)])
+        (match-a-pattern
+         pat
+         [`any #f]
+         [`number #f]
+         [`string #f]
+         [`natural #f]
+         [`integer #f]
+         [`real #f]
+         [`boolean #f]
+         [`variable #f]
+         [`(variable-except ,s ...) #f]
+         [`(variable-prefix ,s) #f]
+         [`variable-not-otherwise-mentioned #f]
+         [`hole #f]
+         [`(nt ,id) #f]
+         [`(name ,n ,pat) #f]
+         [`(mismatch-name ,n ,tag) #f]
+         [`(in-hole ,p1 ,p2) (or (loop p1) (loop p2))]
+         [`(hide-hole ,p) (loop p)]
+         [`(side-condition ,p ,g ,e) (loop p)]
+         [`(cross ,s) #t]
+         [`(list ,sub-pats ...)
+          (for/or ([sub-pat (in-list sub-pats)])
+            (match sub-pat
+              [`(repeat ,pat ,_ ,_) (loop pat)]
+              [pat (loop pat)]))]
+         [(? (compose not pair?)) #f])))))
 
 (define/match (env/e nv l-enum)
   [((env names misnames nreps) _)
