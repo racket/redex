@@ -110,3 +110,21 @@
    (define-extended-language L2 L1
      [E1 ::= .... p])
    (void)))
+(#rx"found a cycle of non-terminals that doesn't consume input"
+ ([E1 e])
+ (let ()
+   (define-language L1
+     [w ::= number]
+
+     ;; it would be nice if `p` were included in the error message
+     ;; but currently the source location gets lost somewhere
+     ;; along the way so we don't see it
+     [p ::= e]
+
+     [e ::= (pop w)])
+   (define-language L2
+     [e ::= (push w)])
+   (define-union-language mergeL L1 L2)
+   (define-extended-language LL mergeL
+     [E1 ::= .... p])
+   (void)))

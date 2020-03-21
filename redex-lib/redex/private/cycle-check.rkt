@@ -186,7 +186,7 @@
                 ([point (in-list (cdr bad-path/stx-objects))])
         (define smaller?
           (< (or (and (syntax? smallest) (syntax-position smallest)) +inf.0)
-             (or (and (syntax? smallest) (syntax-position point)) +inf.0)))
+             (or (and (syntax? point) (syntax-position point)) +inf.0)))
         (if smaller?
             smallest
             point)))
