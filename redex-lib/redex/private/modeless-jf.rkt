@@ -61,9 +61,8 @@
              [((form-name . rest-of-form) ellipsis . more)
               #:when (and (is-ellipsis? #'ellipsis)
                           (judgment-form-id? #'form-name)
-                          (number?
-                           (judgment-form-mode
-                            (lookup-judgment-form-id #'form-name))))
+                          (judgment-form-mode
+                           (lookup-judgment-form-id #'form-name)))
               (define name (get-name))
               (loop #'more
                     (list* #'ellipsis
@@ -87,9 +86,8 @@
                     (list* #'ellipsis #'other-stuff normal-prems))]
              [((form-name . rest-of-form) . more)
               #:when (and (judgment-form-id? #'form-name)
-                          (number?
-                           (judgment-form-mode
-                            (lookup-judgment-form-id #'form-name))))
+                          (judgment-form-mode
+                           (lookup-judgment-form-id #'form-name)))
               (loop #'more
                     (cons #`(#,(symbol->string (syntax-e #'form-name)) . rest-of-form)
                            modeless-prems)
@@ -124,12 +122,50 @@
          (rewrite-side-conditions/check-errs lang syn-error-name #t
                                              #`(#,@modeless-jf-name-only-prems)))
 
-       (define/syntax-parse ((modeless-prem-jf-id modeless-prem-proc modeless-prem-contract-id) ...)
+       (define/syntax-parse (check-jf-against-deriv-proc ...)
          (for/list ([modeless-prem-jf-id (in-list modeless-prem-jf-ids)])
            (define jf-record (lookup-judgment-form-id modeless-prem-jf-id))
-           #`(#,modeless-prem-jf-id
-              #,(judgment-form-proc jf-record)
-              #,(judgment-form-compiled-input-contract-pat-id jf-record))))
+           (cond
+             [(exact-nonnegative-integer? (judgment-form-mode jf-record))
+              #`(λ (deriv only-check-contracts?)
+                  (call-modeless-judgment-form lang
+                                               '#,modeless-prem-jf-id
+                                               #,(judgment-form-proc jf-record)
+                                               #,(judgment-form-compiled-input-contract-pat-id jf-record)
+                                               deriv
+                                               only-check-contracts?))]
+             [else
+              (define id-or-not (car (generate-temporaries '(jf-derivation-lst))))
+              (define argument-anys
+                (for/list ([i/o (in-list (judgment-form-mode jf-record))]
+                           [i (in-naturals)])
+                  (string->symbol (format "any_~a" i))))
+              (define-values (main-stx compiled-pattern-identifiers patterns-to-compile)
+                (bind-withs 'define-judgment-form '() lang nts lang
+                            (list #`(#,modeless-prem-jf-id #,@argument-anys))
+                            id-or-not '() '() #f id-or-not))
+              (with-syntax ([(compiled-pattern-identifier ...) compiled-pattern-identifiers]
+                            [(pattern-to-compile ...) patterns-to-compile])
+                (syntax-property
+                 #`(begin
+                     ;; make sure we get the right undefined error (if there is one)
+                     #,(let ([s (judgment-form-proc jf-record)])
+                         (datum->syntax s (syntax-e s) #'form-name #'form-name))
+                     (let ([compiled-pattern-identifier (compile-pattern #,lang pattern-to-compile #t)] ...)
+                       (λ (deriv only-check-contracts?)
+                         (check-jf-result-against-derivations
+                          only-check-contracts?
+                          deriv
+                          (λ (inputs)
+                            (parameterize ([include-entire-derivation #t])
+                              (term-let ([#,argument-anys inputs])
+                                        (let ([#,id-or-not '()])
+                                          #,main-stx))))
+                          '#,(judgment-form-mode jf-record)
+                          #,(judgment-form-compiled-input-contract-pat-id jf-record)
+                          #,(judgment-form-compiled-output-contract-pat-id jf-record)))))
+                 'disappeared-use
+                 (syntax-local-introduce #'form-name)))])))
 
        (define/syntax-parse (conc-syncheck-exp
                              conc
@@ -204,13 +240,7 @@
             `modeless-jf-name-only-prem
             '(#,@premise-repeat-names)
             #,other-conditions
-            (list (λ (deriv only-check-contracts?)
-                    (call-modeless-judgment-form lang
-                                                 'modeless-prem-jf-id
-                                                 modeless-prem-proc
-                                                 modeless-prem-contract-id
-                                                 deriv
-                                                 only-check-contracts?)) ...)))]))
+            (list check-jf-against-deriv-proc ...)))]))
 
   (define noname-clauses '())
   (define named-clauses '())
@@ -228,6 +258,26 @@
                        #,@(if (null? noname-clauses)
                               (list)
                               (list #`(cons #f (list #,@noname-clauses))))))))
+
+(define (check-jf-result-against-derivations only-check-contracts?
+                                             derivation get-derivations
+                                             mode input-contract output-contract)
+  (define jf-name (car (derivation-term derivation)))
+  (define jf-args (cdr (derivation-term derivation)))
+  (when input-contract
+    (define input-parts
+      (for/list ([m (in-list mode)]
+                 [t (in-list jf-args)]
+                 #:when (equal? m 'I))
+        t))
+    (unless (match-pattern input-contract input-parts)
+      (modeless-judgment-form-signal-contract-violation jf-name jf-args)))
+  (when output-contract
+    (unless (match-pattern output-contract jf-args)
+      (modeless-judgment-form-signal-contract-violation jf-name jf-args)))
+  (unless only-check-contracts?
+    ;; cdr to drop the name of the judgment form
+    (and (member derivation (get-derivations jf-args)) #t)))
 
 (define (build-modeless-jf-clause lang conc conc-ids-to-duplicate
                                   modeless-prem modeless-prem-ids-to-duplicate
@@ -252,7 +302,9 @@
     [(derivation (cons deriv-jf-name jf-args) rule-name sub-derivations)
      (cond
        [(equal? jf-name deriv-jf-name)
-        (modeless-judgment-form-check-contract jf-name contract-cp jf-args)
+        (when contract-cp
+          (unless (match-pattern contract-cp jf-args)
+            (modeless-judgment-form-signal-contract-violation jf-name jf-args)))
         (unless only-check-contracts?
           (define rules (hash-ref modeless-jf-clause-table rule-name #f))
           (cond
@@ -273,32 +325,30 @@
        [else #f])]
     [_ #f]))
 
-(define (modeless-judgment-form-check-contract jf-name contract-cp jf-args)
-  (when contract-cp
-    (unless (match-pattern contract-cp jf-args)
-      ;; actually it will show 9 if there are 9
-      ;; arguments, and at most 8 otherwise
-      (define max-args-shown 8)
-      (define first-set-of-args
-        (apply
-         string-append
-         (for/list ([i (in-range (if (= (+ max-args-shown 1)
-                                        (length jf-args))
-                                     (+ max-args-shown 1)
-                                     max-args-shown))]
-                    [jf-arg (in-list jf-args)])
-           (format "\n  arg ~a: ~.s" (+ i 1) jf-arg))))
-      (define maybe-more-args
-        (if (> (length jf-args) (+ 1 max-args-shown))
-            (format "\n  args ~a - ~a elided"
-                    (+ max-args-shown 1)
-                    (length jf-args))
-            ""))
-      (error jf-name
-             "derivation's term field does not match contract~a"
-             (string-append
-              first-set-of-args
-              maybe-more-args)))))
+(define (modeless-judgment-form-signal-contract-violation jf-name jf-args)
+  ;; actually it will show 9 if there are 9
+  ;; arguments, and at most 8 otherwise
+  (define max-args-shown 8)
+  (define first-set-of-args
+    (apply
+     string-append
+     (for/list ([i (in-range (if (= (+ max-args-shown 1)
+                                    (length jf-args))
+                                 (+ max-args-shown 1)
+                                 max-args-shown))]
+                [jf-arg (in-list jf-args)])
+       (format "\n  arg ~a: ~.s" (+ i 1) jf-arg))))
+  (define maybe-more-args
+    (if (> (length jf-args) (+ 1 max-args-shown))
+        (format "\n  args ~a - ~a elided"
+                (+ max-args-shown 1)
+                (length jf-args))
+        ""))
+  (error jf-name
+         "derivation's term field does not match contract~a"
+         (string-append
+          first-set-of-args
+          maybe-more-args)))
 
 (define (modeless-jf-process-rule-candidates lang candidates jf-args sub-derivations fail)
   (match candidates

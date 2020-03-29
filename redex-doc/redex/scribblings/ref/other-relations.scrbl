@@ -399,7 +399,7 @@ to compute all pairs with a given sum.
                 (list
                  (derivation `(same-exp (+ ,four ,two) ,six)
                              "add"
-                             (list))
+                             (list (car (build-derivations (sum ,four ,two n)))))
                  (derivation
                   `(same-exp ,six
                              (+ ,one (+ ,two ,three)))
@@ -418,11 +418,11 @@ to compute all pairs with a given sum.
                        (derivation `(same-exp (+ ,two ,three)
                                               ,five)
                                    "add"
-                                   (list))))
+                                   (list (car (build-derivations (sum ,two ,three n)))))))
                      (derivation `(same-exp (+ ,one ,five)
                                             ,six)
                                  "add"
-                                 (list))))))))))]
+                                 (list (car (build-derivations (sum ,one ,five n)))))))))))))]
  It is a bit hard to read in that form; here it is in
  a more traditional tree rendering:
  @examples[#:label #f #:eval redex-eval

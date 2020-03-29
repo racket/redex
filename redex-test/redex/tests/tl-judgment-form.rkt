@@ -1584,7 +1584,11 @@
          (derivation '(same-exp (+ (s (s (s (s z)))) (s (s z)))
                                    (s (s (s (s       (s (s z)))))))
                      "add"
-                     (list)))
+                     (list
+                      (car (build-derivations
+                            (sum (s (s (s (s z))))
+                                 (s (s z))
+                                 (s (s (s (s (s (s z))))))))))))
         #t))
 
 (let ()
@@ -1609,13 +1613,19 @@
      -------------------------- "add"
      (same-exp (+ n_1 n_2) n_3)])
 
+  (define sum-derivation
+    (car (build-derivations
+          (sum (s (s (s (s z))))
+               (s (s z))
+               (s (s (s (s (s (s z))))))))))
+  
   (test (judgment-holds
          same-exp
          (derivation '(same-exp (+ (s (s (s (s z))))
                                    (s (s z)))
                                 (s (s (s (s (s (s z)))))))
                      "add"
-                     (list)))
+                     (list sum-derivation)))
         #t)
 
   (test (judgment-holds
@@ -1624,7 +1634,7 @@
                                    (s (s z)))
                                 (s (s (s (s (s z))))))
                      "add"
-                     (list)))
+                     (list sum-derivation)))
         #f))
 
 (let ()
@@ -1658,6 +1668,52 @@
           (list (derivation '(⊢ 0 N) "nat" (list))
                 (derivation '(⊢ 1 N) "nat" (list))
                 (derivation '(⊢ 2 N) "nat" (list)))))
+        #t))
+
+(let ()
+  (define-language L)
+
+  (define-judgment-form L
+    #:mode (J1 I)
+
+    [--------- "r1"
+     (J1 1)])
+
+  (define-judgment-form L
+    [(J1 any)
+     ----------- "r2"
+     (J2 any)])
+
+  (test (judgment-holds
+         J2
+         (derivation '(J2 1)
+                     "r2"
+                     (list (derivation '(J1 1) "r1" '()))))
+        #t))
+
+(let ()
+  (define-language L)
+  (define-judgment-form L
+    #:mode (J1 I I O)
+    #:contract (J1 natural natural natural)
+  
+    [--------- "r1"
+     (J1 1 2 3)])
+
+  (define-judgment-form L
+    [(J1 any 2 3)
+     ----------- "r2"
+     (J2 any)])
+
+  (test (regexp-match?
+         #rx"^J1: [^\n]*does not match contract"
+         (with-handlers ([exn:fail? exn-message])
+           (judgment-holds
+            J2
+            (derivation '(J2 1)
+                        "r2"
+                        (list (derivation '(J1 "one") "r1" '()))))
+           "no exception raised"))
         #t))
 
 (print-tests-passed 'tl-judgment-form.rkt)

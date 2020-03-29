@@ -27,7 +27,9 @@
 
          extend-nt-ellipses
          (for-syntax extend-nt-ellipses)
-         (struct-out derivation))
+         (struct-out derivation)
+         include-entire-derivation
+         include-jf-rulename)
 
 (begin-for-syntax
   (define extend-nt-ellipses '(....)))
@@ -155,3 +157,8 @@
                          (andmap derivation? subs))
               (raise-argument-error struct-name "derivation?" 2 term name subs))
             (values term name subs)))
+
+
+;; judgment-form parameters
+(define include-entire-derivation (make-parameter #f))
+(define include-jf-rulename (make-parameter #f))
