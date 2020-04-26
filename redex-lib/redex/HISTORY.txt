@@ -1,3 +1,12 @@
+v7.7
+
+  * change modeless judgment forms to check for moded subderivations
+    (instead of synthesizing them itself)
+
+  * generalize typesetting to accept pict-convertibles, not just picts
+
+  * bug fixes
+
 v7.6
 
   * bug fixes
