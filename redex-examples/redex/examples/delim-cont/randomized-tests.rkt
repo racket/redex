@@ -24,6 +24,8 @@
   (define attempt->size default-attempt-size)
 
   (define repetitions 1)
+
+  (printf "seed: ~s\n" seed) (flush-output)
   
   (command-line
    #:argv args
