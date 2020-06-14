@@ -671,7 +671,11 @@ see also term.rkt for some restrictions/changes there
                           (define this-one (loop pat #'pat-stx))
                           (l-loop (cdr pats) (cdr pat-stxes)
                                   (and all-zeros? (equal? this-one 0))
-                                  (if (equal? this-one 1) +inf.0 number-of-ones)
+                                  (case this-one
+                                    [(0) number-of-ones]
+                                    [(1) +inf.0]
+                                    [(unknown) number-of-ones]
+                                    [(lots) +inf.0])
                                   (and all-known? (not (equal? this-one 'unknown)))))])]
                     [pat
                      (let ()
@@ -679,7 +683,11 @@ see also term.rkt for some restrictions/changes there
                        (l-loop (cdr pats)
                                (cdr pat-stxes)
                                (and all-zeros? (equal? this-one 0))
-                               (if (equal? this-one 1) (+ number-of-ones 1) number-of-ones)
+                               (case this-one
+                                 [(0) number-of-ones]
+                                 [(1) (+ number-of-ones 1)]
+                                 [(unknown) number-of-ones]
+                                 [(lots) +inf.0])
                                (and all-known? (not (equal? this-one 'unknown)))))])]))])]
          [(? (compose not pair?)) 0])))
 

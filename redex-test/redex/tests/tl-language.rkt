@@ -1001,6 +1001,26 @@
   (test (get-nt-hole-map L) (make-hash '((L . 1) (E  . 1)))))
 
 (let ()
+  (define-language HoleTest
+    (n  ::= number)
+    (e ::= (+ e e) n)
+    (x ::= variable-not-otherwise-mentioned)
+    (P ::= (+ E E))
+    (E ::= (E hole) hole)
+    (Q ::= (P)))
+  (test (get-nt-hole-map HoleTest)
+        (make-hash '((n . 0) (e . 0) (x . 0) (P . lots) (E . lots) (Q . lots)))))
+
+(let ()
+  (define-language L
+    (e ::= number (+ e ...))
+    (C ::=
+       hole
+       (+ (+ C ...) ...)))
+  (test (get-nt-hole-map L)
+        (make-hash '((e . 0) (C . lots)))))
+
+(let ()
   (define-language L1)
   (define-extended-language L2 L1
     ((l k) Zz))
