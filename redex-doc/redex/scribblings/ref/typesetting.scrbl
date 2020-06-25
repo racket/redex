@@ -122,6 +122,11 @@ sets @racket[dc-for-text-size] and the latter does not.
  
  See @racket[render-language] for more details on the construction of the pict.
 
+@history[#:changed "1.16"
+         @list{
+           Changed how @racket[in-hole] renders when its second argument is
+           @racket[hole], avoiding a special case for that situation.
+          }]
 }
 
 

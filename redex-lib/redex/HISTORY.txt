@@ -1,3 +1,8 @@
+v7.8
+
+  * change the typesetting of `(in-hole E hole)`
+    from something like E to something like E[].
+
 v7.7
 
   * change modeless judgment forms to check for moded subderivations
