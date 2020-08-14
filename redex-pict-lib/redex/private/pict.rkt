@@ -587,13 +587,12 @@
   (unless (compiled-lang-pict-builder lang)
     (error what "cannot render the result of define-union-language"))
   (define pict-info (compiled-lang-pict-builder lang))
-  (define all-non-terminals (pict-info->all-nonterminals pict-info))
   (when specd-non-terminals
     (check-non-terminals what specd-non-terminals lang))
   (make-grammar-pict what
                      pict-info
-                     (or specd-non-terminals all-non-terminals)
-                     all-non-terminals))
+                     (or specd-non-terminals (pict-info->all-nonterminals pict-info))
+                     (language-nts lang)))
 
 (define (pict-info->all-nonterminals pict-info)
   (cond

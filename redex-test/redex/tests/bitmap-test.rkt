@@ -59,6 +59,27 @@
          (frame (language->pict L3))))))
    "extended-language.png"))
 
+(let ()
+  (define-language L1
+    [e ::= any])
+  (define-language L2
+    [e ::= any])
+
+  (define-union-language tagL (S. L1) (T. L2))
+
+  (define-extended-language multiL tagL
+    [e ::= S.e T.e])
+
+  (define-extended-language fixed-multiL tagL
+    [S.e ::= .... ]
+    [T.e ::= .... ]
+    [e ::= S.e T.e])
+
+  (btest (vl-append
+          (frame (render-language multiL))
+          (frame (render-language fixed-multiL)))
+         "extended-language2.png"))
+
 (define red
   (reduction-relation
    lang
