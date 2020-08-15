@@ -24,6 +24,25 @@
 (void (render-language var-not-ab))
 
 (let ()
+  (define-language L2
+    [e ::= 0
+       (1
+        2)])
+
+  (void (render-language L2)))
+
+(let ()
+  (define-language L2
+    [e ::= any
+       (let ([x e]
+             ...
+             [x e]
+             [x e] ...)
+         e)])
+
+  (void (render-language L2)))
+
+(let ()
   (define-metafunction empty-language [(zero any_in) 0])
   (void (render-metafunction zero)))
 

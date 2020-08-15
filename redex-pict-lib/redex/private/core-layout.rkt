@@ -168,7 +168,6 @@
   ;; pict : pict
   (define-struct (pict-token token) (pict) #:inspector (make-inspector))
   
-  ;; spacer : number
   (define-struct (spacer-token token) () #:inspector (make-inspector))
 
   ;; pict : pict
@@ -640,10 +639,11 @@
                           [(< (token-span spacer)
                               col)
                            (cons (make-line (line-n line)
-                                            (insert-new-token col
-                                                              new-token
-                                                              (token-column spacer)
-                                                              tokens))
+                                            (cons spacer
+                                                  (insert-new-token col
+                                                                    new-token
+                                                                    (token-column spacer)
+                                                                    (cdr tokens))))
                                  (cdr lines))]))))]))))
                   
   ;; insert-new-token : number token number (listof token) -> (listof token)
