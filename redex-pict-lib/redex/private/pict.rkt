@@ -70,6 +70,8 @@
          reduction-relation-rule-extra-separation
          reduction-relation-rule-line-separation
 
+         language-make-::=-pict
+
          where-make-prefix-pict
          where-combine
          metafunction-arrow-pict
@@ -663,20 +665,22 @@
             (nts->str all-nts)
             (nts->str nts))]
     [else
+     (define snts (map (λ (x) (sequence-of-non-terminals (car x)))
+                       info))
      (define term-space
        (launder
         (ghost
-         (apply cc-superimpose (map (λ (x) (sequence-of-non-terminals (car x)))
-                                    info)))))
+         (apply cc-superimpose snts))))
      (apply vl-append
             (non-terminal-gap-space)
-            (for/list ([line (in-list info)])
+            (for/list ([line (in-list info)]
+                       [snt (in-list snts)])
               ((adjust 'language-production)
                (htl-append
-                (rc-superimpose term-space (sequence-of-non-terminals (car line)))
+                (rc-superimpose term-space snt)
                 (lw->pict
                  all-nts
-                 (find-enclosing-loc-wrapper (add-bars-and-::= (cdr line)))
+                 (find-enclosing-loc-wrapper (add-bars-and-::= (list-ref line 0) (cdr line)))
                  (adjust 'language-line))))))]))
 
 
@@ -783,7 +787,9 @@
                extensions))]
         [else info]))))
 
-(define (make-::=) (basic-text " ::= " (grammar-style)))
+(define (default-make-::= non-terminals) (basic-text " ::= " (grammar-style)))
+(define language-make-::=-pict (make-parameter default-make-::=))
+(define (make-::= non-terminals) ((language-make-::=-pict) non-terminals))
 (define (make-bar) 
   (basic-text " | " (grammar-style))
   #;
@@ -805,14 +811,14 @@
      (pict-ascent p)
      (pict-descent p))))
 
-(define (add-bars-and-::= lst)
+(define (add-bars-and-::= non-terminals lst)
   (cond
     [(null? lst) null]
     [else
      (cons
       (let ([fst (car lst)])
         (build-lw
-         (rc-superimpose (ghost (make-bar)) (make-::=))
+         (rc-superimpose (ghost (make-bar)) (make-::= non-terminals))
          (lw-line fst)
          (lw-line-span fst)
          (lw-column fst)
@@ -839,7 +845,7 @@
                         (build-lw (make-bar) line line-span column column-span))]
                      [else
                       (build-lw
-                       (rc-superimpose (make-bar) (ghost (make-::=)))
+                       (rc-superimpose (make-bar) (ghost (make-::= non-terminals)))
                        (lw-line snd)
                        (lw-line-span snd)
                        (lw-column snd)

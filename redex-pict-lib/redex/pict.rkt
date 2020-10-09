@@ -104,6 +104,7 @@
  [relation-clause-combine (parameter/c (-> (listof (listof pict-convertible?)) pict-convertible? (or/c string? #f) pict-convertible?))]
  [default-relation-clause-combine (-> (listof (listof pict-convertible?)) pict-convertible? (or/c string? #f) pict-convertible?)]
  [metafunction-arrow-pict (parameter/c (-> pict-convertible?))]
+ [language-make-::=-pict (parameter/c (-> (listof symbol?) pict?))]
  [where-make-prefix-pict (parameter/c (-> pict-convertible?))]
  [where-combine (parameter/c (-> pict-convertible? pict-convertible? pict-convertible?))])
 
