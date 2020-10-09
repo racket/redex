@@ -449,6 +449,19 @@ This function sets @racket[dc-for-text-size]. See also
   @history[#:added "1.1"]
 }
 
+@defparam[language-make-::=-pict make-::= (-> (listof symbol?) pict?)]{
+  Controls the pict used after the names of the non-terminals
+  and before the first production in a grammar.
+
+ Defaults to
+ @racketblock[(λ (nt-names)
+                ((current-text) " ::= "
+                                (grammar-style)
+                                (default-font-size)))]
+
+ @history[#:added "1.17"]
+}
+
 @defparam[extend-language-show-union show? boolean?]{
 
 A parameter that controls the rendering of extended languages.
