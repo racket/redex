@@ -2,6 +2,8 @@ v7.9
 
   * added language-make-::=-pict
 
+  * misc bug fixes
+
 v7.8
 
   * change the typesetting of `(in-hole E hole)`
