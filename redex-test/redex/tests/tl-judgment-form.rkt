@@ -388,15 +388,15 @@
   (define-judgment-form L
     #:mode (J2 I O)
     [--------  "one"
-               (J2 1 1)]
+     (J2 1 1)]
     [--------  two
-               (J2 1 2)])
-  
+     (J2 1 2)])
+
+  ;; make sure the derivations come out in the same
+  ;; order as the rules are listed in judgment-form
   (test (build-derivations (J2 1 any))
         (list (derivation '(J2 1 1) "one" '())
               (derivation '(J2 1 2) "two" '())))
-  
-  
   
   (define-judgment-form L
     #:contract (K any any)
@@ -476,6 +476,48 @@
                    '(J () z)
                    #f
                    '()))))))))
+
+(let ()
+  (define-language L (N ::= z (s N) (t N)))
+
+  (define-judgment-form L
+    #:mode (J1 I O)
+    [(side-condition #false)
+     ------- "never fires"
+     (J1 3 3)])
+
+  (define-extended-judgment-form L J1
+    #:mode (J2 I O)
+    [--------  "one"
+     (J2 1 1)]
+    [--------  two
+     (J2 1 2)])
+
+  ;; make sure the derivations come out in the same
+  ;; order as the rules are listed in the extension
+  (test (build-derivations (J2 1 any))
+        (list (derivation '(J2 1 1) "one" '())
+              (derivation '(J2 1 2) "two" '()))))
+
+(let ()
+  (define-language L (N ::= z (s N) (t N)))
+
+  (define-judgment-form L
+    #:mode (J1 I O)
+    [--------  "one"
+     (J1 1 1)])
+
+  (define-extended-judgment-form L J1
+    #:mode (J2 I O)
+    [--------  two
+     (J2 1 2)])
+
+  ;; derivations from the "child" judgment form
+  ;; come first in the list so we can share the
+  ;; tail internally
+  (test (build-derivations (J2 1 any))
+        (list (derivation '(J2 1 2) "two" '())
+              (derivation '(J2 1 1) "one" '()))))
 
 (let ()
   (define-judgment-form empty-language #:mode (J I) [(J any)])

@@ -47,7 +47,9 @@
 ;; mode: (or/c #f --  means the judgment form is actually a relation
 ;;             natural -- the arity of the judgment form; used when there is no #:mode declaration
 ;;             (listof (or/c 'I 'O))
-(define-struct judgment-form (name mode proc mk-proc lang lws rule-names 
+;; proc: (-> ....)
+;; mk-procs: (listof (cons/c string? (-> language (-> ...same-thing-as-proc...))))
+(define-struct judgment-form (name mode proc mk-procs lang lws rule-names 
                                    gen-clauses mk-gen-clauses term-proc relation?
                                    cache runtime-judgment-form-id
                                    original-contract-expression-id

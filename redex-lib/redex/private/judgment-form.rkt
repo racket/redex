@@ -900,21 +900,21 @@
           #,@(if (identifier? orig) (list #`(void (λ () #,orig))) (list)) ;; for check syntax
           (define-syntax #,judgment-form-name 
             (judgment-form '#,judgment-form-name '#,mode #'judgment-form-runtime-proc
-                           #'mk-judgment-form-proc #'#,lang #'jf-lws
+                           #'mk-judgment-form-procs #'#,lang #'jf-lws
                            '#,rule-names #'judgment-runtime-gen-clauses #'mk-judgment-gen-clauses #'jf-term-proc #,is-relation?
                            #'jf-cache #'the-runtime-judgment-form
                            #'original-contract-expression-id
                            #'compiled-input-contract-pat-id
                            #'compiled-output-contract-pat-id
                            (λ (stx) (expand-to-id #'the-runtime-judgment-form stx))))
-          (define-values (mk-judgment-form-proc
+          (define-values (mk-judgment-form-procs
                           mk-judgment-gen-clauses
                           original-contract-expression
                           judgment-form-input-contract
                           judgment-form-output-contract)
             (compile-judgment-form #,judgment-form-name #,mode #,lang #,clauses #,rule-names #,position-contracts #,invariant
                                    #,orig #,stx #,syn-err-name judgment-runtime-gen-clauses))
-          (define judgment-form-runtime-proc (mk-judgment-form-proc #,lang))
+          (define judgment-form-runtime-proc (assemble-judgment-form-procs '#,mode (mk-judgment-form-procs #,lang)))
           (define jf-lws (compiled-judgment-form-lws #,clauses #,judgment-form-name #,stx))
           (define judgment-runtime-gen-clauses (mk-judgment-gen-clauses #,lang (λ () (judgment-runtime-gen-clauses))))
           (define jf-term-proc (make-jf-term-proc #,judgment-form-name #,syn-err-name #,lang #,nts #,mode))
@@ -952,6 +952,27 @@
         definitions))
    'disappeared-use
    (map syntax-local-introduce dup-form-names)))
+
+(define (assemble-judgment-form-procs mode form-procs)
+  (cond
+    [(number? mode)
+     ;; modeless judgment-forms have a hash here not a proc
+     ;; that gets called, so we don't need to do any
+     ;; assembly
+     form-procs]
+    [else
+     (define (judgment-form-proc recur input derivation-init pair-of-boxed-caches
+                                 original-contract-expression
+                                 compiled-input-contract-pat
+                                 compiled-output-contract)
+       (for/fold ([result '()])
+                 ([form-proc-pair (in-list form-procs)])
+         (append ((cdr form-proc-pair) recur input derivation-init pair-of-boxed-caches
+                                       original-contract-expression
+                                       compiled-input-contract-pat
+                                       compiled-output-contract)
+                 result)))
+     judgment-form-proc]))
 
 (define-for-syntax (jf-is-relation? jf-id)
   (judgment-form-relation? (lookup-judgment-form-id jf-id)))
@@ -1377,29 +1398,24 @@
                                                #'((lookup-binding bnds 'names) ...)
                                                body)))))))))]))
     
-    (with-syntax ([(((clause-proc-binding ...) clause-proc-body) ...) (map compile-clause clauses rule-names)])
-      (with-syntax ([(clause-proc-body-backwards ...) (reverse (syntax->list #'(clause-proc-body ...)))])
-        (if (identifier? orig)
-            (with-syntax ([orig-mk (judgment-form-mk-proc (lookup-judgment-form-id orig))])
-              #`(λ (lang)
-                  (let (clause-proc-binding ... ...)
-                    (let ([prev (orig-mk lang)])
-                      (λ (recur input init-jf-derivation-id recur-cache
-                           original-contract-expression
-                           compiled-input-contract-pat
-                           compiled-output-contract-pat)
-                        (append (prev recur input init-jf-derivation-id recur-cache
-                                      original-contract-expression
-                                      compiled-input-contract-pat
-                                      compiled-output-contract-pat)
-                                clause-proc-body-backwards ...))))))
+    (with-syntax ([(((clause-proc-binding ...) clause-proc-body) ...) (map compile-clause clauses rule-names)]
+                  [(rule-names ...) rule-names])
+      (with-syntax ([(new-rules-code ...)
+                     #'((cons rule-names
+                              (λ (recur input init-jf-derivation-id recur-cache
+                                   original-contract-expression
+                                   compiled-input-contract-pat
+                                   compiled-output-contract-pat)
+                                clause-proc-body)) ...)])
+      (if (identifier? orig)
+          (with-syntax ([orig-mks (judgment-form-mk-procs (lookup-judgment-form-id orig))])
             #`(λ (lang)
                 (let (clause-proc-binding ... ...)
-                  (λ (recur input init-jf-derivation-id recur-cache
-                       original-contract-expression
-                       compiled-input-contract-pat
-                       compiled-output-contract-pat)
-                    (append clause-proc-body-backwards ...)))))))))
+                  (let ([prev (orig-mks lang)])
+                    (list* new-rules-code ... prev)))))
+          #`(λ (lang)
+              (let (clause-proc-binding ... ...)
+                (list new-rules-code ...))))))))
 
 (define (combine-judgment-rhses compiled-lhs input rhs)
   (define mtchs (match-pattern compiled-lhs input))
