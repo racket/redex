@@ -1,3 +1,7 @@
+v7.10
+
+  * added define-overriding-judgment-form
+
 v7.9
 
   * added language-make-::=-pict
