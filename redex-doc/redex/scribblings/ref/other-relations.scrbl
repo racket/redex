@@ -567,7 +567,24 @@ helpful when debugging.
  with additional rules. The @racket[mode-spec], @racket[contract-spec],
  @racket[invariant-spec], and @racket[rule]s
  are as in @racket[define-judgment-form].
- 
+
+ The mode specification in this judgment form and the original
+ must be the same.
+}
+
+@defform[(define-overriding-judgment-form language judgment-form-id
+           mode-spec
+           contract-spec
+           invariant-spec
+           rule ...)]{
+ Defines a new judgment form that extends @racket[judgment-form-id] 
+ with additional rules, replacing rules from @racket[judgment-form-id]
+ that have the same name as any of the new rules.
+
+ The @racket[mode-spec], @racket[contract-spec],
+ @racket[invariant-spec], and @racket[rule]s
+ are as in @racket[define-judgment-form].
+
  The mode specification in this judgment form and the original
  must be the same.
 }

@@ -39,6 +39,7 @@
          define-relation
          define-judgment-form
          define-extended-judgment-form
+         define-overriding-judgment-form
          judgment-holds
          IO-judgment-form?
          judgment-form?

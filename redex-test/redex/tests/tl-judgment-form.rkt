@@ -1734,6 +1734,83 @@
         #t))
 
 (let ()
+  (define-language A)
+
+  (define-judgment-form A
+    #:mode (a O)
+    [(a #t) Rule])
+
+  (define-overriding-judgment-form A a
+    #:mode (b O)
+    [(b #f) Rule])
+
+  (test (judgment-holds (b any) any) '(#f)))
+
+(let ()
+  (define-language A)
+
+  (define-judgment-form A
+    #:mode (a O)
+    [(a 1) Rule])
+
+  (test (judgment-holds (a any) any) '(1))
+
+  (define-extended-judgment-form A a
+    #:mode (b O)
+    [(b 2) Rule])
+
+  (test (judgment-holds (b any) any) '(1 2))
+
+  (define-overriding-judgment-form A b
+    #:mode (c O)
+    [(c 3) Rule])
+
+  (test (judgment-holds (c any) any) '(3)))
+
+(let ()
+  (define-language L)
+
+  (define-judgment-form L
+    #:mode (J I O)
+    [(side-condition ,(= 1 2))
+     -------- "never fires"
+     (J 1 2)])
+
+  (define-overriding-judgment-form L J
+    #:mode (J2 I O)
+    [--------  "one"
+     (J2 1 1)]
+    [--------  "two"
+     (J2 1 2)])
+
+  ;; make sure the derivations come out in the same
+  ;; order as the rules are listed in judgment-form
+  (test (build-derivations (J2 1 any))
+        (list (derivation '(J2 1 1) "one" '())
+              (derivation '(J2 1 2) "two" '()))))
+
+(let ()
+  (define-language L (N ::= z (s N) (t N)))
+
+  (define-judgment-form L
+    #:mode (J1 I O)
+    [--------  "one"
+     (J1 1 1)])
+
+  (define-overriding-judgment-form L J1
+    #:mode (J2 I O)
+    [--------  two
+     (J2 1 2)])
+
+  ;; derivations from the "child" judgment form
+  ;; come first in the list to match what
+  ;; happens in define-extended-jugment-form
+  (test (build-derivations (J2 1 any))
+        (list (derivation '(J2 1 2) "two" '())
+              (derivation '(J2 1 1) "one" '()))))
+
+
+(let ()
   (define-language L)
   (define-judgment-form L
     #:mode (J1 I I O)
