@@ -14,7 +14,7 @@
  (call/cc (λ (x) x)))
 
 (test-predicate
- (curry regexp-match? #rx"not defined")
+ (curry regexp-match? #rx"not in domain")
  (with-handlers ([exn:fail? exn-message])
    (apply-reduction-relation
     -->TL
