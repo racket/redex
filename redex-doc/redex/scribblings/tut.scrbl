@@ -97,6 +97,10 @@ for ambiguous choice@~cite[amb1 amb2].
 If you are not familiar with Racket, first try 
 @other-doc['(lib "quick.scrbl" "scribblings/quick")] or
 @other-doc['(lib "more.scrbl" "scribblings/more")].
+If you wish to follow along with only parts of this tutorial
+but (perhaps using a different IDE or in a text-only
+context), refer to @secref["reference"] for the full details on
+the constructs presented here.
 
 The model includes a standard evaluation reduction relation and a type system.
 Along the way, the tutorial demonstrates Redex's support for unit testing,

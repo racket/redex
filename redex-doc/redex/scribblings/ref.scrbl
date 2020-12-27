@@ -1,6 +1,6 @@
 #lang scribble/doc
 @(require scribble/manual)
-@title{The Redex Reference}
+@title[#:tag "reference"]{The Redex Reference}
 
 @defmodule*/no-declare[(redex)]
 
