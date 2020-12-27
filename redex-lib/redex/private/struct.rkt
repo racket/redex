@@ -115,19 +115,19 @@
      (define (checked-rewrite t)
        (unless (match-pattern compiled-input-check t)
          (error 'reduction-relation
-                "relation reduced to ~s via ~a, which is outside its ~a"
+                "relation reduced outside its ~a\n  term: ~s\n  via: ~a"
+                (if (no-codomain-pattern? codomain-pat)
+                    "domain"
+                    "codomain")
                 t
                 (let ([name (rewrite-proc-name rule)])
                   (if name
-                      (format "the rule named ~a" name)
-                      "an unnamed rule"))
-                (if (no-codomain-pattern? codomain-pat)
-                    "domain"
-                    "codomain")))
+                      (format "the rule ~a" name)
+                      "an unnamed rule"))))
        t)
      (λ (exp acc)
        (unless (match-pattern compiled-domain exp)
-         (error 'reduction-relation "relation not defined for ~s" exp))
+         (error 'reduction-relation "not in domain\n  term: ~s" exp))
        (specialized exp exp checked-rewrite acc)))
    domain-pat
    codomain-pat

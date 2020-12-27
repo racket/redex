@@ -306,7 +306,7 @@
         (with-handlers ((exn? exn-message))
           (apply-reduction-relation red 'x)
           'no-exception-raised))
-      "reduction-relation: relation not defined for x")
+      "reduction-relation: not in domain\n  term: x")
 
 (test (let ([red
              (reduction-relation 
@@ -316,7 +316,7 @@
         (with-handlers ((exn? exn-message))
           (apply-reduction-relation red 1)
           'no-exception-raised))
-      "reduction-relation: relation reduced to x via an unnamed rule, which is outside its domain")
+      "reduction-relation: relation reduced outside its domain\n  term: x\n  via: an unnamed rule")
 
 (let* ([red1
         (reduction-relation 
@@ -335,13 +335,13 @@
   (test (with-handlers ((exn? exn-message))
           (apply-reduction-relation red-c 1)
           'no-exception-raised)
-        "reduction-relation: relation not defined for 1")
+        "reduction-relation: not in domain\n  term: 1")
   
   ;; ensure second branch of 'union' is checked
   (test (with-handlers ((exn? exn-message))
           (apply-reduction-relation red-c 2)
           'no-exception-raised)
-        "reduction-relation: relation not defined for 2"))
+        "reduction-relation: not in domain\n  term: 2"))
 
 (let ()
   (define-language l1
@@ -372,7 +372,7 @@
         '(2))
   (test (with-handlers ([exn:fail? exn-message])
           (apply-reduction-relation S 1))
-        #rx"not defined"))
+        #rx"not in domain"))
 
 (let ()
   (define-language L)
