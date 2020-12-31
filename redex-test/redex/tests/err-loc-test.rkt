@@ -26,38 +26,42 @@
                          (values (exn-message exn)
                                  (map source-location (exn:fail:syntax-exprs exn))))])
         (thunk))))
-  (define (runtime-error-test-setup thunk)
+  (define ((runtime-error-test-setup depth-in-stack) thunk)
     (define errortrace-key (dynamic-require 'errortrace/errortrace-key 'errortrace-key))
     (parameterize ([current-compile ((dynamic-require 'errortrace/errortrace-lib
                                                       'make-errortrace-compile-handler))])
       (with-handlers ([exn:fail? 
-                       (λ (exn) 
+                       (λ (exn)
+                         (define marks
+                           (continuation-mark-set->list
+                            (exn-continuation-marks exn)
+                            errortrace-key))
+                         (define mark
+                           (if (< (length marks) depth-in-stack)
+                               '()
+                               (list (cdr (list-ref marks depth-in-stack)))))
                          (values (exn-message exn)
-                                 (let ([ans (let ([marks (continuation-mark-set->list
-                                                          (exn-continuation-marks exn)
-                                                          errortrace-key)])
-                                              (if (null? marks) '() (list (cdar marks))))])
-                                   (let loop ([ans ans])
-                                     (cond
-                                       [(pair? ans) (cons (loop (car ans)) (loop (cdr ans)))]
-                                       [(path? ans) (path->relative-string/library ans)]
-                                       [else ans])))))])
+                                 (let loop ([ans mark])
+                                   (cond
+                                     [(pair? ans) (cons (loop (car ans)) (loop (cdr ans)))]
+                                     [(path? ans) (path->relative-string/library ans)]
+                                     [else ans]))))])
         (thunk))))
+
+  (define syntax-error-tests-box (box '()))
+  (define (exec-syntax-error-tests path)
+    (exec-error-tests syn-err-tests syntax-error-test-setup
+                      expand syntax-error-tests-box path))
+
+  (define runtime-error-tests-box (box '()))
+  (define (exec-runtime-error-tests path  #:depth-in-stack [depth-in-stack 0])
+    (exec-error-tests run-err-tests (runtime-error-test-setup depth-in-stack)
+                      eval runtime-error-tests-box path))
   
-  (define ((exec-error-tests base-path setup exec b) path)
+  (define (exec-error-tests base-path setup exec b path)
     (set-box! b (cons path (unbox b)))
     (for ([test (in-list (read-tests (build-path base-path path)))])
       (exec-error-test test exec setup)))
-
-  (define syntax-error-tests-box (box '()))
-  (define exec-syntax-error-tests
-    (exec-error-tests syn-err-tests syntax-error-test-setup
-                      expand syntax-error-tests-box))
-
-  (define runtime-error-tests-box (box '()))
-  (define exec-runtime-error-tests
-    (exec-error-tests run-err-tests runtime-error-test-setup
-                      eval runtime-error-tests-box))
   
   (define (exec-error-test spec exec setup)
     (define-values (file line expected-message expected-sources test)
@@ -186,7 +190,8 @@
   (exec-runtime-error-tests "judgment-form-contracts.rktd")
   (exec-runtime-error-tests "judgment-form-undefined.rktd")
   (exec-runtime-error-tests "judgment-form-ellipses.rktd")
-  (exec-runtime-error-tests "judgment-form-where-error.rktd"))
+  (exec-runtime-error-tests "judgment-form-where-error.rktd")
+  (exec-runtime-error-tests "test-judgment-holds.rktd"))
 
 (parameterize ([current-namespace (make-base-namespace)])
   (eval '(require (for-syntax racket/base)))
@@ -201,11 +206,18 @@
 (require redex/private/term
          redex/private/lang-struct)
 (define-namespace-anchor here)
-  (define ns (namespace-anchor->namespace here))
-  (parameterize ([current-namespace ns])
-    (exec-runtime-error-tests "term.rktd"))
+(define ns (namespace-anchor->namespace here))
+(parameterize ([current-namespace ns])
+  (exec-runtime-error-tests "term.rktd"))
   
-  (exec-syntax-error-tests "term.rktd")
+(exec-syntax-error-tests "term.rktd")
+
+(parameterize ([current-namespace (make-base-namespace)])
+  (eval '(require (for-syntax racket/base racket/syntax)
+                  redex/reduction-semantics))
+  (exec-runtime-error-tests "test-equal.rktd" #:depth-in-stack 1)
+  (exec-runtime-error-tests "test-predicate.rktd" #:depth-in-stack 1)
+  (exec-runtime-error-tests "test-reduction-relation.rktd"))
 
 (check-syntax/runtime-test-complete)
 (print-tests-passed 'err-loc-test.rkt)

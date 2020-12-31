@@ -2954,12 +2954,13 @@
            e1:expr
            e2:expr ...)
      #:declare equiv? (expr/c test-equiv-ctc #:name test-equiv-name)
-     #`(test-->>/procs 'test-->> red (λ () e1) (λ () (list e2 ...))
+     (quasisyntax/loc stx
+       (test-->>/procs 'test-->> red (λ () e1) (λ () (list e2 ...))
                        traverse-reduction-graph
                        #,(attribute cycles-ok?)
                        equiv?.c
                        #,(attribute pred)
-                       #,(get-srcloc stx))]))
+                       #,(get-srcloc stx)))]))
 
 (define-syntax (test--> stx)
   (syntax-parse stx
@@ -2969,9 +2970,10 @@
            e1:expr
            e2:expr ...)
      #:declare equiv? (expr/c test-equiv-ctc #:name test-equiv-name)
-     #`(test-->>/procs 'test--> red (λ () e1) (λ () (list e2 ...))
+     (quasisyntax/loc stx
+       (test-->>/procs 'test--> red (λ () e1) (λ () (list e2 ...))
                        apply-reduction-relation/dummy-second-value
-                       #t equiv?.c #f #,(get-srcloc stx))]))
+                       #t equiv?.c #f #,(get-srcloc stx)))]))
 
 (define (apply-reduction-relation/dummy-second-value red arg #:visit visit)
   (values (apply-reduction-relation red arg) #f))
@@ -3039,7 +3041,8 @@
                             #:name "goal expression")
      #:declare steps (expr/c #'(or/c natural-number/c +inf.0) 
                              #:name "steps expression")
-     #`(test-->>∃/proc relation.c start goal.c steps.c #,(get-srcloc stx))]))
+     (quasisyntax/loc stx
+       (test-->>∃/proc relation.c start goal.c steps.c #,(get-srcloc stx)))]))
 
 (define (test-->>∃/proc relation start goal steps srcinfo)
   (let ([result (traverse-reduction-graph 
@@ -3193,7 +3196,7 @@
 (define-syntax (test-predicate stx)
   (syntax-case stx ()
     [(_ p arg)
-     #`(test-predicate/proc p arg #,(get-srcloc stx))]))
+     (quasisyntax/loc stx (test-predicate/proc p arg #,(get-srcloc stx)))]))
 
 (define-syntax (test-match stx)
   (syntax-parse stx
@@ -3258,9 +3261,9 @@
 (define-syntax (test-equal stx)
   (syntax-case stx ()
     [(_ e1 e2)
-     #`(test-equal/proc e1 e2 #,(get-srcloc stx) #,test-equiv-default)]
+     (quasisyntax/loc stx (test-equal/proc e1 e2 #,(get-srcloc stx) #,test-equiv-default))]
     [(_ e1 e2 #:equiv ~equal?)
-     #`(test-equal/proc e1 e2 #,(get-srcloc stx) ~equal?)]))
+     (quasisyntax/loc stx (test-equal/proc e1 e2 #,(get-srcloc stx) ~equal?))]))
 
 (define (test-equal/proc v1 v2 srcinfo equal?)
   (cond
