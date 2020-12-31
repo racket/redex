@@ -190,9 +190,9 @@
   (define bd (get-dist len depth max-depth))
   (define n (round ((distribution-sample bd))))
   (define perm (nth-lexico-perm len (inexact->exact n)))
-  (define l-sorted (list->vector (sort (shuffle l) >= #:key key)))
+  (define l-sorted (list->vector (sort l < #:key key)))
   (for/list ([i (in-list perm)])
-    (vector-ref l-sorted i)))
+    (vector-ref l-sorted (- len i 1))))
 
 (define get-dist
   (let ([cache (make-hash)])
