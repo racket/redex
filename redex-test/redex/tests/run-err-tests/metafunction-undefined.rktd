@@ -1,7 +1,7 @@
-("reference to metafunction q before its definition"
- ([use q]) ([def q])
+("q: undefined;\n cannot use before initialization"
+ ([use (term (q))]) ([def q])
  (let ()
-   (term (use))
+   use ;; it would be better if this pointed to the metafunction inside the `term` (and it does seem to in DrRacket!)
    (define-language L)
    (define-metafunction L
      [(def) ()])

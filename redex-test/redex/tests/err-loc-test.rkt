@@ -4,12 +4,15 @@
   (require setup/path-to-relative
            racket/runtime-path
            "private/test-util.rkt"
-           syntax/strip-context)
+           syntax/strip-context
+           racket/set)
   (provide exec-syntax-error-tests
            exec-runtime-error-tests
-           syn-err-test-namespace)
+           syn-err-test-namespace
+           check-syntax/runtime-test-complete)
   
-  (define-runtime-path this-dir ".")
+  (define-runtime-path run-err-tests "run-err-tests")
+  (define-runtime-path syn-err-tests "syn-err-tests")
   
   (define syn-err-test-namespace (make-base-namespace))
   (parameterize ([current-namespace syn-err-test-namespace])
@@ -41,13 +44,20 @@
                                        [else ans])))))])
         (thunk))))
   
-  (define ((exec-error-tests setup exec) path)
-    (for ([test (in-list (read-tests (build-path this-dir path)))])
+  (define ((exec-error-tests base-path setup exec b) path)
+    (set-box! b (cons path (unbox b)))
+    (for ([test (in-list (read-tests (build-path base-path path)))])
       (exec-error-test test exec setup)))
+
+  (define syntax-error-tests-box (box '()))
   (define exec-syntax-error-tests
-    (exec-error-tests syntax-error-test-setup expand))
+    (exec-error-tests syn-err-tests syntax-error-test-setup
+                      expand syntax-error-tests-box))
+
+  (define runtime-error-tests-box (box '()))
   (define exec-runtime-error-tests
-    (exec-error-tests runtime-error-test-setup eval))
+    (exec-error-tests run-err-tests runtime-error-test-setup
+                      eval runtime-error-tests-box))
   
   (define (exec-error-test spec exec setup)
     (define-values (file line expected-message expected-sources test)
@@ -91,7 +101,19 @@
           (define test (read-syntax path port))
           (if (eof-object? test)
               '()
-              (cons test (loop))))))))
+              (cons test (loop)))))))
+
+  (define (check-syntax/runtime-test-complete)
+    (check-test-complete syntax-error-tests-box syn-err-tests)
+    (check-test-complete runtime-error-tests-box run-err-tests))
+
+  (define (check-test-complete tested-files base-path)
+    (define all-tested-files (apply set (unbox tested-files)))
+    (for ([file (in-list (directory-list base-path))]
+          #:unless (regexp-match #rx"~$" (path->bytes file)))
+      (unless (set-member? all-tested-files (path->string file))
+        (define-values (base-base base1 dir?) (split-path base-path))
+        (eprintf "err-lock-test.rkt: test not run: ~a\n" (build-path base1 file))))))
 
 (require "private/test-util.rkt"
          redex/reduction-semantics
@@ -119,28 +141,29 @@
   (eval '(require redex/reduction-semantics redex/pict))
   (eval '(define-language L
            (s a b c)))
-  (exec-runtime-error-tests "run-err-tests/define-union-language.rktd"))
+  (exec-runtime-error-tests "define-union-language.rktd"))
 
-(exec-syntax-error-tests "syn-err-tests/language-definition.rktd")
+(exec-syntax-error-tests "language-definition.rktd")
 
 ;; term with #:lang tests
-(exec-syntax-error-tests "syn-err-tests/term-lang.rktd")
+(exec-syntax-error-tests "term-lang.rktd")
 
 (parameterize ([current-namespace (make-base-namespace)])
   (eval '(require redex/reduction-semantics))
   (eval '(require (for-syntax racket/base)))
-  (exec-runtime-error-tests "run-err-tests/judgment-form-undefined.rktd"))
+  (exec-runtime-error-tests "metafunction-undefined.rktd")
+  (exec-runtime-error-tests "judgment-form-undefined.rktd"))
 
-(exec-syntax-error-tests "syn-err-tests/metafunction-definition.rktd")
+(exec-syntax-error-tests "metafunction-definition.rktd")
 
-(exec-syntax-error-tests "syn-err-tests/relation-definition.rktd")
+(exec-syntax-error-tests "relation-definition.rktd")
 
-(exec-syntax-error-tests "syn-err-tests/reduction-relation-definition.rktd")
+(exec-syntax-error-tests "reduction-relation-definition.rktd")
 
-(exec-syntax-error-tests "syn-err-tests/redex-let.rktd")
+(exec-syntax-error-tests "redex-let.rktd")
 
-(exec-syntax-error-tests "syn-err-tests/judgment-form-definition.rktd")
-(exec-syntax-error-tests "syn-err-tests/judgment-holds.rktd")
+(exec-syntax-error-tests "judgment-form-definition.rktd")
+(exec-syntax-error-tests "judgment-holds.rktd")
 
 (parameterize ([current-namespace (make-base-namespace)])
   (eval '(require (for-syntax racket/base)))
@@ -160,10 +183,10 @@
            #:contract (inv-fail s_1 s_2)
            #:inv ,(not (eq? (term s_1) (term s_2)))
            [(inv-fail s a)]))
-  (exec-runtime-error-tests "run-err-tests/judgment-form-contracts.rktd")
-  (exec-runtime-error-tests "run-err-tests/judgment-form-undefined.rktd")
-  (exec-runtime-error-tests "run-err-tests/judgment-form-ellipses.rktd")
-  (exec-runtime-error-tests "run-err-tests/judgment-form-where-error.rktd"))
+  (exec-runtime-error-tests "judgment-form-contracts.rktd")
+  (exec-runtime-error-tests "judgment-form-undefined.rktd")
+  (exec-runtime-error-tests "judgment-form-ellipses.rktd")
+  (exec-runtime-error-tests "judgment-form-where-error.rktd"))
 
 (parameterize ([current-namespace (make-base-namespace)])
   (eval '(require (for-syntax racket/base)))
@@ -173,15 +196,17 @@
            ∨ : boolean boolean -> boolean
            [(∨ #f #f) #f]
            [(∨ boolean boolean) #t]))
-  (exec-runtime-error-tests "run-err-tests/metafunction-no-match.rktd"))
+  (exec-runtime-error-tests "metafunction-no-match.rktd"))
 
 (require redex/private/term
          redex/private/lang-struct)
 (define-namespace-anchor here)
   (define ns (namespace-anchor->namespace here))
   (parameterize ([current-namespace ns])
-    (exec-runtime-error-tests "run-err-tests/term.rktd"))
+    (exec-runtime-error-tests "term.rktd"))
   
-  (exec-syntax-error-tests "syn-err-tests/term.rktd")
-  
+  (exec-syntax-error-tests "term.rktd")
+
+(check-syntax/runtime-test-complete)
 (print-tests-passed 'err-loc-test.rkt)
+
