@@ -41,6 +41,10 @@
          (set! largest-used-prefix n)
          (string->symbol (format "any_~a" n)))
 
+       (define modeless-jf-name-only-prems-any-counter 0)
+       (define (next-any)
+         (set! modeless-jf-name-only-prems-any-counter (+ modeless-jf-name-only-prems-any-counter 1))
+         (string->symbol (format "any_modeless-jf-name-only-prems-any-~a" modeless-jf-name-only-prems-any-counter)))
        (define-values (modeless-prems
                        modeless-jf-name-only-prems
                        modeless-prem-jf-ids
@@ -71,7 +75,7 @@
                            modeless-prems)
                     (list* #'ellipsis
                            #`(name #,name
-                                   (#,(symbol->string (syntax-e #'form-name)) any (... ...)))
+                                   (#,(symbol->string (syntax-e #'form-name)) #,(next-any) (... ...)))
                            modeless-jf-name-only-prems)
                     (cons #'form-name modeless-prem-jf-ids)
                     (cons name premise-repeat-names)
@@ -91,7 +95,7 @@
               (loop #'more
                     (cons #`(#,(symbol->string (syntax-e #'form-name)) . rest-of-form)
                            modeless-prems)
-                    (cons #`(#,(symbol->string (syntax-e #'form-name)) any (... ...))
+                    (cons #`(#,(symbol->string (syntax-e #'form-name)) #,(next-any) (... ...))
                           modeless-jf-name-only-prems)
                     (cons #'form-name modeless-prem-jf-ids)
                     (cons #f premise-repeat-names)

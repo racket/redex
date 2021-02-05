@@ -1600,6 +1600,53 @@
                        (list)))))
         #t))
 
+;; just make sure this one compiles
+(let ()
+
+  (define-language L
+    (n ::= natural)
+    (e ::= n x +)
+    (t ::= num)
+    (tf ::= ((t ...) -> (t ...)))
+    (C ::= ((x tf) ...))
+    (x ::= variable-not-otherwise-mentioned)
+    (mod ::= ([x (func tf (e ...))] ...)))
+
+  (define-judgment-form L
+    #:contract (⊢ C (e ...) tf)
+
+    [-----------------------
+     (⊢ C (n) (() -> (num)))]
+
+    [------------------------------
+     (⊢ C (+) ((num num) -> (num)))]
+
+    [(where (_ ... (x tf) _ ...) C)
+     ------------------------------
+     (⊢ C (x) tf)])
+
+  (define-judgment-form L
+    #:contract (same-context C (C ...))
+    #:mode (same-context I I)
+
+    [-------------------
+     (same-context _ ())]
+
+    [(same-context C_1 (C_2 ...))
+     --------------------------------
+     (same-context C_1 (C_1 C_2 ...))])
+
+  (define-judgment-form L
+    #:contract (⊢-mod mod C)
+
+    [(where ((x tf) ...) C)
+     (⊢ C_f (e ...) tf) ...
+     (same-context C (C_f ...))
+     -------------------------------------
+     (⊢-mod ([x (func tf (e ...))] ...) C)])
+
+  (void))
+
 (let ()
   (define-language nats
     (n ::= z (s n))
