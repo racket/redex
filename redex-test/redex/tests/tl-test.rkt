@@ -321,6 +321,23 @@
 
 (let ()
   (define-language L
+    (e ::= (λ (x) e) (e e) x)
+    (x ::= variable-not-otherwise-mentioned)
+    #:binding-forms (λ (x) e #:refers-to x))
+
+  (test (capture-output
+         (test-->>∃
+          (reduction-relation
+           L (--> any any))
+          (term (λ (z) z))
+          (term (λ (y) y))))
+        "")
+  (test (capture-output (test-results)) "One test passed.\n"))
+
+
+
+(let ()
+  (define-language L
     (e ::= (e e) (λ (x) e) x (fix e))
     (x ::= variable-not-otherwise-mentioned)
     #:binding-forms

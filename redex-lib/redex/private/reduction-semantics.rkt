@@ -3045,10 +3045,14 @@
        (test-->>∃/proc relation.c start goal.c steps.c #,(get-srcloc stx)))]))
 
 (define (test-->>∃/proc relation start goal steps srcinfo)
+  (define test-->>∃/goal-proc
+    (if (procedure? goal)
+        goal
+        (λ (x) (alpha-equivalent? (reduction-relation/IO-jf-lang relation) goal x))))
   (let ([result (traverse-reduction-graph 
                  relation
                  start 
-                 #:goal (if (procedure? goal) goal (λ (x) (equal? goal x)))
+                 #:goal test-->>∃/goal-proc
                  #:steps steps)])
     (cond
       [(search-failure? result)
