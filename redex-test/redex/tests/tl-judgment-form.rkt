@@ -1600,6 +1600,150 @@
                        (list)))))
         #t))
 
+(let ()
+  (define-language L)
+
+  (define-judgment-form L
+    #:contract (⊢ any)
+
+    [--------
+     (⊢ any)])
+
+  (define-judgment-form L
+    #:contract (⊢-module-func1 any)
+
+    [(⊢ ((_ ...)
+         (_ ...)
+         (_ ...)
+         (_ ...)
+         (_ ...)
+         (_ ...)
+         (any_elephant ...)
+         (any_elephant ...)))
+     --------------------------------------------
+     (⊢-module-func1 ((_ ...)
+                      (_ ...)
+                      (_ ...)
+                      (_ ...)
+                      (_ ...)
+                      (_ ...)
+                      (any_ant ...)
+                      (any_ant ...)))])
+
+  (define deriv3
+    (derivation `(⊢ (() () () () () () () ()))
+                #f
+                (list)))
+
+  (define deriv4
+    (derivation `(⊢-module-func1
+                  (() () () () () () (a) (a)))
+                #f
+                (list deriv3)))
+
+  (test (judgment-holds ⊢-module-func1 deriv4) #t))
+
+(let ()
+
+  (define-language L
+    (n m t e tfi tg ti locals Γ φ ivar ::= any))
+
+  (define-judgment-form L
+    #:contract (⊢ any any any)
+
+    [---------------------
+     (⊢ any_1 any_2 any_3)])
+
+  (define-judgment-form L
+    #:contract (⊢-module-func1 any any any)
+
+    [(⊢ ((func tfi_f ...)
+         (global tg ...)
+         (table (n tfi_t ...) ...)
+         (memory m ...)
+         (local t_1 ... t ...)
+         (label ((ti_2 ...) locals_1 Γ_6 φ_4))
+         (return ((ti_2 ...) locals_1 Γ_6 φ_4)))
+        (e ...)
+        ((() ((t_1 ivar_1) ...) Γ_5 φ_5) -> ((ti_2 ...) locals_2 Γ_3 φ_3)))
+     -------------------------------------------------------------------------------------------------
+     (⊢-module-func1 ((func tfi_f ...) (global tg ...) (table (n tfi_t ...) ...) (memory m ...) _ _ _)
+                     (() (func ((((t_1 ivar_1) ...) () Γ_1 φ_1) -> ((ti_2 ...) () Γ_4 φ_4))
+                               (local (t ...) (e ...))))
+                     (() ((((t_1 ivar_1) ...) () Γ_1 φ_1) -> ((ti_2 ...) () Γ_4 φ_4))))])
+
+  (define-judgment-form L
+    #:contract (⊢-module-func2 any any any)
+
+    [(⊢ ((func tfi_f ...)
+         (global tg ...)
+         (table (n tfi_t ...) ...)
+         (memory m ...)
+         (local t_1 ... t ...)
+         (label ((ti_92 ...) locals_1 Γ_6 φ_4))
+         (return ((ti_92 ...) locals_1 Γ_6 φ_4)))
+        (e ...)
+        ((() ((t_1 ivar_1) ...) Γ_5 φ_5) -> ((ti_2 ...) locals_2 Γ_3 φ_3)))
+     -------------------------------------------------------------------------------------------------
+     (⊢-module-func2 ((func tfi_f ...) (global tg ...) (table (n tfi_t ...) ...) (memory m ...) _ _ _)
+                     (() (func ((((t_1 ivar_1) ...) () Γ_1 φ_1) -> ((ti_2 ...) () Γ_4 φ_4))
+                               (local (t ...) (e ...))))
+                     (() ((((t_1 ivar_1) ...) () Γ_1 φ_1) -> ((ti_2 ...) () Γ_4 φ_4))))])
+
+
+
+  (define ticond0 `(((i32 a) (i32 b)) () ((empty (i32 a)) (i32 b)) empty))
+  (define ticond1 `(() ((i32 a) (i32 b)) ((empty (i32 a)) (i32 b)) empty))
+  (define ticond4 `(((i32 c)) ((i32 a) (i32 b)) (((((empty (i32 a)) (i32 b)) (i32 a_2)) (i32 b_2)) (i32 c)) (((empty (= a_2 a)) (= b_2 b)) (= c (add a_2 b_2)))))
+  (define ticond5 `(((i32 c)) () (((empty (i32 a)) (i32 b)) (i32 c)) (empty (= c (add a b)))))
+  (define ticond5_1 `(((i32 c)) ((i32 a) (i32 b)) (((empty (i32 a)) (i32 b)) (i32 c)) (empty (= c (add a b)))))
+
+  (define context1
+    (term ((func (,ticond0 -> ,ticond5))
+           (global)
+           (table)
+           (memory)
+           (local)
+           (label)
+           (return))))
+
+  (define context1-inner
+    (term ((func (,ticond0 -> ,ticond5))
+           (global)
+           (table)
+           (memory)
+           (local i32 i32)
+           (label ,ticond5_1)
+           (return ,ticond5_1))))
+
+  (define deriv3
+    (derivation `(⊢ ,context1-inner
+                    ((get-local 0) (get-local 1) (i32 add))
+                    (,ticond1 -> ,ticond4))
+                #f
+                (list)))
+
+  (define deriv4
+    (derivation `(⊢-module-func1 ,context1
+                                 (() (func (,ticond0 -> ,ticond5)
+                                           (local () ((get-local 0) (get-local 1) (i32 add)))))
+                                 (() (,ticond0 -> ,ticond5)))
+                #f
+                (list deriv3)))
+
+  (test (judgment-holds ⊢-module-func1 deriv4) #t)
+
+  (define deriv5
+    (derivation `(⊢-module-func2 ,context1
+                                 (() (func (,ticond0 -> ,ticond5)
+                                           (local () ((get-local 0) (get-local 1) (i32 add)))))
+                                 (() (,ticond0 -> ,ticond5)))
+                #f
+                (list deriv3)))
+
+  (test (judgment-holds ⊢-module-func2 deriv5) #t))
+
+
 ;; just make sure this one compiles
 (let ()
 

@@ -50,10 +50,17 @@ see also term.rkt for some restrictions/changes there
   ;; Occurrences of that symbol in the `orig-stx' pattern are replaced by
   ;; the pattern. Also, uses of that identifier not in "pattern expression" positions
   ;; are signalled as syntax errors
+
+  ;; this introduces names onto unnamed ellipses and sometimes we need to compare
+  ;; the results of two different matches that come from two different calls to
+  ;; this function; so we use ellipsis-number-start as a way to avoid the two
+  ;; calls from seeing each others ellipses (when it is passed, we'll return
+  ;; the number, which informs what to pass in subsequent calls)
   (define (rewrite-side-conditions/check-errs all-nts/lang-id what bind-names? orig-stx
                                               #:rewrite-as-any-id [rewrite-as-any-id #f]
                                               #:aliases [_aliases #f]
-                                              #:nt-identifiers [_nt-identifiers #f])
+                                              #:nt-identifiers [_nt-identifiers #f]
+                                              #:ellipsis-number-start [ellipsis-number-start #f])
     (unless (or (not what) (symbol? what))
       (error 'rewrite-side-conditions/check-errs
              "expected `what' argument to be a symbol or #f, got ~s"
@@ -163,7 +170,7 @@ see also term.rkt for some restrictions/changes there
                              'disappeared-use
                              (if old (cons old the-uses) the-uses))))
 
-    (define ellipsis-number 0)
+    (define ellipsis-number (or ellipsis-number-start 0))
     
     (define-values (term names)
       (let loop ([term orig-stx]
@@ -565,8 +572,10 @@ see also term.rkt for some restrictions/changes there
                   [void-stx void-stx])
       (when nt->hole
         (check-hole-sanity what #'term nt->hole orig-stx))
-      #'(void-stx term (name ...) (name/ellipses ...))))
-
+      #`(void-stx term (name ...) (name/ellipses ...)
+                  #,@(if ellipsis-number-start
+                         (list (+ ellipsis-number 1))
+                         (list)))))
 
 (define (is-ellipsis? term)
   (and (identifier? term)

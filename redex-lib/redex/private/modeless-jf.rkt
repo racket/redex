@@ -116,15 +116,19 @@
        (define/syntax-parse (modeless-prems-syncheck-exp
                              modeless-prem
                              (modeless-prem-names ...)
-                             (modeless-prem-names/ellipses ...))
-         (rewrite-side-conditions/check-errs lang syn-error-name #t #`(#,@modeless-prems)))
+                             (modeless-prem-names/ellipses ...)
+                             ellipsis-number-end)
+         (rewrite-side-conditions/check-errs lang syn-error-name #t #`(#,@modeless-prems)
+                                             #:ellipsis-number-start 0))
 
        (define/syntax-parse (modeless-jf-name-only-prems-syncheck-exp
                              modeless-jf-name-only-prem
                              (modeless-jf-name-only-prem-names ...)
-                             (modeless-jf-name-only-prem-names/ellipses ...))
+                             (modeless-jf-name-only-prem-names/ellipses ...)
+                             ellipsis-number-end-end)
          (rewrite-side-conditions/check-errs lang syn-error-name #t
-                                             #`(#,@modeless-jf-name-only-prems)))
+                                             #`(#,@modeless-jf-name-only-prems)
+                                             #:ellipsis-number-start (syntax-e #'ellipsis-number-end)))
 
        (define/syntax-parse (check-jf-against-deriv-proc ...)
          (for/list ([modeless-prem-jf-id (in-list modeless-prem-jf-ids)])
@@ -174,8 +178,10 @@
        (define/syntax-parse (conc-syncheck-exp
                              conc
                              (conc-names ...)
-                             (conc-names/ellipses ...))
-         (rewrite-side-conditions/check-errs lang syn-error-name #t #'conc-pats))
+                             (conc-names/ellipses ...)
+                             ellipsis-number-conc-end)
+         (rewrite-side-conditions/check-errs lang syn-error-name #t #'conc-pats
+                                             #:ellipsis-number-start (syntax-e #'ellipsis-number-end-end)))
 
        (define-values (body compiled-pattern-identifiers patterns-to-compile)
          (parameterize ([judgment-form-pending-expansion
