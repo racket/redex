@@ -1,3 +1,7 @@
+v8.1
+
+  * bug fixes and a documentation improvement
+
 v8.0
 
   * added define-overriding-judgment-form
