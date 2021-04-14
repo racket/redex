@@ -263,11 +263,31 @@
                              named-clauses))]
       [else (set! noname-clauses (cons compiled noname-clauses))]))
 
-  #`(λ (lang)
-      (make-hash (list #,@named-clauses
-                       #,@(if (null? noname-clauses)
+  (define hash-stx
+    #`(make-hash (list #,@(if (null? noname-clauses)
                               (list)
-                              (list #`(cons #f (list #,@noname-clauses))))))))
+                              (list #`(cons #f (list #,@noname-clauses))))
+                       #,@named-clauses)))
+  (cond
+    [(identifier? orig)
+     (define jf-record (lookup-judgment-form-id orig))
+     #`(λ (lang)
+         (build-extended-jf-hash
+          (#,(judgment-form-mk-procs jf-record) lang)
+          #,hash-stx))]
+    [else
+     #`(λ (lang)
+         #,hash-stx)]))
+
+(define (build-extended-jf-hash orig-hash new-hash)
+  (define all-keys (remove-duplicates (append (hash-keys orig-hash) (hash-keys new-hash))))
+  (define result (make-hash))
+  (for ([key (in-list all-keys)])
+    (hash-set! result
+               key
+               (or (hash-ref new-hash key #f)
+                   (hash-ref orig-hash key))))
+  result)
 
 (define (check-jf-result-against-derivations only-check-contracts?
                                              derivation get-derivations

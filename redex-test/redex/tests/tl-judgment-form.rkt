@@ -1743,6 +1743,38 @@
 
   (test (judgment-holds ⊢-module-func2 deriv5) #t))
 
+(let ()
+  (define-language L)
+
+  (define-judgment-form L
+    #:contract (⊢ any)
+    [--- "1"
+     (⊢ 1)])
+
+  (define-extended-judgment-form L ⊢
+    #:contract (⊢2 any)
+    [--- "2"
+     (⊢2 2)])
+
+  (test (judgment-holds ⊢ (derivation `(⊢ 1) "1" (list))) #t)
+  (test (judgment-holds ⊢2 (derivation `(⊢2 1) "1" (list))) #t))
+
+(let ()
+  (define-language L)
+
+  (define-judgment-form L
+    #:contract (⊢ any)
+    [--- "1"
+     (⊢ x)])
+
+  (define-extended-judgment-form L ⊢
+    #:contract (⊢2 any)
+    [--- "1"
+     (⊢2 y)])
+
+  (test (judgment-holds ⊢ (derivation `(⊢ x) "1" (list))) #t)
+  (test (judgment-holds ⊢2 (derivation `(⊢2 y) "1" (list))) #t)
+  (test (judgment-holds ⊢2 (derivation `(⊢2 x) "1" (list))) #f))
 
 ;; just make sure this one compiles
 (let ()
