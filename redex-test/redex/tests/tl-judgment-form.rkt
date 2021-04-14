@@ -1794,6 +1794,73 @@
   (test (judgment-holds ⊢2 (derivation `(⊢2 1) #f (list))) #t)
   (test (judgment-holds ⊢2 (derivation `(⊢2 2) #f (list))) #t))
 
+(let ()
+  (define-language L)
+
+  (define-judgment-form L
+    #:contract (⊢ any)
+    [------ "1"
+     (⊢ 1)]
+    [------ "2"
+     (⊢ 2)])
+
+  (define msg
+    (with-handlers ([exn:fail? exn-message])
+      (judgment-holds ⊢ (derivation `(⊢ 1) #f (list)))))
+  (test (regexp-match?
+         (regexp
+          (regexp-quote
+           (string-append
+            "used nameless rule in derivation, but there are no nameless rules in the judgment form\n"
+            "  named rules:\n   \"1\"\n   \"2\"")))
+         msg)
+        #t))
+
+(let ()
+  (define-language L)
+
+  (define-judgment-form L
+    #:contract (⊢ any)
+    [------ "1"
+     (⊢ 1)]
+    [------ "2"
+     (⊢ 2)])
+
+  (define msg
+    (with-handlers ([exn:fail? exn-message])
+      (judgment-holds ⊢ (derivation `(⊢ 1) #f (list)))))
+
+  (test (regexp-match?
+         (regexp
+          (regexp-quote
+           (string-append
+            "used nameless rule in derivation, but there are no nameless rules in the judgment form\n"
+            "  named rules:\n   \"1\"\n   \"2\"")))
+         msg)
+        #t))
+
+(let ()
+  (define-language L)
+
+(define-judgment-form L
+  #:contract (⊢ any)
+  [------
+   (⊢ 1)]
+  [------
+   (⊢ 2)])
+
+(define msg
+  (with-handlers ([exn:fail? exn-message])
+    (judgment-holds ⊢ (derivation `(⊢ 1) "1" (list)))))
+  (test (regexp-match?
+         (regexp
+          (string-append
+           (regexp-quote
+            "unknown rule in derivation\n  rule: \"1\"")
+           "$"))
+         msg)
+        #t))
+
 ;; just make sure this one compiles
 (let ()
 

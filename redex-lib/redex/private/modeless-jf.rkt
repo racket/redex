@@ -350,12 +350,24 @@
               sub-derivations
               (λ () #f))]
             [else
-             (define known-rules (sort (hash-keys modeless-jf-clause-table) string<?))
-             (error jf-name "unknown rule in derivation\n  rule: ~.s\n  known rules:~a"
-                    rule-name
-                    (apply string-append
-                           (for/list ([rule (in-list known-rules)])
-                             (format "\n   ~s" rule))))]))]
+             (define known-rules
+               (sort (filter values (hash-keys modeless-jf-clause-table))
+                     string<?))
+             (define error-intro
+               (if rule-name
+                   (format "unknown rule in derivation\n  rule: ~.s" rule-name)
+                   "used nameless rule in derivation, but there are no nameless rules in the judgment form"))
+             (define named-rules-str
+               (if (null? known-rules)
+                   ""
+                   (format "\n  named rules:~a"
+                           (apply string-append
+                                  (for/list ([rule (in-list known-rules)])
+                                    (format "\n   ~s" rule))))))
+             (error jf-name
+                    "~a~a"
+                    error-intro
+                    named-rules-str)]))]
        [else #f])]
     [_ #f]))
 
