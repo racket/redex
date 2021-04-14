@@ -282,11 +282,15 @@
 (define (build-extended-jf-hash orig-hash new-hash)
   (define all-keys (remove-duplicates (append (hash-keys orig-hash) (hash-keys new-hash))))
   (define result (make-hash))
-  (for ([key (in-list all-keys)])
+  (for ([key (in-list all-keys)]
+        #:when key)
     (hash-set! result
                key
                (or (hash-ref new-hash key #f)
                    (hash-ref orig-hash key))))
+  (define unnamed-rules (append (hash-ref new-hash #f '()) (hash-ref orig-hash #f '())))
+  (unless (null? unnamed-rules)
+    (hash-set! result #f unnamed-rules))
   result)
 
 (define (check-jf-result-against-derivations only-check-contracts?

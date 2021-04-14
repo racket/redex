@@ -1776,6 +1776,24 @@
   (test (judgment-holds ⊢2 (derivation `(⊢2 y) "1" (list))) #t)
   (test (judgment-holds ⊢2 (derivation `(⊢2 x) "1" (list))) #f))
 
+(let ()
+  (define-language L)
+
+  (define-judgment-form L
+    #:contract (⊢ any)
+    [------
+     (⊢ 1)])
+
+  (define-extended-judgment-form L ⊢
+    #:contract (⊢2 any)
+    [------
+     (⊢2 2)])
+
+  (test (judgment-holds ⊢ (derivation `(⊢ 1) #f (list))) #t)
+  (test (judgment-holds ⊢ (derivation `(⊢ 2) #f (list))) #f)
+  (test (judgment-holds ⊢2 (derivation `(⊢2 1) #f (list))) #t)
+  (test (judgment-holds ⊢2 (derivation `(⊢2 2) #f (list))) #t))
+
 ;; just make sure this one compiles
 (let ()
 
