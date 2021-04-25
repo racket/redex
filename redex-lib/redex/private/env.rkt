@@ -21,16 +21,16 @@
 (define-type Env env)
 (define-type TEnv t-env)
 (define-type Tag Integer)
-(define-type (Tagged a) (HashTable Tag a))
+(define-type (Tagged a) (Immutable-HashTable Tag a))
 
-(struct: env ([names    : (HashTable Symbol Pattern)]
-              [misnames : (HashTable Symbol (Pairof Pattern (Setof Tag)))]
-              [nreps    : (HashTable Symbol (Pairof Env (Tagged Pattern)))])
+(struct: env ([names    : (Immutable-HashTable Symbol Pattern)]
+              [misnames : (Immutable-HashTable Symbol (Pairof Pattern (Setof Tag)))]
+              [nreps    : (Immutable-HashTable Symbol (Pairof Env (Tagged Pattern)))])
          #:transparent)
 
-(struct: t-env ([names    : (HashTable Symbol Term)]
-                [misnames : (HashTable Symbol (Listof (Pairof Tag Term)))]
-                [nreps    : (HashTable Symbol (Listof (Pairof TEnv (Tagged Term))))])
+(struct: t-env ([names    : (Immutable-HashTable Symbol Term)]
+                [misnames : (Immutable-HashTable Symbol (Listof (Pairof Tag Term)))]
+                [nreps    : (Immutable-HashTable Symbol (Listof (Pairof TEnv (Tagged Term))))])
          #:transparent)
 
 (: empty-env : Env)
@@ -63,9 +63,9 @@
 
 (: pure-nrep : Symbol Env Tag Pattern -> Env)
 (define (pure-nrep n repnv tag pat)
-  (: nreps : (HashTable Symbol (Pairof Env (Tagged Pattern))))
+  (: nreps : (Immutable-HashTable Symbol (Pairof Env (Tagged Pattern))))
   (define nreps
-    (hash-set (ann (hash) (HashTable Symbol (Pairof Env (Tagged Pattern))))
+    (hash-set (ann (hash) (Immutable-HashTable Symbol (Pairof Env (Tagged Pattern))))
               n
               (cons repnv
                     (hash-set (ann (hash) (Tagged Pattern))
@@ -113,7 +113,7 @@
         (redex-error 'generate-term-#:ith "mismatch named patterns must be the same pattern, saw ~s and ~s" p1 p2))
       (cons p1 (set-union ts1 ts2))])
    
-   (: misnames-union : (HashTable Symbol (Pairof Pattern (Setof Tag))))
+   (: misnames-union : (Immutable-HashTable Symbol (Pairof Pattern (Setof Tag))))
    (define misnames-union
      (hash-union ms1 ms2 mis-combo))
    
@@ -130,17 +130,17 @@
      (hash-union rs1 rs2 nrep-combo))
    (env names-union misnames-union nreps-union)])
 
-(: key-set : (All (k v) (HashTable k v) -> (Setof k)))
+(: key-set : (All (k v) (Immutable-HashTable k v) -> (Setof k)))
 (define (key-set m)
   (list->set (hash-keys m)))
 
-(: hash-union : (All (k v) (HashTable k v) (HashTable k v) (k v v -> v) -> (HashTable k v)))
+(: hash-union : (All (k v) (Immutable-HashTable k v) (Immutable-HashTable k v) (k v v -> v) -> (Immutable-HashTable k v)))
 (define (hash-union m1 m2 combo)
   (: ks1 : (Setof k))
   (: ks2 : (Setof k))
   (define ks1 (key-set m1))
   (define ks2 (key-set m2))
-  (for/hash: : (HashTable k v)
+  (for/hash: : (Immutable-HashTable k v)
                ([k : k (in-set (set-union ks1 ks2))])
     (define v1 (hash-ref m1 k (thunk #f)))
     (define v2 (hash-ref m2 k (thunk #f)))
