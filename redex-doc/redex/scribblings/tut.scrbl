@@ -145,14 +145,16 @@ Next, enter the following definition.
 The @racket[define-language] form gives a name to
 a grammar. In this case, @racket[L] is the Racket-level
 name referring to the grammar containing the non-terminal
-@racket[e], with six productions (application, abstraction,
-variables, @racket[amb] expressions, numbers, and addition
+@racket[e], with eight productions (application, abstraction,
+variables, @racket[amb] expressions, numbers, addition
+expressions, if-zero expressions, and fixpoint 
 expressions), the non-terminal @racket[t] with two productions,
 and the non-terminal @racket[x] that uses the pattern
 keyword @racket[variable-not-otherwise-mentioned]. This 
 special pattern matches all symbols except those used
 as literals in the grammar (in this case: @racket[λ],
-@racket[amb], @racket[+], and @racket[→]).
+@racket[amb], @racket[+], @racket[if0], @racket[fix], 
+and @racket[→]).
 
 Once we have defined the grammar, we can ask Redex if 
 specific terms match the grammar. This expression checks
