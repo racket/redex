@@ -132,9 +132,8 @@ todo:
                              [editor zoom-out-pb]))
     
     (define choice-vp (new vertical-panel% [alignment '(center center)] [parent lower-hp] [stretchable-width #f]))
-    (define reduction-names (if (IO-judgment-form? red)
-                                '()
-                                (reduction-relation->rule-names red)))
+    (define reduction-names (reduction-relation/IO-jf->rule-names red))
+
     (define reds-choice 
       (and (not (null? reduction-names))
            (new choice%

@@ -44,7 +44,8 @@
                                            compiled-input-contract-pat
                                            compiled-output-contract-pat
                                            input-contract-pat
-                                           output-contract-pat)
+                                           output-contract-pat
+                                           rule-names)
   #:methods gen:custom-write
   [(define (write-proc rjf port _mode)
      (if (runtime-judgment-form-mode rjf)
@@ -66,7 +67,8 @@
                                      name proc mode lang
                                      original-contract-expression ;; (or/c #f (listof s-exp))
                                      input-contract-pat
-                                     output-contract-pat)
+                                     output-contract-pat
+                                     (rule-names '()))
   (define cache (cons (box (make-hash)) (box (make-hash))))
   (make-runtime-judgment-form
    name proc mode cache lang
@@ -98,7 +100,15 @@
             (runtime-judgment-form-input-contract-pat parent-judgment-form)))
    (or output-contract-pat
        (and parent-judgment-form
-            (runtime-judgment-form-output-contract-pat parent-judgment-form)))))
+            (runtime-judgment-form-output-contract-pat parent-judgment-form)))
+   (map (lambda (raw-name)
+          (cond
+            [raw-name => (lambda (x)
+                           (if (symbol? x)
+                               x
+                               (string->symbol x)))]
+            [else raw-name]))
+        rule-names)))
 
 (define-for-syntax (prune-syntax stx)
   (datum->syntax
@@ -939,7 +949,8 @@
                                          #,lang
                                          original-contract-expression
                                          judgment-form-input-contract
-                                         judgment-form-output-contract))
+                                         judgment-form-output-contract
+                                         '#,rule-names))
           (define jf-cache (runtime-judgment-form-cache the-runtime-judgment-form))
           (define original-contract-expression-id
             (runtime-judgment-form-original-contract-expression the-runtime-judgment-form))
