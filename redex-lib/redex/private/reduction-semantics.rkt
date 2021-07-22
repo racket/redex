@@ -2871,7 +2871,7 @@
 (define (reduction-relation/IO-jf->rule-names x)
   (cond
     [(reduction-relation? x) (reduction-relation->rule-names x)]
-    [(IO-judgment-form? x) '(judgment-form->rule-names x)]))
+    [(IO-judgment-form? x) (runtime-judgment-form-rule-names x)]))
 
 
 ;                                                                               
@@ -3361,6 +3361,7 @@
 (provide (rename-out [-reduction-relation reduction-relation])
          ::=
          reduction-relation->rule-names
+         reduction-relation/IO-jf->rule-names
          reduction-relation/IO-jf-lang
          extend-reduction-relation
          reduction-relation?
