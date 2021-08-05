@@ -151,7 +151,12 @@ help give finer-grained control over the layout, so the
 before it is instantiated. Also note that all of the snips
 inserted into the editor by this library have a
 @tt{get-term-node} method which returns the snip's
-@racket[term-node].
+@racket[term-node?].
+
+ The @onscreen{Fix Layout} button calls out to @tt{dot} (a
+ program that's a part of @tt{graphviz}) and uses its results
+ to lay out the graph. While in the fixed-layout mode, the edges
+ are now drawn. Click the button again to restore the edges.
 
 For a more serious example of @racket[traces], please see @secref["tutorial"],
 but for a silly one that demonstrates how the @racket[pp] argument
