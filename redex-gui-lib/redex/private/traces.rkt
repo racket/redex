@@ -120,14 +120,6 @@
               (channel-put c (thunk)))))
          (channel-get c))])))
 
-(define initial-font-size
-  (make-parameter
-   (send (send (send (editor:get-standard-style-list) 
-                     find-named-style
-                     "Standard")
-               get-font)
-         get-point-size)))
-
 ;; the initial spacing between row and columns of the reduction terms
 (define default-x-spacing 15)
 (define default-y-spacing 15)

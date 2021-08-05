@@ -3,7 +3,8 @@
          racket/class
          framework
          racket/pretty
-         redex/private/lang-struct)
+         redex/private/lang-struct
+         racket/math)
 
 (provide reflowing-snip<%>
          size-editor-snip%
@@ -16,7 +17,8 @@
          resizing-pasteboard-mixin
          get-user-char-width
          find-snip-height
-         find-snip-width)
+         find-snip-width
+         initial-font-size)
 
 (define initial-char-width (make-parameter 30))
 
@@ -212,3 +214,11 @@
     (send ed get-snip-location snip bl #f #f)
     (- (unbox br)
        (unbox bl))))
+
+(define initial-font-size
+  (make-parameter
+   (send (send (send (editor:get-standard-style-list)
+                     find-named-style
+                     "Standard")
+               get-font)
+         get-point-size)))

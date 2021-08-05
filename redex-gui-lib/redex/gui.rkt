@@ -103,12 +103,14 @@
  [stepper
   (->* ((or/c IO-judgment-form? reduction-relation?)
         any/c)
-       (pp-contract)
+       (pp-contract
+        #:show-font-size-control? any/c)
        void?)]
  [stepper/seed 
   (->* ((or/c reduction-relation? IO-judgment-form?)
         (cons/c any/c (listof any/c)))
-       (pp-contract)
+       (pp-contract
+        #:show-font-size-control? any/c)
        void?)]
  
  [dark-pen-color (parameter/c (or/c string? (is-a?/c color%)))]

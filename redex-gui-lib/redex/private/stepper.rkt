@@ -59,10 +59,13 @@ todo:
   (define updown-label (pick-label "↕" "^"))
   (define back-label (pick-label "↩" "<-"))
   
-  (define (stepper red term [pp default-pretty-printer])
-    (stepper/seed red (list term) pp))
+  (define (stepper red term [pp default-pretty-printer]
+                   #:show-font-size-control? [show-font-size-control? #f])
+    (stepper/seed red (list term) pp
+                  #:show-font-size-control? show-font-size-control?))
   
-  (define (stepper/seed red seed [_pp #f])
+  (define (stepper/seed red seed [_pp #f]
+                        #:show-font-size-control? [show-font-size-control? #f])
     (define pp (or _pp default-pretty-printer))
     (for ([seed (in-list seed)])
       (unless (is-in-domain? red seed)
@@ -98,6 +101,9 @@ todo:
                    [height 450]))
     (define dp (new vertical-panel% [parent f]))
     (define upper-hp (new horizontal-panel% [parent dp]))
+    (define font-size-control-parent
+      (and show-font-size-control?
+           (new horizontal-panel% [parent f] [stretchable-height #f])))
     (define lower-hp (new horizontal-panel% [alignment '(center center)] [parent f] [stretchable-height #f]))
     
     (define (moved left top right bottom)
@@ -123,6 +129,26 @@ todo:
     (define bp-outer (new vertical-panel% [parent upper-hp] [stretchable-width #f]))
     (define bp (new vertical-panel% [parent bp-outer] [stretchable-width #f]))
     (define bp-spacer (new grow-box-spacer-pane% [parent bp-outer]))
+
+    (when show-font-size-control?
+      (define (set-font-size size)
+        (define standard (send (editor:get-standard-style-list) find-named-style "Standard"))
+        (define delta (make-object style-delta%))
+        (send standard get-delta delta)
+        (send delta set-size-mult 0)
+        (send delta set-size-add size)
+        (send standard set-delta delta))
+      (new slider%
+           [label "Font Size"]
+           [min-value 1]
+           [init-value (initial-font-size)]
+           [max-value 127]
+           [parent font-size-control-parent]
+           [callback (λ (slider evt)
+                       (send pb begin-edit-sequence)
+                       (set-font-size (send slider get-value))
+                       (send pb end-edit-sequence)
+                       (send ec refresh))]))
     
     (define zoom-out-pb (new zoom-out-pasteboard%))
     (define zoom-out-ec (new editor-canvas% 
@@ -928,4 +954,10 @@ todo:
                 (values (unbox wb) (- (unbox hb) 2)))
               (values 10 10))))
       
-      (super-new)))
+      (super-new)
+
+      (inherit get-style-list)
+      (define (style-list-callback the-style)
+        (unless the-style
+          (update-heights)))
+      (send (editor:get-standard-style-list) notify-on-change style-list-callback)))
