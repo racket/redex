@@ -186,7 +186,7 @@ see also term.rkt for some restrictions/changes there
           [(side-condition pre-pat exp)
            (let ()
              (define-values (pre-term pre-vars) (loop #'pre-pat under under-mismatch-ellipsis))
-             (define names/ellipses (map build-dots pre-vars))
+             (define names/ellipses (map (λ (x) (build-dots x (length under))) pre-vars))
              (with-syntax ([pre-term pre-term]
                            [((name name/ellipses) ...)
                             (map (λ (id name/ellipses)
@@ -754,8 +754,12 @@ see also term.rkt for some restrictions/changes there
               (map build-dots no-dups))))
   
   ;; build-dots : id/depth -> syntax[x | (x ...) | ((x ...) ...) | ...]
-  (define (build-dots id/depth)
-    (let loop ([depth (id/depth-depth id/depth)])
+  (define (build-dots id/depth [start-depth 0])
+    (when (< (- (id/depth-depth id/depth) start-depth) 0)
+      (error 'build-dots "internal error\n start depth and the id depth are confused\n  id's depth: ~a\n  start-depth: ~a"
+             (id/depth-depth id/depth)
+             start-depth))
+    (let loop ([depth (- (id/depth-depth id/depth) start-depth)])
       (cond
         [(zero? depth) (id/depth-id id/depth)]
         [else (with-syntax ([rest (loop (- depth 1))]

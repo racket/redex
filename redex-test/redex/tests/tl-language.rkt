@@ -1244,5 +1244,16 @@
                             '(thunk (λ (x) 11))))
         #t))
 
+(let ()
+  (define-language fooL
+    [x (any ...)])
+
+  (define matched (set))
+
+  (define-language foo2L
+    [x ((side-condition any_1 (begin (set! matched (set-add matched (term any_1))) #t)) ...)])
+
+  (test (pair? (redex-match foo2L x (term ((1 2 3) (4 5 6))))) #t)
+  (test matched (set (term (1 2 3)) (term (4 5 6)))))
 
 (print-tests-passed 'tl-language.rkt)
