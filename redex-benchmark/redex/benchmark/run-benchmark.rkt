@@ -50,13 +50,7 @@
                                    (if (print-work-status?)
                                        "-v" ""))
                              " ")))
-       (define command 
-         (apply string-append 
-                (add-between 
-                 (list (path->string (find-exe)) 
-                       (path->string run-generators)
-                       args) " ")))
-       (system command)
+       (apply system* (find-exe) (run-generators) args)
        (do-next)]))
   
   (map thread-wait
