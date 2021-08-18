@@ -309,7 +309,7 @@ The function is a good example of accumulator-functions in Redex:
    (lambda () (sd/a e_1 ((x ...) e_rest ...)))]
   [(sd/a (e_fun e_arg ...) (e_rib ...))
    ((sd/a e_fun (e_rib ...)) (sd/a e_arg (e_rib ...)) ...)]
-  [(sd/a e_1 e)
+  [(sd/a e_1 any)
    ;; a free variable is left alone 
    e_1])
 ))
