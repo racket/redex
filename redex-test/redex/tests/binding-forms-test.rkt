@@ -772,3 +772,31 @@
                 L
                 (ξ x e)
                 (term (ξ x (ζ (1 (2 hole)))))))))
+
+(let ()
+  (define-language L
+    [x y z ::= variable-not-otherwise-mentioned]
+    [e ::= x (case-lambda [pat e] ...) (e e)]
+    [pat ::= (cons pat pat) x]
+
+    #:binding-forms
+    (case-lambda
+      [(cons x_1 x_2) e_1 #:refers-to (shadow x_1 x_2)]
+      [(cons y z) e_2 #:refers-to (shadow y z)] ...))
+
+  (define m
+    (redex-match
+     L
+     (case-lambda
+       [(cons x_1 x_2) e_1]
+       [(cons y_1 y_2) e_2]
+       [(cons z_1 z_2) e_3])
+     (term
+      (case-lambda
+        [(cons a b) a]
+        [(cons c d) c]
+        [(cons e f) e]))))
+
+  (check-true (and (list? m) (= (length m) 1)))
+  (for ([b (in-list (match-bindings (list-ref m 0)))])
+    (check-true (regexp-match? #rx"«[0-9]+»$" (~a (bind-exp b))))))

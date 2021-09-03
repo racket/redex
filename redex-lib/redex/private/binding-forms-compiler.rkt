@@ -92,39 +92,25 @@
  (define (names-imported-in-with-depths body form-name stx-for-error)
    (names-imported-in/rec body 0))
 
-
- (define (dedupe-names-and-depths lst form-name stx-for-error)
-  (remove-duplicates
-   lst
-   (match-lambda*
-    [`((,id-a ,depth-a) (,id-b ,depth-b))
-     (if (equal? id-a id-b)
-         (if (= depth-a depth-b)
-             #t
-             (raise-syntax-error
-              (syntax-e form-name)
-              (format "same name used at two different ... depths: ~s (depth ~s) vs. ~s (depth ~s)"
-                      id-a depth-a id-b depth-b)
-              stx-for-error))
-         #f)])))
-
  ;; this returns both the names and the `...` depth at which they were transcribed
- (define (names-transcribed-in-body/rec body depth)
-   (match body
-     [(import/internal sub-body beta)
-      (names-transcribed-in-body/rec sub-body depth)]
-     [(.../internal sub-body _)
-      (names-transcribed-in-body/rec sub-body (+ depth 1))]
-     [(...bind/internal export-name _ _) `((,export-name ,depth))]
-     [`(,car-body . ,cdr-body)
-      (append (names-transcribed-in-body/rec car-body depth)
-              (names-transcribed-in-body/rec cdr-body depth))]
-     [anything-else (if (symbol? anything-else)
-                        `((,anything-else ,depth))
-                        `())]))
-
  (define (names-transcribed-in-body body form-name stx-for-error)
-   (dedupe-names-and-depths (names-transcribed-in-body/rec body 0) form-name stx-for-error))
+   (define names-to-depths (make-hash))
+   (let loop ([body body] [depth 0])
+     (define (add-name s) (hash-set! names-to-depths s depth))
+     (match body
+       [(import/internal sub-body beta)
+        (loop sub-body depth)]
+       [(.../internal sub-body _)
+        (loop sub-body (+ depth 1))]
+       [(...bind/internal export-name _ _)
+        (add-name export-name)]
+       [(cons car-body cdr-body)
+        (loop car-body depth)
+        (loop cdr-body depth)]
+       [(? symbol? s)
+        (add-name s)]
+       [_ (void)]))
+   (hash-map names-to-depths list))
 
  (module+ test
    (require rackunit)
