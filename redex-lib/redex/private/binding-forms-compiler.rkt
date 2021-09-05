@@ -110,7 +110,7 @@
        [(? symbol? s)
         (add-name s)]
        [_ (void)]))
-   (hash-map names-to-depths list))
+   (sort (hash-map names-to-depths list) symbol<? #:key car))
 
  (module+ test
    (require rackunit)
@@ -351,7 +351,7 @@
    (check-equal?
     lambda-bspec
     (bspec `(lambda (x) ,(import/internal 'expr 'x))
-           (shadow/internal `()) '(x) '() '(x) `((lambda 0) (x 0) (expr 0))))
+           (shadow/internal `()) '(x) '() '(x) `((expr 0) (lambda 0) (x 0))))
 
    (check-equal?
     (surface-bspec->bspec
@@ -361,7 +361,7 @@
                         `(c ,(import/internal `d `h) e)
                         (shadow/internal `(e b ,(shadow/internal `(,(shadow/internal `())))))) e f g h)
            (shadow/internal `(e f)) `(h e b) `(e f) `(h e b f)
-           `((form 0) (a 0) (b 0) (c 0) (d 0) (e 0) (f 0) (g 0) (h 0))))
+           `((a 0) (b 0) (c 0) (d 0) (e 0) (f 0) (form 0) (g 0) (h 0))))
 
    (check-equal?
     (surface-bspec->bspec #'((form x_11
@@ -378,7 +378,7 @@
            `(x_2 x_444 x_1 x_9 x_3)
            `()
            `(x_2 x_444 x_1 x_9 x_3)
-           (map (λ (nm) `(,nm 0)) `(form x_11 x_1 x_2 x_444 x_9 x_3 e_1 x_22 x_33 e_2 e_3))))
+           (map (λ (nm) `(,nm 0)) `(e_1 e_2 e_3 form x_1 x_11 x_2 x_22 x_3 x_33 x_444 x_9))))
 
 
 
@@ -391,7 +391,7 @@
     (bspec `(va-lambda (,(.../internal `x `(x)))
                        ,(import/internal `expr (shadow/internal `(,(.../internal `x `(x))))))
            (shadow/internal `()) `(x) `() `(x)
-           `((va-lambda 0) (x 1) (expr 0))))
+           `((expr 0) (va-lambda 0) (x 1))))
 
 
    ;; imported, exported, imported and exported
