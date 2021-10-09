@@ -20,3 +20,6 @@
 (define pkg-desc "tests for \"redex\"")
 
 (define pkg-authors '(robby bfetscher))
+
+(define license
+  '(Apache-2.0 OR MIT))

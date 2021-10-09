@@ -8,3 +8,6 @@
 (define pkg-desc "PLT Redex libraries for practical semantics engineering")
 
 (define pkg-authors '(robby bfetscher))
+
+(define license
+  '(Apache-2.0 OR MIT))
