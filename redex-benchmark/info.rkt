@@ -15,3 +15,6 @@
 (define pkg-desc "PLT Redex Benchmark")
 
 (define pkg-authors '(robby bfetscher))
+
+(define license
+  '(Apache-2.0 OR MIT))
