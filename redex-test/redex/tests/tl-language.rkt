@@ -1256,4 +1256,32 @@
   (test (pair? (redex-match foo2L x (term ((1 2 3) (4 5 6))))) #t)
   (test matched (set (term (1 2 3)) (term (4 5 6)))))
 
+(let ()
+  (define-language L
+    [A (name x B)]
+    [B (hole (name x (hole hole)))])
+
+  (define m (redex-match L
+                         (name x A)
+                         (term (hole (hole hole)))))
+  (test (list? m) #t)
+  (test (length m) 1)
+  (test (match-bindings (car m))
+        (list (make-bind 'A (term (hole (hole hole))))
+              (make-bind 'x (term (hole (hole hole)))))))
+
+(let ()
+  (define-language L
+    [A (name x B)]
+    [B (hole (name x (hole hole)))])
+
+  (define m (redex-match L
+                         (name x (name x B))
+                         (term (hole (hole hole)))))
+  (test (list? m) #t)
+  (test (length m) 1)
+  (test (match-bindings (car m))
+        (list (make-bind 'B (term (hole (hole hole))))
+              (make-bind 'x (term (hole (hole hole)))))))
+
 (print-tests-passed 'tl-language.rkt)

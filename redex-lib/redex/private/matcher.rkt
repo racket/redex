@@ -728,7 +728,7 @@ See match-a-pattern.rkt for more details
 (define (build-compiled-pattern proc names lang-α-equal?)
   (make-compiled-pattern
    proc
-   (null? names)
+   (not (null? names))
                          
    ;; none of the names are duplicated
    (and (equal? names (remove-duplicates names))
