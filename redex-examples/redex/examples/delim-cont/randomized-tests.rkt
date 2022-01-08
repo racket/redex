@@ -17,16 +17,16 @@
 (define (main . args)
   (define from-grammar-tests #f)
   (define from-rules-tests #f)
-  
-  (define seed (add1 (random (sub1 (expt 2 31)))))
+
+  (define command-line-seed #f)
+  (define max-seed (expt 2 31))
+  (define (mk-seed) (add1 (random (sub1 max-seed))))
   
   (define size #f)
   (define attempt->size default-attempt-size)
 
   (define repetitions 1)
 
-  (printf "seed: ~s\n" seed) (flush-output)
-  
   (command-line
    #:argv args
    #:once-each
@@ -41,7 +41,7 @@
    ["--seed"
     n
     "Generate tests using the PRG seed n"
-    (set! seed (string->number n))]
+    (set! command-line-seed (string->number n))]
    ["--size"
     n
     "Generate tests of size at most n"
@@ -58,8 +58,11 @@
   
   
   (for ([_ (in-range 0 repetitions)])
-    
-    (printf "Test seed: ~a (size: ~a)\n" seed (or size "variable"))
+
+    (define seed (or command-line-seed (mk-seed)))
+    (printf "Test seed: ~a (size: ~a)\n"
+            (~r #:min-width (string-length (format "~a" max-seed)) seed)
+            (or size "variable"))
     (parameterize ([current-pseudo-random-generator test-prg])
       (random-seed seed))
     
