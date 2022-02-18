@@ -111,21 +111,28 @@
            '())))
    cps rhss))
 
+(define (term->string/error-message t)
+  (define candidate (format "~s" t))
+  (define limit 1000)
+  (cond
+    [(< (string-length candidate) limit) t]
+    [else (string-append (substring candidate 0 (- limit 3)) "...")]))
+
 (define ((term-match/single/proc form-name lang ps0 cps rhss) term)
   (let loop ([ps ps0] [cps cps] [rhss rhss])
     (if (null? ps)
         (if (null? (cdr ps0))
-            (redex-error form-name "term ~s does not match pattern ~s" term (car ps0))
-            (redex-error form-name "no patterns matched ~s" term))
+            (redex-error form-name "term ~a does not match pattern ~s" (term->string/error-message term) (car ps0))
+            (redex-error form-name "no patterns matched ~a" (term->string/error-message term)))
         (let ([match (match-pattern (car cps) term)])
           (if match
               (begin
                 (unless (null? (cdr match))
                   (redex-error
                    form-name
-                   "pattern ~s matched term ~s multiple ways"
+                   "pattern ~s matched term ~a multiple ways"
                    (car ps)
-                   term))
+                   (term->string/error-message term)))
                 ((car rhss) (car match)))
               (loop (cdr ps) (cdr cps) (cdr rhss)))))))
 
@@ -1858,20 +1865,20 @@
                         (when dom-compiled-pattern
                           (unless dom-match-result
                             (redex-error name
-                                         "~s is not in my domain"
-                                         `(,name ,@exp)))
+                                         "~a is not in my domain"
+                                         (term->string/error-message `(,name ,@exp))))
                           (unless (for/and ([mtch (in-list dom-match-result)])
                                     (pre-condition (mtch-bindings mtch)))
                             (redex-error name
-                                         "~s is not in my domain"
-                                         `(,name ,@exp))))
+                                         "~a is not in my domain"
+                                         (term->string/error-message `(,name ,@exp)))))
                         (let loop ([ids ids]
                                    [lhss lhss-at-lang]
                                    [rhss rhss-at-lang]
                                    [num (- (length parent-cases))])
                           (cond
                             [(null? ids) 
-                             (redex-error name "no clauses matched for ~s" `(,name . ,exp))]
+                             (redex-error name "no clauses matched for ~a" (term->string/error-message `(,name . ,exp)))]
                             [else
                              (define pattern (car lhss))
                              (define rhs (car rhss))
@@ -1895,11 +1902,11 @@
                                   [(null? anss)
                                    (continue)]
                                   [(not (= 1 num-results))
-                                   (redex-error name "~a matched ~s ~a returned ~a different results"
+                                   (redex-error name "~a matched ~a ~a returned ~a different results"
                                                 (if (< num 0)
                                                     "a clause from an extended metafunction"
                                                     (format "clause #~a (counting from 0)" num))
-                                                `(,name ,@exp)
+                                                (term->string/error-message `(,name ,@exp))
                                                 (if (= 1 (length mtchs))
                                                     "but"
                                                     (format "~a different ways and"
@@ -1914,9 +1921,9 @@
                                                                 (list exp ans)
                                                                 ans)))
                                      (redex-error name
-                                                  "codomain test failed for ~s, call was ~s"
-                                                  ans 
-                                                  `(,name ,@exp)))
+                                                  "codomain test failed for ~a, call was ~a"
+                                                  (term->string/error-message ans)
+                                                  (term->string/error-message `(,name ,@exp))))
                                    (cache-result exp ans id)
                                    (log-coverage id)
                                    ans])])])))]
