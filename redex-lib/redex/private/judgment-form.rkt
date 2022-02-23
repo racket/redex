@@ -428,7 +428,8 @@
 
 (define (combine-where/error-results pat term who lang result)
   (define mtchs (match-pattern pat term))
-  (unless mtchs (error who "where/error did not match"))
+  (unless mtchs (error who "where/error did not match\n  term: ~a"
+                       (term->string/error-message term)))
   (define all-results
     (for/list ([mtch (in-list mtchs)])
       (result (mtch-bindings mtch))))
@@ -2153,6 +2154,13 @@
     [_
      #f]))
 
+(define (term->string/error-message t)
+  (define candidate (format "~s" t))
+  (define limit 1000)
+  (cond
+    [(< (string-length candidate) limit) t]
+    [else (string-append (substring candidate 0 (- limit 3)) "...")]))
+
 (provide define-judgment-form 
          define-relation
          define-extended-judgment-form
@@ -2163,6 +2171,7 @@
          IO-judgment-form?
          call-runtime-judgment-form
          include-jf-rulename
+         term->string/error-message
          (struct-out derivation-subs-acc)
          (struct-out runtime-judgment-form)
          (for-syntax extract-term-let-binds

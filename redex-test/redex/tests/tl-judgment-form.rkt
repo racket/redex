@@ -760,7 +760,7 @@
 
   (test (with-handlers ([exn:fail? exn-message])
           (judgment-holds (J 1 any) any))
-        #rx"where/error")
+        #rx"where/error[^\n]*\n  term: 1")
   (test (judgment-holds (J (1) any) any) (list 1)))
 
 (let ()

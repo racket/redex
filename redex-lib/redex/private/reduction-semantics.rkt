@@ -111,13 +111,6 @@
            '())))
    cps rhss))
 
-(define (term->string/error-message t)
-  (define candidate (format "~s" t))
-  (define limit 1000)
-  (cond
-    [(< (string-length candidate) limit) t]
-    [else (string-append (substring candidate 0 (- limit 3)) "...")]))
-
 (define ((term-match/single/proc form-name lang ps0 cps rhss) term)
   (let loop ([ps ps0] [cps cps] [rhss rhss])
     (if (null? ps)
