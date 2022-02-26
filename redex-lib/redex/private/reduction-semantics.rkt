@@ -2722,12 +2722,16 @@
 (define (apply-reduction-relation* reductions exp
                                    #:all? [return-all? #f]
                                    #:cache-all? [cache-all? (or return-all? (current-cache-all?))]
+                                   #:error-on-multiple? [error-on-multiple? #f]
                                    #:stop-when [stop-when (λ (x) #f)])
-  (let-values ([(results cycle?) (traverse-reduction-graph reductions exp
-                                                           #:all? return-all?
-                                                           #:cache-all? cache-all?
-                                                           #:stop-when stop-when)])
-    results))
+  (define-values (results cycle?)
+    (traverse-reduction-graph reductions exp
+                              #:all? return-all?
+                              #:error-on-multiple?
+                              (and error-on-multiple? 'apply-reduction-relation*)
+                              #:cache-all? cache-all?
+                              #:stop-when stop-when))
+  results)
 
 (struct search-success ())
 (struct search-failure (cutoff?))
@@ -2743,7 +2747,8 @@
 ;;  reduction-relation term #:goal #f                #:steps number?
 ;;      #:visit (-> any/c void?) -> (values (listof any/c) boolean?)
 (define (traverse-reduction-graph reductions start
-                                  #:goal [goal? #f] #:steps [steps +inf.0] #:visit [visit void] 
+                                  #:goal [goal? #f] #:steps [steps +inf.0] #:visit [visit void]
+                                  #:error-on-multiple? [error-on-multiple? #f]
                                   #:all? [return-all? #f]
                                   #:cache-all? [cache-all? (or return-all? (current-cache-all?))]
                                   #:stop-when [stop-when (λ (x) #f)])
@@ -2785,17 +2790,30 @@
                   (when answers
                     (dict-set! answers term #t)))]
                [else
-                (define nexts (remove-duplicates (apply-reduction-relation reductions term)))
-                (define nexts-in-domain (remove-outside-domain reductions nexts))
+                (define all-nexts (apply-reduction-relation reductions term))
+                (when (and error-on-multiple?
+                           (pair? all-nexts)
+                           (pair? (cdr all-nexts)))
+                  (error (if (symbol? error-on-multiple?) error-on-multiple? 'traverse-reduction-graph)
+                         "term reduced to more than one other term\n  term: ~a\n    to: ~a"
+                         (term->string/error-message term)
+                         (apply string-append
+                                (for/list ([i (in-naturals)]
+                                           [next (in-list all-nexts)])
+                                  (if (= i 0)
+                                      (format "~a" (term->string/error-message next))
+                                      (format "\n        ~a" (term->string/error-message next)))))))
+                (define non-dup-nexts (remove-duplicates all-nexts))
+                (define nexts-in-domain (remove-outside-domain reductions non-dup-nexts))
                 (cond
                   [(null? nexts-in-domain) 
                    (unless goal?
                      (when answers
                        (cond
-                         [(null? nexts)
+                         [(null? non-dup-nexts)
                           (dict-set! answers term #t)]
                          [else
-                          (for ([next (in-list nexts)])
+                          (for ([next (in-list non-dup-nexts)])
                             (dict-set! answers next #t))])))]
                   [else (if (zero? more-steps)
                             (set! cutoff? #t)

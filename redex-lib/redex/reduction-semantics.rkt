@@ -109,7 +109,8 @@
        (#:cache-all?
         boolean?
         #:stop-when (-> any/c any)
-        #:all? boolean?)
+        #:all? boolean?
+        #:error-on-multiple? boolean?)
        (listof any/c))]
  [current-cache-all? (parameter/c boolean?)]
  [union-reduction-relations (->* (reduction-relation? reduction-relation?)

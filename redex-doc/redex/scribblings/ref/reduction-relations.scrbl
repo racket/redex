@@ -336,7 +336,8 @@ names of the reductions that were used.
           [t any/c]
           [#:all? all boolean? #f]
           [#:cache-all? cache-all? boolean? (or all? (current-cache-all?))]
-          [#:stop-when stop-when (-> any/c any) (λ (x) #f)])
+          [#:stop-when stop-when (-> any/c any) (λ (x) #f)]
+          [#:error-on-multiple? error-on-multiple? boolean?])
          (listof any/c)]{
 
 Accepts a reduction relation and a
@@ -358,6 +359,11 @@ called with each term that @racket[apply-reduction-relation*] encounters. If it
 ever returns a true value (anything except @racket[#f]), then @racket[apply-reduction-relation*]
 considers the term to be irreducible (and so returns it and does not try to
 reduce it further).
+
+If @racket[error-on-multiple?] is @racket[#t], then an error is signalled if any of
+the terms reduce to more than one other term.
+
+@history[#:changed "1.18" @list{Added @racket[error-on-multiple?].}]
 
 }
 
