@@ -267,4 +267,17 @@
   (test (judgment-holds (unique 0 1 2 3 4 5 6 7 8 9 10)) #t)
   (test (judgment-holds (unique 0 1 2 3 4 5 5 7 8 9 10)) #f))
 
+(let ()
+  (define-relation empty-language
+    empty ⊆ any
+    [(empty any)
+     (where #t #f)])
+
+  (define-relation empty-language
+    wat ⊆ any
+    [(wat any)
+     (judgment-holds (empty any))])
+
+  (test (judgment-holds (wat 0)) #f))
+
 (print-tests-passed 'tl-relation.rkt)

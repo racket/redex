@@ -1851,11 +1851,15 @@
 (define-for-syntax (fix-relation-clauses name raw-clauses)
   (map (λ (clause-stx)
          (define (fix-rule rule-stx)
-           (syntax-case rule-stx ()
+           (syntax-case rule-stx (judgment-holds)
              [(rule-name rest ...)
               (and (identifier? #'rule-name)
                    (judgment-form-id? #'rule-name))
               rule-stx]
+             [(judgment-holds (rule-name rest ...))
+              (and (identifier? #'rule-name)
+                   (judgment-form-id? #'rule-name))
+              (stx-car (stx-cdr rule-stx))]
              [rule
               #'(side-condition rule)]))
          (let loop ([c-stx clause-stx]
