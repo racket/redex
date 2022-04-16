@@ -104,12 +104,12 @@ see also term.rkt for some restrictions/changes there
         (raise-syntax-error
          what
          (format "expected a non-terminal in ~a" where)
-         orig-stx #'a))
+         orig-stx id))
       (when suffix-sym
         (raise-syntax-error
          what
          (format "underscores not allowed on non-terminal names in ~a" where)
-         orig-stx #'a))
+         orig-stx id))
       (hash-ref aliases prefix-sym prefix-sym))
     
     ; union-find w/o balancing or path compression (at least for now)
