@@ -258,10 +258,11 @@
                   #`(λ (bindings)
                       (let ([x (lookup-binding bindings 'names)] ...)
                         (and binding-constraints ...
-                             #,(bind-pattern-names orig-name
-                                                   #'(names/ellipses ...)
-                                                   #'(x ...)
-                                                   rest-body)))))
+                             (λ ()
+                               #,(bind-pattern-names orig-name
+                                                     #'(names/ellipses ...)
+                                                     #'(x ...)
+                                                     rest-body))))))
                 #`(begin
                     syncheck-exp
                     #,(if (where/error? #'-where)
@@ -423,24 +424,29 @@
   (define mtchs (match-pattern pat term))
   (and mtchs
        (for/fold ([r '()]) ([m (in-list mtchs)])
-         (let ([s (result (mtch-bindings m))])
+         (let ([proc/f (result (mtch-bindings m))])
+           (define s (and proc/f (proc/f)))
            (if s (append s r) r)))))
 
 (define (combine-where/error-results pat term who lang result)
+  (define (fail)
+    (error who "where/error did not match\n  term: ~a"
+           (term->string/error-message term)))
   (define mtchs (match-pattern pat term))
-  (unless mtchs (error who "where/error did not match\n  term: ~a"
-                       (term->string/error-message term)))
+  (unless mtchs (fail))
   (define all-results
     (for/list ([mtch (in-list mtchs)])
       (result (mtch-bindings mtch))))
-  (define fst
-    (for/first ([a-result (in-list all-results)]
-                #:when a-result)
-      a-result))
-  (for ([nxt (in-list all-results)])
-    (unless (or (not nxt) (alpha-equivalent? lang fst nxt))
+  (define all-results/no-f (filter values all-results))
+  (when (null? all-results/no-f) (fail))
+  (define fst ((car all-results/no-f)))
+  (for ([nxt-proc (in-list all-results/no-f)])
+    (define nxt (nxt-proc))
+    (unless (alpha-equivalent? lang fst nxt)
       (error who
-             "where/error matched multiple ways, but did not return alpha-equivalent? results")))
+             "where/error matched multiple ways, but did not return alpha-equivalent? results\n  ~a\n  ~a"
+             (term->string/error-message fst)
+             (term->string/error-message nxt))))
   fst)
 
 (define (repeated-premise-outputs inputs premise)

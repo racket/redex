@@ -761,8 +761,9 @@
      (where #t #t)]
     [(f _) 1])
 
-  (test (term (f 4))
-        1))
+  (test (with-handlers ([exn:fail? exn-message])
+          (term (f 4)))
+        #rx"where/error"))
 
 (let ()
   (define-metafunction empty-language
@@ -774,6 +775,21 @@
 
   (test (with-handlers ([exn:fail? exn-message])
           (term (f 4)))
+        #rx"where/error"))
+
+(let ()
+  (define-language L
+    (Id ::= variable-not-otherwise-mentioned))
+
+  (define-metafunction L
+    test-function : Id Id -> any
+    [(test-function Id_1 Id)
+     #t
+     (where/error Id Id_1)]
+    [(test-function any ...) "wrong"])
+
+  (test (with-handlers ([exn:fail? exn-message])
+          (term (test-function Foo Bar)))
         #rx"where/error"))
 
 ;; errors for not-yet-defined metafunctions
