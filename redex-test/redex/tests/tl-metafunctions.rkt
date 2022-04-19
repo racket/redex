@@ -792,6 +792,31 @@
           (term (test-function Foo Bar)))
         #rx"where/error"))
 
+(let ()
+  (define-metafunction empty-language
+    [(f integer)
+     0
+     (where/error integer 3)
+     (where #t #t)]
+    [(f _) 1])
+
+  (test (with-handlers ([exn:fail? exn-message])
+          (term (f 4)))
+        #rx"where/error"))
+
+(let ()
+  (define-metafunction empty-language
+    [(h integer)
+     0
+     (where/error integer 3)
+     (where integer 4)]
+    [(h _) 1])
+
+  (test (term (h 3)) 1)
+  (test (with-handlers ([exn:fail? exn-message])
+          (term (h 4)))
+        #rx"where/error"))
+
 ;; errors for not-yet-defined metafunctions
 (test (let ([on (current-namespace)])
         (parameterize ([current-namespace (make-base-namespace)])
