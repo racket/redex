@@ -145,7 +145,7 @@ the @racket[x] subterm in scope.
 To generalize to the version of @racket[λ] in @racket[_lc-lang], we need to cope with multiple
 variables at once. And in order to do that, we must handle the situation where some of the
 names are the same. Redex's binding support offers only one option for this, namely taking
-the variables in order. The is captured by the keyword @racket[_shadow]. It also allows
+the variables in order, using the keyword @racket[_shadow]. It also allows
 us to specify the binding structure for @racket[let]:
 
 @examples[#:label #f #:eval redex-eval #:no-result
