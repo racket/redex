@@ -162,6 +162,7 @@ to traverse the whole value at once, rather than one binding form at a time.
             (canonicalize language-bf-table language-literals match-pattern redex-val-rhs))]))
 
 ;; Perform a capture-avoiding substitution
+;; If `redex-val-old-var` is a list, `redex-val-new-val` is expected to also be a list of the same length.
 (define (safe-subst language-bf-table language-literals match-pattern redex-val redex-val-old-var redex-val-new-val)
   (parameterize
    ([current-bf-table language-bf-table]
@@ -170,11 +171,20 @@ to traverse the whole value at once, rather than one binding form at a time.
     [literals-in-language language-literals]
     [all-the-way-down? #t])
 
+  (define transform
+    (cond
+      [(list? redex-val-old-var)
+       (define mappings
+         (for/hasheq ([old-var (in-list redex-val-old-var)]
+                      [new-val (in-list redex-val-new-val)])
+           (values old-var new-val)))
+       (λ (v) (hash-ref mappings v (λ () v)))]
+      [else (λ (v) (if (eq? redex-val-old-var v) redex-val-new-val v))]))
+
    (let loop [(v (term-and-table-term (rec-freshen redex-val #f #t #f)))]
      (cond
       [(list? v) (map loop v)]
-      [(eq? redex-val-old-var v) redex-val-new-val]
-      [else v]))))
+      [else (transform v)]))))
 
 (define canonical-name-marker (gensym))
 

@@ -16,22 +16,27 @@
     (x variable-not-otherwise-mentioned)
     (expr x
           (expr expr)
-          (lambda (x) expr)))
+          (lambda (x) expr)
+          (let ([x expr] ...) expr)))
 
   (define-language lc
     (x variable-not-otherwise-mentioned)
     (expr x
           (expr expr)
-          (lambda (x) expr))
+          (lambda (x) expr)
+          (let ([x expr] ...) expr))
     #:binding-forms
-    (lambda (x) expr #:refers-to x))
+    (lambda (x) expr #:refers-to x)
+    (let ([x expr_x] ...) expr_body #:refers-to (shadow x ...)))
 
   (parameterize
     ([default-language lc-without-binding])
 
     ;; put the wrong behavior in the cache...
     (check-equal? (term (substitute (x (lambda (x) x)) x y))
-                  (term (y (lambda (y) y)))))
+                  (term (y (lambda (y) y))))
+    (check-equal? (term (substitute (x (let ([x x] [y y] [z z]) ((x y) z))) [x x1] [y y1] [z z1]))
+                  (term (x1 (let ([x1 x1] [y1 y1] [z1 z1]) ((x1 y1) z1))))))
 
   (parameterize
     ([default-language lc])
@@ -39,7 +44,13 @@
     ;; make sure cache doesn't leak between languages
     (check-match (term (substitute (x (lambda (x) x)) x y))
                  `(y (lambda (,xx) ,xx))
-                 (all-distinct? 'x 'y xx)))
+                 (all-distinct? 'x 'y xx))
+
+    (check-match (term (substitute (x (let ([x y] [y z] [z x]) ((x y) z))) [x y] [y z] [z x]))
+                 `(y (let ([,xx z] [,yy x] [,zz y]) ((,xx ,yy) ,zz)))
+                 (all-distinct? 'x 'x1 xx
+                                'y 'y1 yy
+                                'z 'z1 zz)))
 
 
 
