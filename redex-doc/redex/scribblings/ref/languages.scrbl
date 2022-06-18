@@ -545,14 +545,35 @@ If the @racket[lang] argument is not supplied, it
 defaults to the value of @racket[(default-language)], which must not @racket[#f].
 }
 
-@defform[#:kind "metafunction"
-         (substitute val old-var new-val)]{
+@defform*[#:kind "metafunction"
+          [(substitute val old-var new-val)
+           (substitute val (old-var new-val) ...)]]{
 A metafunction that returns a value like @racket[val], except that any free occurences of
 @racket[old-var] have been replaced with @racket[new-val], in a capture-avoiding fashion. The bound
 names of @racket[val] may be freshened in order to accomplish this, based on the binding information
 in @racket[(default-language)] (this is unlike normal metafunctions, which are defined in a
 particular language).
 
+If a list of susbtitutions is provided, they will be applied simultaneously.
+@examples[#:label #f #:eval redex-eval
+(define-language lc-bind
+  (e ::= (e e)
+         x
+         (λ (x ...) e))
+  (x ::= variable-not-otherwise-mentioned)
+  #:binding-forms
+  (λ (x ...) e #:refers-to (shadow x ...)))
+
+(define-metafunction lc-bind
+  β-reduce : (λ (x ..._1) e) e ..._1 -> e
+  [(β-reduce (λ (x ...) e) e_x ...) (substitute e [x e_x] ...)])
+
+(term (β-reduce (λ (x y) (x y)) y z))
+]
+
 Note that @racket[substitute] is merely a convenience metafunction. Any manually-written
 substitution in the correct language will also be capture-avoiding, provided that the language's
-@tech{binding forms} are correctly defined.  However, @racket[substitute] may be significantly faster.}
+@tech{binding forms} are correctly defined.  However, @racket[substitute] may be significantly faster.
+
+@history[#:changed "1.19" @elem{Added support for simultaneous substitutions}]
+}

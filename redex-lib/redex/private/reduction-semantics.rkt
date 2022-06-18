@@ -3264,13 +3264,17 @@
 
 (define-metafunction metafunction-leave-default-language-alone
   [(substitute any_body variable any_substitution)
-   ,(let ()
-      (define lang (default-language))
-      (unless lang (error 'substitute "unable to determine the language to use"))
-      (safe-subst (compiled-lang-binding-table lang)
-                  (compiled-lang-literals lang)
-                  match-pattern
-                  (term any_body) (term variable) (term any_substitution)))])
+   ,(substitute-with-lang-determined (term any_body) (term variable) (term any_substitution))]
+  [(substitute any_body (variable any_substitution) ...)
+   ,(substitute-with-lang-determined (term any_body) (term (variable ...)) (term (any_substitution ...)))])
+
+(define (substitute-with-lang-determined body old-vars new-vals)
+  (define lang (default-language))
+  (unless lang (error 'substitute "unable to determine the language to use"))
+  (safe-subst (compiled-lang-binding-table lang)
+              (compiled-lang-literals lang)
+              match-pattern
+              body old-vars new-vals))
 
 
 (define default-equiv
