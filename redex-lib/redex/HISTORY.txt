@@ -1,5 +1,11 @@
 v8.5
 
+  * added support for simultaneous substitutions, thanks to Phil Nguyen
+
+  * bug fixes
+
+v8.5
+
   * added the #:error-on-multiple? argument to apply-reduction-relation*
 
   * bug fixes
