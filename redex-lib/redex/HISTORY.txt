@@ -1,4 +1,4 @@
-v8.5
+v8.6
 
   * added support for simultaneous substitutions, thanks to Phil Nguyen
 
