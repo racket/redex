@@ -81,10 +81,11 @@
 (define fix-prog
   (match-lambda
     [`(<> ,s ,_ ,e)
-     (match-let ([`([,xs ,vs] ...) (remove-duplicates s #:key first)])
-       `(<> ,(map list xs (map (fix-expr xs) vs)) [] ,((fix-expr xs) e)))]))
+     (parameterize ([consistent-dw-hash (make-hash)])
+       (match-let ([`([,xs ,vs] ...) (remove-duplicates s #:key first)])
+         `(<> ,(map list xs (map (fix-expr xs) vs)) [] ,((fix-expr xs) e))))]))
 
-(define (fix-expr top-vars) 
+(define (fix-expr top-vars)
   (define rewrite
     (compose drop-duplicate-binders
              proper-wcms
@@ -284,15 +285,16 @@
      (map drop-duplicate-binders es)]
     [e e]))
 
+(define consistent-dw-hash (make-parameter #f))
 (define (consistent-dws p)
-  (define pre-post
-    (let ([h (make-hash)])
-      (λ (id pre post)
-        (match (hash-ref h id #f)
-          [#f
-           (hash-set! h id (list pre post))
-           (list pre post)]
-          [x x]))))
+  (define h (consistent-dw-hash))
+  (unless h (error 'consistent-dws "expected consistent-dw-hash to be set"))
+  (define (pre-post id pre post)
+    (match (hash-ref h id #f)
+      [#f
+       (hash-set! h id (list pre post))
+       (list pre post)]
+      [x x]))
   (let recur ([x p] [excluded '()])
     (match x
       [`(dw ,x ,e1 ,e2 ,e3)
