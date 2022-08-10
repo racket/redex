@@ -272,7 +272,7 @@
      `(cont ,(close top-vars '() v)
             ,(close top-vars '() E))]
     [`(cont ,E)
-     `(comp ,(close top-vars '() E))]
+     `(cont ,(close top-vars '() E))]
     [(? list?)
      (map (curry close top-vars loc-vars) expr)]
     [_ expr]))
