@@ -1,3 +1,7 @@
+v8.7
+
+  * fixed bugs in randomized testing for delimited continuations
+
 v8.6
 
   * added support for simultaneous substitutions, thanks to Phil Nguyen
