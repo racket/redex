@@ -558,3 +558,154 @@
     (list-ref xs (random (length xs)))))
 
 (define test-prg (make-pseudo-random-generator))
+
+
+;                                          
+;                                          
+;                                          
+;                                          
+;         ;;;          ;;;         ;;;     
+;         ;;;                      ;;;     
+;   ;;;;  ;;; ;;  ;;; ;;;; ;;; ;;  ;;;  ;;;
+;  ;;; ;; ;;;;;;; ;;;;;;;; ;;;;;;; ;;; ;;; 
+;  ;;;    ;;; ;;; ;;;  ;;; ;;; ;;; ;;;;;;  
+;   ;;;;  ;;; ;;; ;;;  ;;; ;;; ;;; ;;;;;;  
+;     ;;; ;;; ;;; ;;;  ;;; ;;; ;;; ;;;;;;; 
+;  ;; ;;; ;;; ;;; ;;;  ;;; ;;; ;;; ;;; ;;; 
+;   ;;;;  ;;; ;;; ;;;  ;;; ;;; ;;; ;;;  ;;;
+;                                          
+;                                          
+;                                          
+;                                          
+
+
+;; given a `p` such that `same-behavior?` returns #f (ie a counterexample),
+;; the shrink function will attempt to find a smaller one by repeatedly
+;; applying the function `shrink-rule` everywhere inside the term that
+;; it can. redex-check doesn't currently have support for shrinkers, so
+;; this is just left on the side to be used when a counterexample is found.
+
+(define (shrink p)
+  (let loop ([p p])
+    (cond
+      [(same-behavior? p)
+       #f]
+      [else
+       (or (for/or ([candidate (in-list (shrink/fixed-candidates p))])
+             (loop candidate))
+           p)])))
+
+;; shrink/fixed-candidates : p -> (listof p)
+(define (shrink/fixed-candidates p)
+  (match p
+    [`(<> ,s ,o ,e)
+     (define orig-size (size p))
+     (define shrunk-es (shrink-candidates e))
+     (define shrunk-ps '())
+     (for ([shrunk-e shrunk-es])
+       (define shrunk-p (fix-prog `(<> ,s ,o ,shrunk-e)))
+       (when (< (size shrunk-p) orig-size)
+         ;; this `<` guards against a shrinking
+         ;; being simply a renaming
+         (set! shrunk-ps (cons shrunk-p shrunk-ps))))
+     shrunk-ps]))
+
+;; shrink-candidates : e -> (listof e)
+(define (shrink-candidates orig-e)
+  (define candidates '())
+
+  (define (build-candidate path shrunk-to)
+    (let loop ([e orig-e][path path])
+      (cond
+        [(null? path) shrunk-to]
+        [else
+         (define i (car path))
+         (append (take e i)
+                 (list (loop (list-ref e i)
+                             (cdr path)))
+                 (drop e (+ i 1)))])))
+
+  (let loop ([e orig-e] [path '()])
+    (define shrunken (shrink-rule e))
+    (set! candidates (append (for/list ([shrunk-to (in-list shrunken)])
+                               (build-candidate (reverse path) shrunk-to))
+                             candidates))
+    (match e
+      [`(wcm ,w ,e)
+       `(wcm ,w ,(loop e (cons 2 path)))]
+      [`(% ,e1 ,e2 ,e3)
+       `(% ,(loop e1 (cons 1 path))
+           ,(loop e2 (cons 2 path))
+           ,(loop e3 (cons 3 path)))]
+      [`(set! ,x ,e)
+       `(set! ,x ,(loop e (cons 2 path)))]
+      [`(if ,e1 ,e2 ,e3)
+       `(if ,(loop e1 (cons 1 path))
+            ,(loop e2 (cons 2 path))
+            ,(loop e3 (cons 3 path)))]
+      [`(dw ,x ,e1 ,e2 ,e3)
+       `(dw ,x
+            ,(loop e1 (cons 2 path))
+            ,(loop e2 (cons 3 path))
+            ,(loop e3 (cons 4 path)))]
+      [`(list ,es ...)
+       `(list ,@(for/list ([e (in-list es)]
+                           [i (in-naturals)])
+                  (loop e (cons (+ i 1) path))))]
+      [`(λ (,x ...) ,e) `(λ (,@x) ,(loop e (cons 2 path)))]
+      [`(cont ,v ,e) `(cont ,(loop v (cons 1 path))
+                            ,(loop e (cons 2 path)))]
+      [`(comp ,e) `(comp ,(loop e (cons 1 path)))]
+      [`(,f ,x ...)
+       `(,(loop f (cons 0 path))
+         ,@(for/list ([x (in-list x)]
+                      [i (in-naturals)])
+             (loop x (cons (+ i 1) path))))]
+      [_ e]))
+
+  candidates)
+
+(define (size e)
+  (let loop ([e e])
+    (match e
+      [(? list?)
+       (+ 3
+          (length e)
+          (for/sum ([e (in-list e)])
+            (loop e)))]
+      [(? symbol?) 2]
+      [_ 1])))
+
+(define (shrink-rule e)
+  (match e
+    [`(wcm ((,v1 ,v2) ,more ...) ,e)
+     (list `(wcm ,more ,e))]
+    [`(wcm () ,e) (list e)]
+    [`(% ,e1 ,e2 ,e3) (those-with-holes-or-all (list e1 e2 e3))]
+    [`(set! ,x ,e) (list e)]
+    [`(if ,e1 ,e2 ,e3) (those-with-holes-or-all (list e1 e2 e3))]
+    [`(dw ,x ,e1 ,e2 ,e3) (those-with-holes-or-all (list e1 e2 e3))]
+    [`(list ,es ...) (those-with-holes-or-all es)]
+    [`(λ (,x ...) ,e) (list e)]
+    [`(cont ,v ,e) (those-with-holes-or-all (list v e))]
+    [`(comp ,e) e]
+    [`(,f ,x ...)
+     (those-with-holes-or-all (cons f x))]
+    [(? x?) (list 0)]
+    [_ '()]))
+
+(define (those-with-holes-or-all lst)
+  (cond
+    [(has-hole? lst)
+     (for/list ([e (in-list lst)]
+                #:when (has-hole? e))
+       e)]
+    [else lst]))
+
+(define (has-hole? e)
+  (let loop ([e e])
+    (cond
+      [(redex-match? grammar hole e) #t]
+      [(list? e) (for/or ([e (in-list e)])
+                   (loop e))]
+      [else #f])))
