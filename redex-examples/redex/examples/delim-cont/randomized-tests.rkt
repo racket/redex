@@ -4,6 +4,7 @@
          "reduce.rkt"
          (except-in redex/reduction-semantics plug)
          racket/runtime-path)
+(module+ test (require rackunit))
 
 (provide (all-defined-out))
 
@@ -585,15 +586,32 @@
 ;; it can. redex-check doesn't currently have support for shrinkers, so
 ;; this is just left on the side to be used when a counterexample is found.
 
-(define (shrink p)
-  (let loop ([p p])
-    (cond
-      [(same-behavior? p)
-       #f]
-      [else
-       (or (for/or ([candidate (in-list (shrink/fixed-candidates p))])
-             (loop candidate))
-           p)])))
+(define (shrink p #:looks-buggy? [looks-buggy? (λ (x) (not (same-behavior? x)))])
+  (cond
+    [(looks-buggy? p)
+     (let known-buggy-loop ([p p])
+       ;; p is known to have a bug
+       (let shrunk-candidates-loop ([shrunk-ps (shrink/fixed-candidates p)])
+         (cond
+           [(null? shrunk-ps)
+            ;; none of the candidates were buggy, so `p`
+            ;; is a shrunken as we can make it
+            p]
+           [else
+            (define candidate-p (car shrunk-ps))
+            ;; candidate-p is a shrunk version of `p`
+            (cond
+              [(looks-buggy? candidate-p)
+               ;; greedily take the first buggy-looking
+               ;; candidate and try to shrink it further
+               (known-buggy-loop candidate-p)]
+              [else
+               ;; keep looking at the shrunken candidates
+               (shrunk-candidates-loop (cdr shrunk-ps))])])))]
+    [else
+     (raise-argument-error 'shrink
+                           "a term that looks buggy"
+                           p)]))
 
 ;; shrink/fixed-candidates : p -> (listof p)
 (define (shrink/fixed-candidates p)
@@ -602,7 +620,7 @@
      (define orig-size (size p))
      (define shrunk-es (shrink-candidates e))
      (define shrunk-ps '())
-     (for ([shrunk-e shrunk-es])
+     (for ([shrunk-e (in-list shrunk-es)])
        (define shrunk-p (fix-prog `(<> ,s ,o ,shrunk-e)))
        (when (< (size shrunk-p) orig-size)
          ;; this `<` guards against a shrinking
@@ -678,9 +696,10 @@
 
 (define (shrink-rule e)
   (match e
-    [`(wcm ((,v1 ,v2) ,more ...) ,e)
-     (list `(wcm ,more ,e))]
     [`(wcm () ,e) (list e)]
+    [`(wcm ,bindings ,e)
+     (for/list ([i (in-range (length bindings))])
+       `(wcm ,(remove-ith bindings i) ,e))]
     [`(% ,e1 ,e2 ,e3) (those-with-holes-or-all (list e1 e2 e3))]
     [`(set! ,x ,e) (list e)]
     [`(if ,e1 ,e2 ,e3) (those-with-holes-or-all (list e1 e2 e3))]
@@ -688,11 +707,20 @@
     [`(list ,es ...) (those-with-holes-or-all es)]
     [`(λ (,x ...) ,e) (list e)]
     [`(cont ,v ,e) (those-with-holes-or-all (list v e))]
-    [`(comp ,e) e]
+    [`(comp ,e) (list e)]
     [`(,f ,x ...)
      (those-with-holes-or-all (cons f x))]
     [(? x?) (list 0)]
     [_ '()]))
+
+(define (remove-ith l i)
+  (append (take l i)
+          (drop l (+ i 1))))
+(module+ test
+  (check-equal? (remove-ith (list #f) 0) '())
+  (check-equal? (remove-ith (list 0 1 2) 0) (list 1 2))
+  (check-equal? (remove-ith (list 0 1 2) 1) (list 0 2))
+  (check-equal? (remove-ith (list 0 1 2) 2) (list 0 1)))
 
 (define (those-with-holes-or-all lst)
   (cond
@@ -709,3 +737,33 @@
       [(list? e) (for/or ([e (in-list e)])
                    (loop e))]
       [else #f])))
+
+(module+ test
+  (define (test-shrink-candidates p)
+    (define candidates (set))
+    (define first-call? #t)
+    (shrink p
+            #:looks-buggy?
+            (λ (x)
+              (cond
+                [first-call?
+                 (set! first-call? #f)
+                 #t]
+                [else
+                 (set! candidates (set-add candidates x))
+                 #f])))
+    candidates)
+
+  (check-equal? (test-shrink-candidates `(<> () () 1))
+                (set))
+  (check-equal? (test-shrink-candidates `(<> () () (+ 1 2)))
+                (set `(<> () () +)
+                     `(<> () () 1)
+                     `(<> () () 2)))
+  (check-equal? (test-shrink-candidates `(<> () () ((1 2) (3 4))))
+                (set `(<> () () (1 2))
+                     `(<> () () (3 4))
+                     `(<> () () (1 (3 4)))
+                     `(<> () () (2 (3 4)))
+                     `(<> () () ((1 2) 3))
+                     `(<> () () ((1 2) 4)))))
