@@ -123,7 +123,7 @@
       (define e’ (rewrite e))
       (if (equal? e e’) e (loop e’)))))
 
-(struct error (cause) #:transparent)
+(struct error-raised (cause) #:transparent)
 (struct answer (output result) #:transparent)
 (struct bad-test (reason) #:transparent)
 (struct timeout ())
@@ -134,8 +134,8 @@
         (timeout? impl-behavior)
         (let ([model-behavior (timeout-warn 30 (model-eval prog) (pretty-write prog))])
           (or (timeout? model-behavior)
-              (if (error? impl-behavior)
-                  (error? model-behavior)
+              (if (error-raised? impl-behavior)
+                  (error-raised? model-behavior)
                   (and (answer? model-behavior)
                        (equal? impl-behavior model-behavior))))))))
 
@@ -176,10 +176,10 @@
                            [(exn:fail (regexp "%: expected argument of type <non-procedure>") _)
                             (bad-test "procedure as tag")]
                            [(exn:fail m _)
-                            (error m)])])
+                            (error-raised m)])])
           (parameterize ([current-output-port output])
             (eval test ns))))
-      (if (or (error? result) (bad-test? result))
+      (if (or (error-raised? result) (bad-test? result))
           result
           (answer (get-output-string output) 
                   (show result))))))
@@ -213,7 +213,7 @@
            (answer
             (apply string-append (map (curry format "~v") output))
             (show result))
-           (error p))])))
+           (error-raised p))])))
 
 (define (with-timeout thunk timeout on-timeout)
   (let ([c (make-channel)])
