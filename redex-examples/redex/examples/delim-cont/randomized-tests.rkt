@@ -153,8 +153,7 @@
                  (λ () (letrec ,s ,e))))])
             (if (exn:fail? previous-error)
                 (raise previous-error)
-                result))]
-    [e e]))
+                result))]))
 
 (define-runtime-module-path model-impl "model-impl.rkt")
 
