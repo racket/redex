@@ -91,7 +91,9 @@
     (compose drop-duplicate-binders
              proper-wcms
              proper-conts
+             proper-wcms
              consistent-dws
+             proper-wcms
              (curry close top-vars '())))
   ; Must call proper-wcm after proper-conts because the latter
   ; exposes opportunities to the former.
@@ -118,6 +120,9 @@
   ; It might work to make proper-conts work in more contexts,
   ; but it's easier to iterate the rules to a fixed point (and
   ; there may be more dependencies that require iteration anyway).
+  ;
+  ; Also, close and consistent-dws can both also introduce incorrect
+  ; wcms, so call proper-wcms after calling each of them as well.
   (λ (e)
     (let loop ([e e])
       (define e’ (rewrite e))
