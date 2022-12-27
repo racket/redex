@@ -431,11 +431,13 @@
                                   (- next-lw-line line)
                                   new-lw-col 
                                   new-lw-col-span)
-                        'spring
-                        (build-lw to-wrap2 next-lw-line 0 (+ new-lw-col new-lw-col-span) 0)
-                        (if after-next-lw
-                            (cons next-lw (loop after-next-lw next-line next-column))
-                            '()))))])))))
+                        (append
+                         (cond [(= line next-lw-line) '(spring)]
+                               [else '()])
+                         (list (build-lw to-wrap2 next-lw-line 0 (+ new-lw-col new-lw-col-span) 0))
+                         (if after-next-lw
+                             (cons next-lw (loop after-next-lw next-line next-column))
+                             '())))))])))))
   
   (define (extract-pieces-to-wrap who lst)
     (let ([fst (car lst)])
