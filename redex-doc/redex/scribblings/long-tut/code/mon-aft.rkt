@@ -22,31 +22,17 @@ subst (if time, otherwise it's provide)
 ;; -----------------------------------------------------------------------------
 (require redex)
 
-(define-language Lambda0
-  (e ::=
-     x 
-     (lambda (x ...) e)
-     (e e ...))
-  (x ::= variable-not-otherwise-mentioned))
-
-(define-language Lambda-bad
-  (e ::=
-     x 
-     (side-condition (lambda (x_ ...) e) (term (unique-vars (x_ ...))))
-     (e e ...))
-  (x ::= variable-not-otherwise-mentioned))
-
 (define-language Lambda
   (e ::=
      x 
-     (lambda (x_!_ ...) e)
-     (e e ...))
+     (lambda (x) e)
+     (e e))
   (x ::= variable-not-otherwise-mentioned))
 
 (define e1 (term y))
 (define e2 (term (lambda (y) y)))
-(define e3 (term (lambda (x y) y)))
-(define e4 (term (,e2 e3)))
+(define e3 (term (lambda (x) (lambda (y) y))))
+(define e4 (term (,e2 ,e3)))
 
 (define in-Lambda? (redex-match? Lambda e))
 
@@ -56,8 +42,8 @@ subst (if time, otherwise it's provide)
   (test-equal (in-Lambda? e3) #true)
   (test-equal (in-Lambda? e4) #true))
 
-(define eb1 (term (lambda (x x) y)))
-(define eb2 (term (lambda (x y) 3)))
+(define eb1 (term (lambda (y) (lambda () y))))
+(define eb2 (term (lambda (x) (lambda (y) 3))))
 
 (module+ test
   (test-equal (in-Lambda? eb1) #false)
@@ -95,19 +81,18 @@ subst (if time, otherwise it's provide)
 (module+ test
   (test-equal (term (fv x)) (term (x)))
   (test-equal (term (fv (lambda (x) x))) (term ()))
-  (test-equal (term (fv (lambda (x) (y z x)))) (term (y z))))
+  (test-equal (term (fv (lambda (x) ((y z) x)))) (term (y z))))
 
 (define-metafunction Lambda
-  fv : any -> (x ...)
+  fv : e -> (x ...)
   [(fv x) (x)]
-  [(fv (lambda (x ...) any_body))
-   (subtract (x_e ...) x ...)
-   (where (x_e ...) (fv any_body))]
-  [(fv (any_f any_a ...))
-   (x_f ... x_a ... ...)
-   (where (x_f ...) (fv any_f))
-   (where ((x_a ...) ...) ((fv any_a) ...))]
-  [(fv any) ()])
+  [(fv (lambda (x) e_body))
+   (subtract (x_e ...) x)
+   (where (x_e ...) (fv e_body))]
+  [(fv (e_f e_a))
+   (x_f ... x_a ...)
+   (where (x_f ...) (fv e_f))
+   (where (x_a ...) (fv e_a))])
 
 ;; -----------------------------------------------------------------------------
 ;; (subtract (x ...) x_1 ...) removes x_1 ... from (x ...)
@@ -137,11 +122,10 @@ subst (if time, otherwise it's provide)
 ;; (sd e) computes the static distance version of e
 
 (define-extended-language SD Lambda
-  (e ::= .... (K n n) (lambda n e))
+  (e ::= .... (K n) (lambda e) n)
   (n ::= natural))
 
-(define sd1 (term (K 0 1)))
-(define sd2 (term 1))
+(define sd1 (term (K 0)))
 
 (define SD? (redex-match? SD e))
 
@@ -149,53 +133,46 @@ subst (if time, otherwise it's provide)
   (test-equal (SD? sd1) #true))
 
 (define-metafunction SD
-  sd : any -> any
-  [(sd any_1) (sd/a any_1 ())])
+  sd : e -> e
+  [(sd e) (sd/a e ())])
 
 (module+ test
   (test-equal (term (sd/a x ())) (term x))
-  (test-equal (term (sd/a x ((y) (z) (x)))) (term (K 2 0)))
+  (test-equal (term (sd/a x (y z x))) (term (K 2)))
   (test-equal (term (sd/a ((lambda (x) x) (lambda (y) y)) ()))
-              (term ((lambda 1 (K 0 0)) (lambda 1 (K 0 0)))))
+              (term ((lambda (K 0)) (lambda (K 0)))))
   (test-equal (term (sd/a (lambda (x) (x (lambda (y) y))) ()))
-              (term (lambda 1 ((K 0 0) (lambda 1 (K 0 0))))))
-  (test-equal (term (sd/a (lambda (z x) (x (lambda (y) z))) ()))
-              (term (lambda 2 ((K 0 1) (lambda 1 (K 1 0)))))))
+              (term (lambda ((K 0) (lambda (K 0))))))
+  (test-equal (term (sd/a (lambda (z) (lambda (x) (x (lambda (y) z)))) ()))
+              (term (lambda (lambda ((K 0) (lambda (K 2))))))))
 
 (define-metafunction SD
-  sd/a : any ((x ...) ...) -> any
-  [(sd/a x ((x_1 ...) ... (x_0 ... x x_2 ...) (x_3 ...) ...))
+  sd/a : e (x ...) -> e
+  [(sd/a x (x_1 ... x x_2 ...))
    ;; bound variable 
-   (K n_rib n_pos)
-   (where n_rib ,(length (term ((x_1 ...) ...))))
-   (where n_pos ,(length (term (x_0 ...))))
-   (where #false (in x (x_1 ... ...)))]
-  [(sd/a (lambda (x ...) any_1) (any_rest ...))
-   (lambda n (sd/a any_1 ((x ...) any_rest ...)))
-   (where n ,(length (term (x ...))))]
-  [(sd/a (any_fun any_arg ...) (any_rib ...))
-   ((sd/a any_fun (any_rib ...)) (sd/a any_arg (any_rib ...)) ...)]
-  [(sd/a any_1 any)
-   ;; free variable, constant, etc 
+   (K n)
+   (where n ,(length (term (x_1 ...))))
+   (where #false (in x (x_1 ...)))]
+  [(sd/a (lambda (x) e) (x_rest ...))
+   (lambda (sd/a e (x x_rest ...)))
+   (where n ,(length (term (x_rest ...))))]
+  [(sd/a (e_fun e_arg) (x_rib ...))
+   ((sd/a e_fun (x_rib ...)) (sd/a e_arg (x_rib ...)))]
+  [(sd/a any_1 (x ...))
+   ;; free variable or constant
    any_1])
 
 ;; -----------------------------------------------------------------------------
 ;; (=α e_1 e_2) determines whether e_1 and e_2 are α equivalent
 
-(define-extended-language Lambda/n Lambda
-  (e ::= .... n)
-  (n ::= natural))
-
-(define in-Lambda/n? (redex-match? Lambda/n e))
-
 (module+ test
   (test-equal (term (=α (lambda (x) x) (lambda (y) y))) #true)
-  (test-equal (term (=α (lambda (x) (x 1)) (lambda (y) (y 1)))) #true)
+  (test-equal (term (=α (lambda (x) (x z)) (lambda (y) (y z)))) #true)
   (test-equal (term (=α (lambda (x) x) (lambda (y) z))) #false))
 
 (define-metafunction SD
-  =α : any any -> boolean
-  [(=α any_1 any_2) ,(equal? (term (sd any_1)) (term (sd any_2)))])
+  =α : e e -> boolean
+  [(=α e_1 e_2) ,(equal? (term (sd e_1)) (term (sd e_2)))])
 
 (define (=α/racket x y) (term (=α ,x ,y)))
 
@@ -206,38 +183,36 @@ subst (if time, otherwise it's provide)
   (test-equal (term (subst ([1 x][2 y]) x)) 1)
   (test-equal (term (subst ([1 x][2 y]) y)) 2)
   (test-equal (term (subst ([1 x][2 y]) z)) (term z))
-  (test-equal (term (subst ([1 x][2 y]) (lambda (z w) (x y))))
-              (term (lambda (z w) (1 2))))
-  (test-equal (term (subst ([1 x][2 y]) (lambda (z w) (lambda (x) (x y)))))
-              (term (lambda (z w) (lambda (x) (x 2))))
+  (test-equal (term (subst ([1 x][2 y]) (lambda (z) (lambda (w) (x y)))))
+              (term (lambda (z) (lambda (w) (1 2)))))
+  (test-equal (term (subst ([1 x][2 y]) (lambda (z) (lambda (w) (lambda (x) (x y))))))
+              (term (lambda (z) (lambda (w) (lambda (x) (x 2)))))
               #:equiv =α/racket)
   (test-equal (term (subst ((2 x)) ((lambda (x) (1 x)) x)))
               (term ((lambda (x) (1 x)) 2))
               #:equiv =α/racket))
-              
-              
 
 (define-metafunction Lambda
   subst : ((any x) ...) any -> any
   [(subst [(any_1 x_1) ... (any_x x) (any_2 x_2) ...] x) any_x]
   [(subst [(any_1 x_1) ... ] x) x]
-  [(subst [(any_1 x_1) ... ] (lambda (x ...) any_body))
-   (lambda (x_new ...)
+  [(subst [(any_1 x_1) ... ] (lambda (x) any_body))
+   (lambda (x_new)
      (subst ((any_1 x_1) ...)
-            (subst-raw ((x_new x) ...) any_body)))
-   (where  (x_new ...)  ,(variables-not-in (term any_body) (term (x ...)))) ]
+            (subst-raw (x_new x) any_body)))
+   (where  x_new ,(variable-not-in (term any_body) (term x)))]
   [(subst [(any_1 x_1) ... ] (any ...)) ((subst [(any_1 x_1) ... ] any) ...)]
   [(subst [(any_1 x_1) ... ] any_*) any_*])
 
 (define-metafunction Lambda
-  subst-raw : ((x x) ...) any -> any
-  [(subst-raw ((x_n1 x_o1) ... (x_new x) (x_n2 x_o2) ...) x) x_new]
-  [(subst-raw ((x_n1 x_o1) ... ) x) x]
-  [(subst-raw ((x_n1 x_o1) ... ) (lambda (x ...) any))
-   (lambda (x ...) (subst-raw ((x_n1 x_o1) ... ) any))]
-  [(subst-raw [(any_1 x_1) ... ] (any ...))
-   ((subst-raw [(any_1 x_1) ... ] any) ...)]
-  [(subst-raw [(any_1 x_1) ... ] any_*) any_*])
+  subst-raw : (x x) any -> any
+  [(subst-raw (x_new x_) x_) x_new]
+  [(subst-raw (x_new x_) x) x]
+  [(subst-raw (x_new x_) (lambda (x) any))
+   (lambda (x) (subst-raw (x_new x_) any))]
+  [(subst-raw (x_new x_) (any ...))
+   ((subst-raw (x_new x_) any) ...)]
+  [(subst-raw (x_new x_) any_*) any_*])
 
 ;; -----------------------------------------------------------------------------
 (module+ test

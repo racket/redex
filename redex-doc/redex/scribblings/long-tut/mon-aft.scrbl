@@ -32,7 +32,7 @@ The @racket[define-language] from specifies syntax trees via tree grammars:
 (racketblock
 (define-language Lambda 
   (e ::= x 
-         (lambda (x ...) e)
+         (lambda (x) e)
          (e e ...))
   (x ::= variable-not-otherwise-mentioned))
 ))
@@ -51,7 +51,7 @@ them (typos do sneak in). Instances are generated with @racket[term]:
 @examples[#:label #f #:eval redex-eval
 (define e1 (term y))
 (define e2 (term (lambda (y) y)))
-(define e3 (term (lambda (x y) y)))
+(define e3 (term (lambda (x) (lambda (y) y))))
 (define e4 (term (,e2 ,e3)))
 
 e4
@@ -85,8 +85,8 @@ Now you can formulate language tests:
 (test-equal (lambda? e3) #true)
 (test-equal (lambda? e4) #true)
 
-(define eb1 (term (lambda (x x) y)))
-(define eb2 (term (lambda (x y) 3)))
+(define eb1 (term (lambda (x) (lambda () y))))
+(define eb2 (term (lambda (x) (lambda (y) 3))))
 
 (test-equal (lambda? eb1) #false)
 (test-equal (lambda? eb2) #false)
@@ -105,8 +105,8 @@ To make basic statements about (parts of) your language, define
 metafunctions. Roughly, a metafunction is a function on the terms of a
 specific language. 
 
-We don't want parameter sequences with repeated variables. Can we say this
-with a metafunction?
+A first meta-function might determine whether or not some sequence
+of variables has any duplicates.
 @;%
 @(begin
 #reader scribble/comment-reader
@@ -160,25 +160,6 @@ they are about, work through examples, write down the latter as tests,
 Submodules delegate the tests to where they belong and they allow us to
   document functions by example. 
 
-Sadly, our language definition cannot use the @racket[unique-vars] metafunction.
-(In order to define the metafunction, we first need to define the language.)
-
-Fortunately, language definitions can employ more than Kleene patterns: 
-@;%
-@(begin
-#reader scribble/comment-reader
-(racketblock
-(define-language Lambda
-  (e ::=
-     x 
-     (lambda (x_!_ ...) e)
-     (e e ...))
-  (x ::= variable-not-otherwise-mentioned))
-))
-@;%
-@racket[x_!_ ...] means @racket[x] must differ from all other elements of
-this sequence 
-
 Here are two more metafunctions that use patterns in interesting ways: 
 @;%
 @(begin
@@ -227,23 +208,23 @@ specifies which language constructs bind and which ones don't:
 (racketblock
 ;; (fv e) computes the sequence of free variables of e
 ;; a variable occurrence of @racket[x] is free in @racket[e] 
-;; if no @racket[(lambda (... x ...) ...)] @emph{dominates} its occurrence 
+;; if no @racket[(lambda (x) ...)] @emph{dominates} its occurrence 
 
 (module+ test
   (test-equal (term (fv x)) (term (x)))
   (test-equal (term (fv (lambda (x) x))) (term ()))
-  (test-equal (term (fv (lambda (x) (y z x)))) (term (y z))))
+  (test-equal (term (fv (lambda (x) ((y z) x)))) (term (y z))))
 
 (define-metafunction Lambda
   fv : e -> (x ...)
   [(fv x) (x)]
-  [(fv (lambda (x ...) e))
-   (subtract (x_e ...) x ...)
-   (where (x_e ...) (fv e))]
-  [(fv (e_f e_a ...))
-   (x_f ... x_a ... ...)
+  [(fv (lambda (x) e_body))
+   (subtract (x_e ...) x)
+   (where (x_e ...) (fv e_body))]
+  [(fv (e_f e_a))
+   (x_f ... x_a ...)
    (where (x_f ...) (fv e_f))
-   (where ((x_a ...) ...) ((fv e_a) ...))])
+   (where (x_a ...) (fv e_a))])
 ))
 @;%
 
@@ -263,11 +244,10 @@ The function is a good example of accumulator-functions in Redex:
 ;; (sd e) computes the static distance version of e
 
 (define-extended-language SD Lambda
-  (e ::= .... (K n))
+  (e ::= .... (K n) (lambda e) n)
   (n ::= natural))
 
 (define sd1 (term (K 1)))
-(define sd2 (term 1))
 
 (define SD? (redex-match? SD e))
 
@@ -285,33 +265,33 @@ The function is a good example of accumulator-functions in Redex:
 (racketblock
 (define-metafunction SD
   sd : e -> e
-  [(sd e_1) (sd/a e_1 ())])
+  [(sd e) (sd/a e ())])
 
 (module+ test
   (test-equal (term (sd/a x ())) (term x))
-  (test-equal (term (sd/a x ((y) (z) (x)))) (term (K 2 0)))
+  (test-equal (term (sd/a x (y z x))) (term (K 2)))
   (test-equal (term (sd/a ((lambda (x) x) (lambda (y) y)) ()))
-              (term ((lambda () (K 0 0)) (lambda () (K 0 0)))))
+              (term ((lambda (K 0)) (lambda (K 0)))))
   (test-equal (term (sd/a (lambda (x) (x (lambda (y) y))) ()))
-              (term (lambda () ((K 0 0) (lambda () (K 0 0))))))
-  (test-equal (term (sd/a (lambda (z x) (x (lambda (y) z))) ()))
-              (term (lambda () ((K 0 1) (lambda () (K 1 0)))))))
+              (term (lambda ((K 0) (lambda (K 0))))))
+  (test-equal (term (sd/a (lambda (z) (lambda (x) (x (lambda (y) z)))) ()))
+              (term (lambda (lambda ((K 0) (lambda (K 2))))))))
 
 (define-metafunction SD
-  sd/a : e ((x ...) ...) -> e
-  [(sd/a x ((x_1 ...) ... (x_0 ... x x_2 ...) (x_3 ...) ...))
+  sd/a : e (x ...) -> e
+  [(sd/a x (x_1 ... x x_2 ...))
    ;; bound variable 
-   (K n_rib n_pos)
-   (where n_rib ,(length (term ((x_1 ...) ...))))
-   (where n_pos ,(length (term (x_0 ...))))
-   (where #false (in x (x_1 ... ...)))]
-  [(sd/a (lambda (x ...) e_1) (e_rest ...))
-   (lambda () (sd/a e_1 ((x ...) e_rest ...)))]
-  [(sd/a (e_fun e_arg ...) (e_rib ...))
-   ((sd/a e_fun (e_rib ...)) (sd/a e_arg (e_rib ...)) ...)]
-  [(sd/a e_1 any)
-   ;; a free variable is left alone 
-   e_1])
+   (K n)
+   (where n ,(length (term (x_1 ...))))
+   (where #false (in x (x_1 ...)))]
+  [(sd/a (lambda (x) e) (x_rest ...))
+   (lambda (sd/a e (x x_rest ...)))
+   (where n ,(length (term (x_rest ...))))]
+  [(sd/a (e_fun e_arg) (x_rib ...))
+   ((sd/a e_fun (x_rib ...)) (sd/a e_arg (x_rib ...)))]
+  [(sd/a any_1 (x ...))
+   ;; free variable or constant
+   any_1])
 ))
 @;%
 
@@ -322,15 +302,9 @@ Now α equivalence is straightforward:
 (racketblock
 ;; (=α e_1 e_2) determines whether e_1 and e_2 are α equivalent
 
-(define-extended-language Lambda/n Lambda
-  (e ::= .... n)
-  (n ::= natural))
-
-(define in-Lambda/n? (redex-match? Lambda/n e))
-
 (module+ test
   (test-equal (term (=α (lambda (x) x) (lambda (y) y))) #true)
-  (test-equal (term (=α (lambda (x) (x 1)) (lambda (y) (y 1)))) #true)
+  (test-equal (term (=α (lambda (x) (x z)) (lambda (y) (y z)))) #true)
   (test-equal (term (=α (lambda (x) x) (lambda (y) z))) #false))
 
 (define-metafunction SD
@@ -423,38 +397,36 @@ future extensions in mind.
   (test-equal (term (subst ([1 x][2 y]) x)) 1)
   (test-equal (term (subst ([1 x][2 y]) y)) 2)
   (test-equal (term (subst ([1 x][2 y]) z)) (term z))
-  (test-equal (term (subst ([1 x][2 y]) (lambda (z w) (x y))))
-              (term (lambda (z w) (1 2))))
-  (test-equal (term (subst ([1 x][2 y]) (lambda (z w) (lambda (x) (x y)))))
-              (term (lambda (z w) (lambda (x) (x 2))))
+  (test-equal (term (subst ([1 x][2 y]) (lambda (z) (lambda (w) (x y)))))
+              (term (lambda (z) (lambda (w) (1 2)))))
+  (test-equal (term (subst ([1 x][2 y]) (lambda (z) (lambda (w) (lambda (x) (x y))))))
+              (term (lambda (z) (lambda (w) (lambda (x) (x 2)))))
               #:equiv =α/racket)
   (test-equal (term (subst ((2 x)) ((lambda (x) (1 x)) x)))
               (term ((lambda (x) (1 x)) 2))
               #:equiv =α/racket))
-              
-              
 
 (define-metafunction Lambda
   subst : ((any x) ...) any -> any
   [(subst [(any_1 x_1) ... (any_x x) (any_2 x_2) ...] x) any_x]
   [(subst [(any_1 x_1) ... ] x) x]
-  [(subst [(any_1 x_1) ... ] (lambda (x ...) any_body))
-   (lambda (x_new ...)
+  [(subst [(any_1 x_1) ... ] (lambda (x) any_body))
+   (lambda (x_new)
      (subst ((any_1 x_1) ...)
-            (subst-raw ((x_new x) ...) any_body)))
-   (where  (x_new ...)  ,(variables-not-in (term any_body) (term (x ...)))) ]
+            (subst-raw (x_new x) any_body)))
+   (where  x_new ,(variable-not-in (term any_body) (term x)))]
   [(subst [(any_1 x_1) ... ] (any ...)) ((subst [(any_1 x_1) ... ] any) ...)]
   [(subst [(any_1 x_1) ... ] any_*) any_*])
 
 (define-metafunction Lambda
-  subst-raw : ((x x) ...) any -> any
-  [(subst-raw ((x_n1 x_o1) ... (x_new x) (x_n2 x_o2) ...) x) x_new]
-  [(subst-raw ((x_n1 x_o1) ... ) x) x]
-  [(subst-raw ((x_n1 x_o1) ... ) (lambda (x ...) any))
-   (lambda (x ...) (subst-raw ((x_n1 x_o1) ... ) any))]
-  [(subst-raw [(any_1 x_1) ... ] (any ...))
-   ((subst-raw [(any_1 x_1) ... ] any) ...)]
-  [(subst-raw [(any_1 x_1) ... ] any_*) any_*])
+  subst-raw : (x x) any -> any
+  [(subst-raw (x_new x_) x_) x_new]
+  [(subst-raw (x_new x_) x) x]
+  [(subst-raw (x_new x_) (lambda (x) any))
+   (lambda (x) (subst-raw (x_new x_) any))]
+  [(subst-raw (x_new x_) (any ...))
+   ((subst-raw (x_new x_) any) ...)]
+  [(subst-raw (x_new x_) any_*) any_*])
 
 ))
 @;%
