@@ -190,6 +190,9 @@ subst (if time, otherwise it's provide)
               #:equiv =α/racket)
   (test-equal (term (subst ((2 x)) ((lambda (x) (1 x)) x)))
               (term ((lambda (x) (1 x)) 2))
+              #:equiv =α/racket)
+  (test-equal (term (subst (((lambda (x) y) x)) (lambda (y) x)))
+              (term (lambda (y1) (lambda (x) y)))
               #:equiv =α/racket))
 
 (define-metafunction Lambda
@@ -200,7 +203,7 @@ subst (if time, otherwise it's provide)
    (lambda (x_new)
      (subst ((any_1 x_1) ...)
             (subst-raw (x_new x) any_body)))
-   (where  x_new ,(variable-not-in (term any_body) (term x)))]
+   (where  x_new ,(variable-not-in (term (any_1 ... any_body)) (term x)))]
   [(subst [(any_1 x_1) ... ] (any ...)) ((subst [(any_1 x_1) ... ] any) ...)]
   [(subst [(any_1 x_1) ... ] any_*) any_*])
 
