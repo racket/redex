@@ -133,8 +133,8 @@ subst (if time, otherwise it's provide)
   (test-equal (SD? sd1) #true))
 
 (define-metafunction SD
-  sd : e -> e
-  [(sd e) (sd/a e ())])
+  sd : any -> any
+  [(sd any) (sd/a any ())])
 
 (module+ test
   (test-equal (term (sd/a x ())) (term x))
@@ -147,19 +147,19 @@ subst (if time, otherwise it's provide)
               (term (lambda (lambda ((K 0) (lambda (K 2))))))))
 
 (define-metafunction SD
-  sd/a : e (x ...) -> e
+  sd/a : any (x ...) -> any
   [(sd/a x (x_1 ... x x_2 ...))
    ;; bound variable 
    (K n)
    (where n ,(length (term (x_1 ...))))
    (where #false (in x (x_1 ...)))]
-  [(sd/a (lambda (x) e) (x_rest ...))
-   (lambda (sd/a e (x x_rest ...)))
+  [(sd/a (lambda (x) any_body) (x_rest ...))
+   (lambda (sd/a any_body (x x_rest ...)))
    (where n ,(length (term (x_rest ...))))]
-  [(sd/a (e_fun e_arg) (x_rib ...))
-   ((sd/a e_fun (x_rib ...)) (sd/a e_arg (x_rib ...)))]
+  [(sd/a (any_fun any_arg) (x_rib ...))
+   ((sd/a any_fun (x_rib ...)) (sd/a any_arg (x_rib ...)))]
   [(sd/a any_1 (x ...))
-   ;; free variable or constant
+   ;; free variable or constant, etc
    any_1])
 
 ;; -----------------------------------------------------------------------------
@@ -167,11 +167,11 @@ subst (if time, otherwise it's provide)
 
 (module+ test
   (test-equal (term (=α (lambda (x) x) (lambda (y) y))) #true)
-  (test-equal (term (=α (lambda (x) (x z)) (lambda (y) (y z)))) #true)
+  (test-equal (term (=α (lambda (x) (x 1)) (lambda (y) (y 1)))) #true)
   (test-equal (term (=α (lambda (x) x) (lambda (y) z))) #false))
 
 (define-metafunction SD
-  =α : e e -> boolean
+  =α : any any -> boolean
   [(=α e_1 e_2) ,(equal? (term (sd e_1)) (term (sd e_2)))])
 
 (define (=α/racket x y) (term (=α ,x ,y)))

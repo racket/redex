@@ -39,7 +39,7 @@ Here is the definition of @deftech{environment}:
 Before you get started, make sure you can create examples of
 @tech{environment}s and confirm their well-formedness.}
 
-@exercise["ex:let"]{Develop the metafunction @racket[let], which extends
+@exercise["ex:let"]{Develop the metafunction @racket[let*], which extends
  the language with a notational shorthand, also known as syntactic sugar. 
 
  Once you have this metafunction, you can write expressions such as 
@@ -48,12 +48,12 @@ Before you get started, make sure you can create examples of
 #reader scribble/comment-reader
 (racketblock
 (term 
-  (let ((x (lambda (a b c) a))
+ (let* ((x (lambda (a b c) a))
         (y (lambda (x) x)))
     (x y y y)))
 ))
 @;%
- Like Racket's @racket[let], the function elaborates surface syntax into
+ Like Racket's @racket[let*], the function elaborates surface syntax into
  core syntax:
 @;%
 @(begin
@@ -74,8 +74,8 @@ Before you get started, make sure you can create examples of
 (racketblock
 (term 
  (fv 
-  (let ((x (lambda (a b c) a))
-        (y (lambda (x) x)))
+  (let* ((x (lambda (a b c) a))
+         (y (lambda (x) x)))
     (x y y y))))
 ))
 @;%
@@ -86,8 +86,8 @@ Before you get started, make sure you can create examples of
 (racketblock
 (term 
  (bv
-  (let ((x (lambda (a b c) a))
-        (y (lambda (x) x)))
+  (let* ((x (lambda (a b c) a))
+         (y (lambda (x) x)))
     (x y y y))))
 ))
 @;%

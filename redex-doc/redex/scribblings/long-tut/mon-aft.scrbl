@@ -349,33 +349,33 @@ add binders:
   (test-equal (SD? sd1) #true))
 
 (define-metafunction SD
-  sd : any -> any
-  [(sd any_1) (sd/a any_1 ())])
+  sd : e -> e
+  [(sd e) (sd/a e ())])
 
 (module+ test
   (test-equal (term (sd/a x ())) (term x))
-  (test-equal (term (sd/a x ((y) (z) (x)))) (term (K 2 0)))
+  (test-equal (term (sd/a x (y z x))) (term (K 2)))
   (test-equal (term (sd/a ((lambda (x) x) (lambda (y) y)) ()))
-              (term ((lambda () (K 0 0)) (lambda () (K 0 0)))))
+              (term ((lambda (K 0)) (lambda (K 0)))))
   (test-equal (term (sd/a (lambda (x) (x (lambda (y) y))) ()))
-              (term (lambda () ((K 0 0) (lambda () (K 0 0))))))
-  (test-equal (term (sd/a (lambda (z x) (x (lambda (y) z))) ()))
-              (term (lambda () ((K 0 1) (lambda () (K 1 0)))))))
+              (term (lambda ((K 0) (lambda (K 0))))))
+  (test-equal (term (sd/a (lambda (z) (lambda (x) (x (lambda (y) z)))) ()))
+              (term (lambda (lambda ((K 0) (lambda (K 2))))))))
 
 (define-metafunction SD
-  sd/a : any ((x ...) ...) -> any
-  [(sd/a x ((x_1 ...) ... (x_0 ... x x_2 ...) (x_3 ...) ...))
+  sd/a : e (x ...) -> e
+  [(sd/a x (x_1 ... x x_2 ...))
    ;; bound variable 
-   (K n_rib n_pos)
-   (where n_rib ,(length (term ((x_1 ...) ...))))
-   (where n_pos ,(length (term (x_0 ...))))
-   (where #false (in x (x_1 ... ...)))]
-  [(sd/a (lambda (x ...) any_1) (any_rest ...))
-   (lambda () (sd/a any_1 ((x ...) any_rest ...)))]
-  [(sd/a (any_fun any_arg ...) (any_rib ...))
-   ((sd/a any_fun (any_rib ...)) (sd/a any_arg (any_rib ...)) ...)]
-  [(sd/a any_1 any)
-   ;; free variable, constant, etc 
+   (K n)
+   (where n ,(length (term (x_1 ...))))
+   (where #false (in x (x_1 ...)))]
+  [(sd/a (lambda (x) e) (x_rest ...))
+   (lambda (sd/a e (x x_rest ...)))
+   (where n ,(length (term (x_rest ...))))]
+  [(sd/a (e_fun e_arg) (x_rib ...))
+   ((sd/a e_fun (x_rib ...)) (sd/a e_arg (x_rib ...)))]
+  [(sd/a any_1 (x ...))
+   ;; free variable or constant
    any_1])
 ))
 @;%
