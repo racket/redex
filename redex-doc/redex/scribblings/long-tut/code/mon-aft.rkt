@@ -47,7 +47,8 @@ subst (if time, otherwise it's provide)
 
 (module+ test
   (test-equal (in-Lambda? eb1) #false)
-  (test-equal (in-Lambda? eb2) #false))
+  (test-equal (in-Lambda? eb2) #false)
+  ) ;; close paren must be on this line or else mon-aft.scrbl won't run properly
 
 ;; -----------------------------------------------------------------------------
 ;; (unique-vars x ...) is the sequence of variables x ... free of duplicates?

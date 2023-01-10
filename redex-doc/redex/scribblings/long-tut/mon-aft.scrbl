@@ -25,18 +25,10 @@ To start a program with Redex, start your file with
 @codeblock{#lang racket
            (require redex)}
 
-The @racket[define-language] from specifies syntax trees via tree grammars: 
-@;%
-@(begin
-#reader scribble/comment-reader
-(racketblock
-(define-language Lambda 
-  (e ::= x 
-         (lambda (x) e)
-         (e e ...))
-  (x ::= variable-not-otherwise-mentioned))
-))
-@;%
+The @racket[define-language] from specifies syntax trees via tree grammars:
+
+@codeblock-from-file["code/mon-aft.rkt" #rx"define-language Lambda" #:eval redex-eval]
+
 The trees are somewhat concrete, which makes it easy to work with them, but
 it is confusing on those incredibly rare occasions when we want truly
 abstract syntax. 
@@ -46,54 +38,28 @@ or integers (all of Racket's integers) or naturals (all of Racket's natural
 numbers)---and many other things. 
 
 After you have a syntax, use the grammar to generate instances and check
-them (typos do sneak in). Instances are generated with @racket[term]: 
-@;
-@examples[#:label #f #:eval redex-eval
-(define e1 (term y))
-(define e2 (term (lambda (y) y)))
-(define e3 (term (lambda (x) (lambda (y) y))))
-(define e4 (term (,e2 ,e3)))
+them (typos do sneak in). Instances are generated with @racket[term]:
+@codeblock-from-file["code/mon-aft.rkt"
+                     #rx"define e1 [(]term"
+                     #:eval redex-eval
+                     #:exp-count 4
+                     #:extra-code ("e4")]
 
-e4
-]
 Mouse over @racket[define]. It is @emph{not} a Redex form, it comes from
 Racket. Take a close look at the last definition. Comma anyone? 
 
-@;%
-@(begin
-#reader scribble/comment-reader
-(racketblock
-(redex-match? Lambda e e4)
-))
-@;%
-
 Define yourself a predicate that tests membership: 
-@;%
-@(begin
-#reader scribble/comment-reader
-(racketblock
-(define lambda? (redex-match? Lambda e))
-))
-@;%
-Now you can formulate language tests: 
-@;%
-@(begin
-#reader scribble/comment-reader
-(racketblock
-(test-equal (lambda? e1) #true)
-(test-equal (lambda? e2) #true)
-(test-equal (lambda? e3) #true)
-(test-equal (lambda? e4) #true)
+@codeblock-from-file["code/mon-aft.rkt" #rx"define in-Lambda[?]" #:eval redex-eval]
 
-(define eb1 (term (lambda (x) (lambda () y))))
-(define eb2 (term (lambda (x) (lambda (y) 3))))
+Now you can formulate language tests:
+@codeblock-from-file["code/mon-aft.rkt" #rx"test-equal [(]in-Lambda[?] e1"
+                     #:eval redex-eval #:exp-count 4]
+@codeblock-from-file["code/mon-aft.rkt" #rx"define eb1"
+                     #:eval redex-eval #:exp-count 2]
+@codeblock-from-file["code/mon-aft.rkt" #rx"test-equal [(]in-Lambda[?] eb1"
+                     #:eval redex-eval #:exp-count 2
+                     #:extra-code ("(test-results)")]
 
-(test-equal (lambda? eb1) #false)
-(test-equal (lambda? eb2) #false)
-
-(test-results)
-))
-@;%
 Make sure your language contains the terms that you want and does
 @emph{not} contain those you want to exclude. Why should @racket[eb1] and
 @racket[eb2] not be in @racket[Lambda]'s set of expressions? 
