@@ -156,7 +156,6 @@ accumulator-functions in Redex.
 
 Now α equivalence is straightforward: 
 
-
 @code-from-file["code/mon-aft.rkt"
                 #rx"determines whether e_1 and e_2 are α equivalent"
                 #:exp-count 3]
@@ -164,6 +163,7 @@ Now α equivalence is straightforward:
 
 @; -----------------------------------------------------------------------------
 @section{Extending a Language: @racket[any]}
+
 
 Suppose we wish to extend @racket[Lambda] with @racket[if] and Booleans,
 like this: 
@@ -178,7 +178,7 @@ like this:
      (if e e e)))
 ))
 @;%
- Guess what? @racket[(term (fv (lambda (x y) (if x y false))))] doesn't
+ Guess what? @racket[(term (sd (lambda (x y) (if x y false))))] doesn't
  work because @racket[false] and @racket[if] are not covered. 
 
 We want metafunctions that are as generic as possible for computing such
@@ -187,45 +187,11 @@ equivalences.
 
 Redex contracts come with @racket[any] and Redex patterns really are over
 Racket's S-expressions. This definition now works for extensions that don't
-add binders: 
-@;%
-@(begin
-#reader scribble/comment-reader
-(racketblock
-(module+ test
-  (test-equal (SD? sd1) #true))
+add binders:
 
-(define-metafunction SD
-  sd : e -> e
-  [(sd e) (sd/a e ())])
-
-(module+ test
-  (test-equal (term (sd/a x ())) (term x))
-  (test-equal (term (sd/a x (y z x))) (term (K 2)))
-  (test-equal (term (sd/a ((lambda (x) x) (lambda (y) y)) ()))
-              (term ((lambda (K 0)) (lambda (K 0)))))
-  (test-equal (term (sd/a (lambda (x) (x (lambda (y) y))) ()))
-              (term (lambda ((K 0) (lambda (K 0))))))
-  (test-equal (term (sd/a (lambda (z) (lambda (x) (x (lambda (y) z)))) ()))
-              (term (lambda (lambda ((K 0) (lambda (K 2))))))))
-
-(define-metafunction SD
-  sd/a : e (x ...) -> e
-  [(sd/a x (x_1 ... x x_2 ...))
-   ;; bound variable 
-   (K n)
-   (where n ,(length (term (x_1 ...))))
-   (where #false (in x (x_1 ...)))]
-  [(sd/a (lambda (x) e) (x_rest ...))
-   (lambda (sd/a e (x x_rest ...)))
-   (where n ,(length (term (x_rest ...))))]
-  [(sd/a (e_fun e_arg) (x_rib ...))
-   ((sd/a e_fun (x_rib ...)) (sd/a e_arg (x_rib ...)))]
-  [(sd/a any_1 (x ...))
-   ;; free variable or constant
-   any_1])
-))
-@;%
+@code-from-file["code/common.rkt"
+                #rx"define-extended-language SD Lambda"
+                #:exp-count 6]
 
 @; -----------------------------------------------------------------------------
 @section{Substitution}
@@ -234,49 +200,6 @@ The last thing we need is substitution, because it @emph{is} the syntactic
 equivalent of function application. We define it with @emph{any} having
 future extensions in mind.  
 
-@;%
-@(begin
-#reader scribble/comment-reader
-(racketblock
-;; (subst ([e x] ...) e_*) substitutes e ... for x ... in e_* (hygienically)
-
-(module+ test
-  (test-equal (term (subst ([1 x][2 y]) x)) 1)
-  (test-equal (term (subst ([1 x][2 y]) y)) 2)
-  (test-equal (term (subst ([1 x][2 y]) z)) (term z))
-  (test-equal (term (subst ([1 x][2 y]) (lambda (z) (lambda (w) (x y)))))
-              (term (lambda (z) (lambda (w) (1 2)))))
-  (test-equal (term (subst ([1 x][2 y]) (lambda (z) (lambda (w) (lambda (x) (x y))))))
-              (term (lambda (z) (lambda (w) (lambda (x) (x 2)))))
-              #:equiv =α/racket)
-  (test-equal (term (subst ((2 x)) ((lambda (x) (1 x)) x)))
-              (term ((lambda (x) (1 x)) 2))
-              #:equiv =α/racket))
-
-(define-metafunction Lambda
-  subst : ((any x) ...) any -> any
-  [(subst [(any_1 x_1) ... (any_x x) (any_2 x_2) ...] x) any_x]
-  [(subst [(any_1 x_1) ... ] x) x]
-  [(subst [(any_1 x_1) ... ] (lambda (x) any_body))
-   (lambda (x_new)
-     (subst ((any_1 x_1) ...)
-            (subst-raw (x_new x) any_body)))
-   (where  x_new ,(variable-not-in (term any_body) (term x)))]
-  [(subst [(any_1 x_1) ... ] (any ...)) ((subst [(any_1 x_1) ... ] any) ...)]
-  [(subst [(any_1 x_1) ... ] any_*) any_*])
-
-(define-metafunction Lambda
-  subst-raw : (x x) any -> any
-  [(subst-raw (x_new x_) x_) x_new]
-  [(subst-raw (x_new x_) x) x]
-  [(subst-raw (x_new x_) (lambda (x) any))
-   (lambda (x) (subst-raw (x_new x_) any))]
-  [(subst-raw (x_new x_) (any ...))
-   ((subst-raw (x_new x_) any) ...)]
-  [(subst-raw (x_new x_) any_*) any_*])
-
-))
-@;%
-
-
-}
+@code-from-file["code/common.rkt"
+                #rx"substitutes e [.][.][.] for x [.][.][.] in e_[*]"
+                #:exp-count 3]

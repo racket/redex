@@ -89,7 +89,7 @@
 
 ;; (sd e) computes the static distance version of e
 (define-extended-language SD Lambda
-  (e ::= .... (K n))
+  (e ::= .... (K n) (lambda e))
   (n ::= natural))
 
 (define SD? (redex-match? SD e))

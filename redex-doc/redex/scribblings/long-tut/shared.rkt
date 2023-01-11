@@ -1,12 +1,4 @@
 #lang at-exp racket/base
-(module+ test (require rackunit))
-
-#; #;
-(this is to facilitate
-      some testing code
-      that appears below)
-(it helps test
-    codeblock-from-file)
 
 (provide
   goals  ;; bulletize goals 
@@ -26,7 +18,7 @@
   "exercise/ex.rkt"
   (for-label racket/base redex/reduction-semantics)
   (for-syntax racket/base racket/match racket/list racket/port
-              syntax/parse syntax/strip-context)
+              syntax/parse syntax/strip-context compiler/cm-accomplice)
   scribble/manual
   scribble/core
   scribble/example
@@ -125,6 +117,8 @@ to the top of your file:
   (define (get-code file rx:start number-of-expressions number-of-lines-to-skip extra-code doing-eval? stx)
     (define src (syntax-source stx))
     (define-values (src-dir _1 _2) (split-path src))
+    (define file-with-code-to-show (build-path src-dir file))
+    (register-external-file file-with-code-to-show)
     (define-values (in out) (make-pipe))
     (define-values (start-pos start-line end-line no-prompt?s)
       (get-start-and-end-lines file rx:start
@@ -132,7 +126,7 @@ to the top of your file:
                                stx
                                src-dir))
     (set! start-line (+ start-line number-of-lines-to-skip))
-    (call-with-input-file (build-path src-dir file)
+    (call-with-input-file file-with-code-to-show
       (λ (port)
         (for/list ([l (in-lines port)]
                    [i (in-range end-line)]
@@ -148,7 +142,7 @@ to the top of your file:
        (for/list ([no-prompt? (in-list (append no-prompt?s
                                                (make-list (length extra-code)
                                                           #f)))])
-         (define e (replace-context stx (read-syntax (build-path src-dir file) in)))
+         (define e (replace-context stx (read-syntax file-with-code-to-show in)))
          (if no-prompt?
              `(eval:no-prompt ,e)
              e))]

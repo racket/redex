@@ -139,8 +139,8 @@ subst (if time, otherwise it's provide)
 
 ;; SD metafunction
 (define-metafunction SD
-  sd : any -> any
-  [(sd any) (sd/a any ())])
+  sd : e -> e
+  [(sd e) (sd/a e ())])
 
 (module+ test
   (test-equal (term (sd/a x ())) (term x))
@@ -153,19 +153,18 @@ subst (if time, otherwise it's provide)
               (term (lambda (lambda ((K 0) (lambda (K 2))))))))
 
 (define-metafunction SD
-  sd/a : any (x ...) -> any
+  sd/a : e (x ...) -> any
   [(sd/a x (x_1 ... x x_2 ...))
    ;; bound variable 
    (K n)
    (where n ,(length (term (x_1 ...))))
    (where #false (in x (x_1 ...)))]
-  [(sd/a (lambda (x) any_body) (x_rest ...))
-   (lambda (sd/a any_body (x x_rest ...)))
+  [(sd/a (lambda (x) e_body) (x_rest ...))
+   (lambda (sd/a e_body (x x_rest ...)))
    (where n ,(length (term (x_rest ...))))]
-  [(sd/a (any_fun any_arg) (x_rib ...))
-   ((sd/a any_fun (x_rib ...)) (sd/a any_arg (x_rib ...)))]
+  [(sd/a (e_fun e_arg) (x ...))
+   ((sd/a e_fun (x ...)) (sd/a e_arg (x ...)))]
   [(sd/a any_1 (x ...))
-   ;; free variable or constant, etc
    any_1])
 
 ;; -----------------------------------------------------------------------------
@@ -177,52 +176,10 @@ subst (if time, otherwise it's provide)
   (test-equal (term (=α (lambda (x) x) (lambda (y) z))) #false))
 
 (define-metafunction SD
-  =α : any any -> boolean
+  =α : e e -> boolean
   [(=α e_1 e_2) ,(equal? (term (sd e_1)) (term (sd e_2)))])
 
 (define (=α/racket x y) (term (=α ,x ,y)))
 
-;; -----------------------------------------------------------------------------
-;; (subst ([e x] ...) e_*) substitutes e ... for x ... in e_* (hygienically)
-
-(module+ test
-  (test-equal (term (subst ([1 x][2 y]) x)) 1)
-  (test-equal (term (subst ([1 x][2 y]) y)) 2)
-  (test-equal (term (subst ([1 x][2 y]) z)) (term z))
-  (test-equal (term (subst ([1 x][2 y]) (lambda (z) (lambda (w) (x y)))))
-              (term (lambda (z) (lambda (w) (1 2)))))
-  (test-equal (term (subst ([1 x][2 y]) (lambda (z) (lambda (w) (lambda (x) (x y))))))
-              (term (lambda (z) (lambda (w) (lambda (x) (x 2)))))
-              #:equiv =α/racket)
-  (test-equal (term (subst ((2 x)) ((lambda (x) (1 x)) x)))
-              (term ((lambda (x) (1 x)) 2))
-              #:equiv =α/racket)
-  (test-equal (term (subst (((lambda (x) y) x)) (lambda (y) x)))
-              (term (lambda (y1) (lambda (x) y)))
-              #:equiv =α/racket))
-
-(define-metafunction Lambda
-  subst : ((any x) ...) any -> any
-  [(subst [(any_1 x_1) ... (any_x x) (any_2 x_2) ...] x) any_x]
-  [(subst [(any_1 x_1) ... ] x) x]
-  [(subst [(any_1 x_1) ... ] (lambda (x) any_body))
-   (lambda (x_new)
-     (subst ((any_1 x_1) ...)
-            (subst-raw (x_new x) any_body)))
-   (where  x_new ,(variable-not-in (term (any_1 ... any_body)) (term x)))]
-  [(subst [(any_1 x_1) ... ] (any ...)) ((subst [(any_1 x_1) ... ] any) ...)]
-  [(subst [(any_1 x_1) ... ] any_*) any_*])
-
-(define-metafunction Lambda
-  subst-raw : (x x) any -> any
-  [(subst-raw (x_new x_) x_) x_new]
-  [(subst-raw (x_new x_) x) x]
-  [(subst-raw (x_new x_) (lambda (x) any))
-   (lambda (x) (subst-raw (x_new x_) any))]
-  [(subst-raw (x_new x_) (any ...))
-   ((subst-raw (x_new x_) any) ...)]
-  [(subst-raw (x_new x_) any_*) any_*])
-
-;; -----------------------------------------------------------------------------
 (module+ test
   (test-results))
