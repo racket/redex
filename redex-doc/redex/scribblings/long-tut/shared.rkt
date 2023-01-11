@@ -19,13 +19,13 @@
     racket/sandbox
     scribble/core
     scriblib/figure)
-  codeblock-from-file)
+  code-from-file)
 
 ;; -----------------------------------------------------------------------------
 (require
   "exercise/ex.rkt"
   (for-label racket/base redex/reduction-semantics)
-  (for-syntax racket/base racket/match racket/list
+  (for-syntax racket/base racket/match racket/list racket/port
               syntax/parse syntax/strip-context)
   scribble/manual
   scribble/core
@@ -73,9 +73,14 @@ to the top of your file:
 ;; - the name of the file as a relative path to the source
 ;;   location of the use of codeblock-from-file,
 ;; - a regular expression that the first line to include must match
-;; - the evaluator to evaluate the program, with #:eval
+;; - the evaluator to evaluate the program, with #:eval; if #:eval
+;;   is not present, the code is not evaluated and instead of `examples`
+;;   being used, `codeblock` is used.
 ;; - the number of expressions that should follow (according to the
 ;;   rules of read) with #:exp-count, which defaults to 1
+;; - the number of lines to skip, counting the matching line
+;;   (useful to add comments to give the regexp something to grab onto)
+;;   with #:skip-lines
 ;; - and a sequence of strings to tack onto the end of the expression
 ;;   these are treated as if they are extra lines in the file with
 ;;   #:extra-code
@@ -85,36 +90,48 @@ to the top of your file:
 ;; is wrapped with eval:no-prompt (see examples for docs)
 ;; the highlighting and linking is based on the for-label bindings
 ;; that are at the use of codeblock-from-file
-(define-syntax (codeblock-from-file stx)
+(define-syntax (code-from-file stx)
   (syntax-parse stx
-    [(_ file:string rx-start:regexp #:eval eval
+    [(_ file:string rx-start:regexp 
+        (~optional (~seq #:eval eval))
         (~optional (~seq #:exp-count number-of-expressions:integer))
+        (~optional (~seq #:skip-lines number-of-lines-to-skip:integer))
         (~optional (~seq #:extra-code (extra-code:string ...))))
-
-     #`(examples #:label #f
-                 #:eval eval
-                 #,@(get-code (syntax-e #'file)
-                              (syntax-e #'rx-start)
-                              (if (attribute number-of-expressions)
-                                  (syntax-e #'number-of-expressions)
-                                  1)
-                              (if (attribute extra-code)
-                                  (map
-                                   syntax-e
-                                   (syntax->list #'(extra-code ...)))
-                                  '())
-                              stx))]))
+     (define doing-eval? (attribute eval))
+     (define code
+       (get-code (syntax-e #'file)
+                 (syntax-e #'rx-start)
+                 (if (attribute number-of-expressions)
+                     (syntax-e #'number-of-expressions)
+                     1)
+                 (if (attribute number-of-lines-to-skip)
+                     (syntax-e #'number-of-lines-to-skip)
+                     0)
+                 (if (attribute extra-code)
+                     (map
+                      syntax-e
+                      (syntax->list #'(extra-code ...)))
+                     '())
+                 doing-eval?
+                 stx))
+     (if doing-eval?
+         #`(examples #:label #f
+                     #:eval eval
+                     #,@code)
+         #`(codeblock #:context #'#,stx
+                      #,@code))]))
 
 (begin-for-syntax
-  (define (get-code file rx:start number-of-expressions extra-code stx)
+  (define (get-code file rx:start number-of-expressions number-of-lines-to-skip extra-code doing-eval? stx)
     (define src (syntax-source stx))
     (define-values (src-dir _1 _2) (split-path src))
     (define-values (in out) (make-pipe))
-    (define-values (start-line end-line no-prompt?s)
+    (define-values (start-pos start-line end-line no-prompt?s)
       (get-start-and-end-lines file rx:start
                                number-of-expressions
                                stx
                                src-dir))
+    (set! start-line (+ start-line number-of-lines-to-skip))
     (call-with-input-file (build-path src-dir file)
       (λ (port)
         (for/list ([l (in-lines port)]
@@ -125,16 +142,23 @@ to the top of your file:
       (displayln extra-code-item out))
     (close-output-port out)
     (port-count-lines! in)
-    (for/list ([no-prompt? (in-list (append no-prompt?s
-                                            (make-list (length extra-code)
-                                                       #f)))])
-      (define e (replace-context stx (read-syntax src in)))
-      (if no-prompt?
-          `(eval:no-prompt ,e)
-          e)))
+    (set-port-next-location! in start-line 0 start-pos)
+    (cond
+      [doing-eval?
+       (for/list ([no-prompt? (in-list (append no-prompt?s
+                                               (make-list (length extra-code)
+                                                          #f)))])
+         (define e (replace-context stx (read-syntax (build-path src-dir file) in)))
+         (if no-prompt?
+             `(eval:no-prompt ,e)
+             e))]
+      [else
+       (define sp (open-output-string))
+       (copy-port in sp)
+       (list (get-output-string sp))]))
 
   (define (get-start-and-end-lines file rx:start number-of-expressions stx src-dir)
-    (define start-line
+    (define-values (start-line start-pos)
       (call-with-input-file (build-path src-dir file)
         (λ (port)
           (define count 0)
@@ -146,7 +170,8 @@ to the top of your file:
             (raise-syntax-error 'codeblock-from-file
                                 (format "didn't find a line matching ~s" rx:start)
                                 stx))
-          count)))
+          (define-values (line col pos) (port-next-location port))
+          (values count pos))))
     (define-values (no-prompt?s end-line)
       (call-with-input-file (build-path src-dir file)
         (λ (port)
@@ -160,8 +185,10 @@ to the top of your file:
               (match exp
                 [`(define . ,stuff) #t]
                 [`(define-language . ,stuff) #t]
+                [`(define-extended-language . ,stuff) #t]
+                [`(define-metafunction . ,stuff) #t]
                 [`(test-equal . ,stuff) #t]
                 [_ #f])))
           (define-values (line col pos) (port-next-location port))
           (values no-prompt?s line))))
-    (values start-line end-line no-prompt?s)))
+    (values start-pos start-line end-line no-prompt?s)))

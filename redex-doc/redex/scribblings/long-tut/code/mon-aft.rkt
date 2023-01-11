@@ -53,10 +53,12 @@ subst (if time, otherwise it's provide)
 ;; -----------------------------------------------------------------------------
 ;; (unique-vars x ...) is the sequence of variables x ... free of duplicates?
 
+;; unique-vars tests start
 (module+ test 
   (test-equal (term (unique-vars x y)) #true)
   (test-equal (term (unique-vars x y x)) #false))
 
+;; unique-vars metafunction start
 (define-metafunction Lambda 
   unique-vars : x ... -> boolean 
   [(unique-vars) #true]
@@ -84,6 +86,7 @@ subst (if time, otherwise it's provide)
   (test-equal (term (fv (lambda (x) x))) (term ()))
   (test-equal (term (fv (lambda (x) ((y z) x)))) (term (y z))))
 
+;; fv metafunction start
 (define-metafunction Lambda
   fv : e -> (x ...)
   [(fv x) (x)]
@@ -130,9 +133,11 @@ subst (if time, otherwise it's provide)
 
 (define SD? (redex-match? SD e))
 
+;; SD? test case
 (module+ test
   (test-equal (SD? sd1) #true))
 
+;; SD metafunction
 (define-metafunction SD
   sd : any -> any
   [(sd any) (sd/a any ())])
