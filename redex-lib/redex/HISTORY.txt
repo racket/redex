@@ -1,3 +1,11 @@
+v8.8
+
+  * improved typesetting support when customized renders are used in
+    certain multi-line situations. Thanks to Shu-Hung You for
+    suggesting the fix.
+
+  * fixed more bugs in randomized testing for delimited continuations
+
 v8.7
 
   * fixed bugs in randomized testing for delimited continuations
