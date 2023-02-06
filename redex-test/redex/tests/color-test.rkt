@@ -9,7 +9,7 @@ as you reduce you expect to see a spectrum from blue to red
 
 In the other window, you expect to see the currently unreducted terms in green and all others white.
 
-Also just tests that the stepper works. The third window is a stepper window.
+Also just tests that the stepper and show-derivations work. The third window is a stepper window.
 Expect the second step to split and show two steps.
 
 |#
@@ -17,7 +17,8 @@ Expect the second step to split and show two steps.
 (require redex/reduction-semantics
          redex/gui
          racket/gui/base
-         racket/class)
+         racket/class
+         racket/file)
 
 (module test racket/base)
 
@@ -94,3 +95,31 @@ Expect the second step to split and show two steps.
     (--> 0 zero)
     (--> (any) (any any) "not-computed"))
    0))
+
+(let ()
+  (define-language L
+    (e ::= (e e) n)
+    (n ::= natural))
+  (define-judgment-form L
+    #:mode (J I O)
+    [-------
+     (J n n)]
+
+    [(J e_1 n_1) (J e_2 n_2)
+     ----------------------------------------
+     (J (e_1 e_2) ,(+ (term n_1) (term n_2)))])
+  (show-derivations
+   (build-derivations
+    (J (0 ((((1 2) (3 4)) ((5 6) (7 8))) ((9 10) (11 12)))) 78))))
+
+
+(let ([tmp.ps (make-temporary-file "redex-derivations-ps-test~a.ps")])
+  (dynamic-wind
+   void
+   (λ () (derivation/ps
+          (derivation '(P foo) "foo"
+                      (list (derivation '(P foo) "foo" '())
+                            (derivation '(P foo) "foo" '())))
+          tmp.ps))
+   (λ ()
+     (delete-file tmp.ps))))

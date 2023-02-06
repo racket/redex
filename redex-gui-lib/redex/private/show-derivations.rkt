@@ -131,6 +131,10 @@
 (define derivation-pb%
   (class pasteboard%
 
+    ;; this method is called to give the pasteboard a
+    ;; chance to relayout its snips based on font size
+    (define/public (re-run-layout) (void))
+
     (init-field pp racket-colors?)
     (define root-snip #f)
     (define/public (set-root ts) (set! root-snip ts))
