@@ -17,11 +17,12 @@ jobs:
           sudo: never
           dest: '"${HOME}/racket"'
           local_catalogs: '${GITHUB_WORKSPACE}'
-      - uses: GabrielBB/xvfb-action@v1
       - run: mkdir ~/.racket/
       - run: chmod -R a+w ~/.racket/
       - name: Install the Local Checkout of Redex
         run: |
              raco pkg install --auto -i --no-setup --skip-installed redex-test
              raco pkg update -i --auto --no-setup redex/ redex-doc/ redex-gui-lib/ redex-pict-lib/ redex-benchmark/ redex-examples/ redex-lib/ redex-test/
-      - run: racket -l redex/tests/run-tests -- --no-bitmap-tests --examples --set-exit-status-on-stderr
+      - uses: GabrielBB/xvfb-action@v1
+        with:
+          run: racket -l redex/tests/run-tests -- --no-bitmap-tests --examples --set-exit-status-on-stderr
