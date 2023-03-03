@@ -1,0 +1,27 @@
+on: [push, pull_request]
+name: CI
+jobs:
+  build:
+    name: "Build on Racket"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@master
+      - uses: Bogdanp/setup-racket@v1.9.1
+        with:
+          architecture: x64
+          distribution: full
+          variant: "CS"
+          version: "current"
+          sudo: never
+          dest: '"${HOME}/racket"'
+          local_catalogs: '${GITHUB_WORKSPACE}'
+      - uses: GabrielBB/xvfb-action@v1
+      - run: mkdir ~/.racket/
+      - run: chmod -R a+w ~/.racket/
+      - name: Install the Local Checkout of Redex
+        run: |
+             raco pkg install --auto -i --no-setup --skip-installed redex-test
+             raco pkg update -i --auto --no-setup redex/ redex-doc/ redex-gui-lib/ redex-pict-lib/ redex-benchmark/ redex-examples/ redex-lib/ redex-test/
+      - run: racket -l redex/tests/run-tests -- --no-bitmap-tests --examples --set-exit-status-on-stderr

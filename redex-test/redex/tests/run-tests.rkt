@@ -1,4 +1,5 @@
 #lang racket/base
+(require racket/port)
 
 ;; require this file to run all of the test suites for redex.
 
@@ -10,11 +11,39 @@
          "private/bitmap-test-util.rkt")
 
 (define test-examples? #f)
+(define set-exit-status-on-stderr? #f)
+(define skip-bitmap-tests? #f)
 
 (command-line
  #:once-each
  [("--no-bitmap-gui") "skips the GUI for bitmap-test.rkt" (show-bitmap-test-gui? #f)]
- [("--examples") "executes the tests in the examples directory" (set! test-examples? #t)])
+ [("--no-bitmap-tests") "skips the bitmap tests" (set! skip-bitmap-tests? #t)]
+ [("--examples") "executes the tests in the examples directory" (set! test-examples? #t)]
+ [("--set-exit-status-on-stderr") "executes the tests in the examples directory" (set! set-exit-status-on-stderr? #t)])
+
+(define watching-stderr-and-printed-to-stderr?
+  (cond
+    [set-exit-status-on-stderr?
+     (define printed-to-stderr? #f)
+     (define-values (in out) (make-pipe 1))
+     (define err (current-error-port))
+     (current-error-port out)
+     (define copy-thread
+       (thread
+        (λ ()
+          (define b (read-byte in))
+          (unless (eof-object? b)
+            (set! printed-to-stderr? #t)
+            (write-byte b err)
+            (copy-port in err)
+            (close-input-port in)))))
+     (λ ()
+       (current-error-port err)
+       (close-output-port out)
+       (thread-wait copy-thread)
+       (flush-output err)
+       printed-to-stderr?)]
+    [else (λ () #f)]))
 
 (define test-files
   (append
@@ -72,6 +101,11 @@
   (flush-output (current-error-port))
   (flush-output (current-output-port)))
 
+(define exempted-tests
+  '("color-test.rkt"
+    "ryr-test.rkt"
+    "binding-performance-test.rkt"))
+
 ;; check to make sure all the files in this directory
 ;; are actually known by this testing file
 (for ([file (in-list (directory-list here))])
@@ -80,8 +114,8 @@
     (unless (or (member str test-files)
                 (regexp-match? #rx"~$" str)
                 (regexp-match? #rx"[.]bak$" str)
-                (member str '("run-tests.rkt" "color-test.rkt" "ryr-test.rkt"
-                                              "binding-performance-test.rkt")))
+                (equal? str "run-tests.rkt")
+                (member str exempted-tests))
       (eprintf "WARNING: unknown file ~a\n" file))))
 
 (for ([test-file (in-list test-files)])
@@ -98,12 +132,18 @@
     (if (regexp-match #rx"<redex-examples>" file)
         (build-path examples-path (cadr (regexp-match #rx"^<redex-examples>/(.*)$" file)))
         (build-path here file)))
-  (action (dynamic-require path provided))
+  (cond
+    [(and (equal? file "bitmap-test.rkt")
+          skip-bitmap-tests?)
+     (printf "skipping the bitmap tests\n")]
+    [else
+     (action (dynamic-require path provided))])
   (flush))
 
-(printf "\nWARNING: didn't run color-test.rkt\n")
+(printf "\nWARNING: didn't run ~s\n" exempted-tests)
 (flush)
-
+(when (watching-stderr-and-printed-to-stderr?)
+  (exit 1))
 
 ;; Test mode:
 (module test racket/base
