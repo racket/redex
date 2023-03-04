@@ -23,5 +23,4 @@ jobs:
         run: |
              raco pkg install --auto -i --no-setup --skip-installed redex-test
              raco pkg update -i --auto --no-setup redex/ redex-doc/ redex-gui-lib/ redex-pict-lib/ redex-benchmark/ redex-examples/ redex-lib/ redex-test/
-      - run: find ~/racket-current-CS -type d -name errortrace | grep compiled/errortrace | xargs rm -rf 
       - run: xvfb-run -a racket -l redex/tests/run-tests -- --no-bitmap-tests --examples --set-exit-status-on-stderr
