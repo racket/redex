@@ -354,18 +354,16 @@ This function sets @racket[dc-for-text-size]. See also
                (term (to-nat (add K_1 K_2)))))]
 }
 
-@deftogether[(@defform[(render-relation relation-name)]{}
-              @defform/none[#:literals (render-relation)
-                                       (render-relation relation-name filename)]{})]{
+@defform*[[(render-relation relation-name)
+           (render-relation relation-name filename)]]{
 Like @racket[render-metafunction] but for relations.
 
 This function sets @racket[dc-for-text-size]. See also
 @racket[relation->pict].
 }
 
-@deftogether[(@defform[(render-judgment-form judgment-form-name)]{}
-              @defform/none[#:literals (render-judgment-form)
-                                       (render-judgment-form judgment-form-name filename)]{})]{
+@defform*[[(render-judgment-form judgment-form-name)
+           (render-judgment-form judgment-form-name filename)]]{
 Like @racket[render-metafunction] but for judgment forms. The
 @racket[judgment-form-cases] parameter can be used to control which clauses
 are rendered.
