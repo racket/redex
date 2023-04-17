@@ -627,6 +627,13 @@ helpful when debugging.
  See @racket[define-judgment-form] for more examples.
 }
 
+@defproc[(judgment-form->rule-names [r judgment-form?])
+         (listof symbol?)]{
+
+Returns the names of the judgment form's named clauses.
+}
+
+
 @defform[(build-derivations judgment-or-relation)]{
   Constructs all of the @racket[derivation] trees
   for @racket[judgment-or-relation].

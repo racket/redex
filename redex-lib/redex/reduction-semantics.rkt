@@ -95,6 +95,7 @@
 (provide/contract
  [current-traced-metafunctions (parameter/c (or/c 'all (listof symbol?)))]
  [reduction-relation->rule-names (-> reduction-relation? (listof symbol?))]
+ [judgment-form->rule-names (-> judgment-form? (listof symbol?))]
  [language-nts (-> compiled-lang? (listof symbol?))]
  [set-cache-size! (-> number? void?)]
  [apply-reduction-relation (-> (or/c IO-judgment-form? reduction-relation?)

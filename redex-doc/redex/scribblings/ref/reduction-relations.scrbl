@@ -207,6 +207,8 @@ arguments would have stepped.
          (listof symbol?)]{
 
 Returns the names of the reduction relation's named clauses.
+
+ @history[#:added "1.20"]
 }
 
 @defform[(compatible-closure reduction-relation lang non-terminal)]{

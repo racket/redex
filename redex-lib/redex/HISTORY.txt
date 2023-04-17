@@ -1,3 +1,7 @@
+v8.10
+
+  * added judgment-form->rule-names
+
 v8.9
 
   * bug fix

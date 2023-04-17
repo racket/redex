@@ -20,7 +20,7 @@
 
 (define pkg-authors '(robby bfetscher))
 
-(define version "1.19")
+(define version "1.20")
 
 (define license
   '(Apache-2.0 OR MIT))
