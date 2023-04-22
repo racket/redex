@@ -175,6 +175,7 @@
         (send text set-styles-sticky #f)
         (send text erase)
         (real-pp expr port char-width text)
+        (close-output-port port)
         (unless (zero? (send text last-position))
           (when (char=? #\newline (send text get-character (- (send text last-position) 1)))
             (send text delete (- (send text last-position) 1) (send text last-position))))
