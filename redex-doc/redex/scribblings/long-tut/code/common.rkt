@@ -27,7 +27,7 @@
  subst)
 
 ;; -----------------------------------------------------------------------------
-(require redex)
+(require redex/reduction-semantics)
 
 (define-language Lambda
   (e ::=

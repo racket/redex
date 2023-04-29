@@ -3,6 +3,10 @@
 @(require "shared.rkt"
           racket/runtime-path)
 @(define-runtime-path traces.png "traces.png")
+@(define redex-eval (let ([e (make-base-eval)])
+                      (e '(require redex/reduction-semantics
+                                   redex/scribblings/long-tut/code/common))
+                      e))
 
 @; ---------------------------------------------------------------------------------------------------
 @title[#:tag "tue-mor"]{Reductions and Semantics}
@@ -43,45 +47,21 @@ compatible with all syntactic constructions.
 An alternative and equivalent method is to introduce the notion of a
 context and to use it to generate the reduction relation (or equivalence)
 from the notion of reduction:
-@;%
-@(begin
-#reader scribble/comment-reader
-(racketblock
-(require "common.rkt")
 
-(define-extended-language Lambda-calculus Lambda
-  (e ::= .... n)
-  (n ::= natural)
-  (v ::= (lambda (x ...) e))
-   
-  ;; a context is an expression with one hole in lieu of a sub-expression 
-  (C ::=
-     hole
-     (e ... C e ...)
-     (lambda (x_!_ ...) C)))
+@code-from-file["code/tue-mor.rkt"
+                #rx"define-extended-language"
+                #:eval redex-eval
+                #:exp-count 3]
+@code-from-file["code/tue-mor.rkt"
+                #rx";; context tests"
+                #:exp-count 6]
 
-(define Context? (redex-match? Lambda-calculus C))
-
-(module+ test
-  (define C1 (term ((lambda (x y) x) hole 1)))
-  (define C2 (term ((lambda (x y) hole) 0 1)))
-  (test-equal (Context? C1) #true)
-  (test-equal (Context? C2) #true))
-))
 @;%
 Filling the hole of context with an expression yields an expression: 
-@;%
-@(begin
-#reader scribble/comment-reader
-(racketblock
-(module+ test
-  (define e1 (term (in-hole ,C1 1)))
-  (define e2 (term (in-hole ,C2 x)))
+@code-from-file["code/tue-mor.rkt"
+                #rx";; plugging tests"
+                #:exp-count 6]
 
-  (test-equal (in-Lambda/n? e1) #true)
-  (test-equal (in-Lambda/n? e2) #true))
-))
-@;%
 What does filling the hole of a context with a context yield?
 
 @; -----------------------------------------------------------------------------

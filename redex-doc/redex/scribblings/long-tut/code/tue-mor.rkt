@@ -1,6 +1,6 @@
 #lang racket
-(require redex "common.rkt" (only-in "mon-aft.rkt" fv))
 (provide eval-value)
+(require redex "common.rkt" (only-in "mon-aft.rkt" fv))
 
 (define-extended-language Lambda-calculus Lambda
   (e ::= .... n)
@@ -24,6 +24,7 @@
     any_rhs)])
 
 (module+ test
+  ;; context tests
   (define C1 (term (((lambda (x) (lambda (y) x)) hole) 1)))
   (define C2 (term (((lambda (x) (lambda (y) hole)) 0) 1)))
   (define C3 (term (let ([x hole][y 3]) (lambda (a) (a (((x 1) y) 2))))))
@@ -32,13 +33,15 @@
   (test-equal (context? C2) #true)
   (test-equal (context? C3) #true)
   
+  ;; plugging tests
   (define e1 (term (in-hole ,C1 1)))
   (define e2 (term (in-hole ,C2 x)))
   (define e3 (term (in-hole ,C3 (lambda (x) (lambda (y) (lambda (z) x))))))
   
   (test-equal (lambda? e1) #true)
   (test-equal (lambda? e2) #true)
-  (test-equal (lambda? e3) #true))
+  (test-equal (lambda? e3) #true)
+  )
 
 ;; -----------------------------------------------------------------------------
 ;; model the λβv calculus, reductions only 
