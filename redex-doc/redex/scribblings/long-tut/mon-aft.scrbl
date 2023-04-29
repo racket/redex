@@ -94,10 +94,8 @@ document functions by example without introducing tests into client modules
 that require the module for the definitions:
 @;
 @code-from-file["code/mon-aft.rkt"
-                #rx";; unique-vars metafunction start"
-                #:eval redex-eval
+                #rx";; unique-vars tests start"
                 #:skip-lines 1]
-
 
 Here are two more metafunctions that use patterns in interesting ways:
 

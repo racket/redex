@@ -87,7 +87,7 @@ to the top of your file:
     [(_ file:string rx-start:regexp 
         (~optional (~seq #:eval eval))
         (~optional (~seq #:exp-count number-of-expressions:integer))
-        (~optional (~seq #:skip-lines number-of-lines-to-skip:integer))
+        (~optional (~seq #:skip-lines number-of-lines-to-skip:nat))
         (~optional (~seq #:extra-code (extra-code:string ...))))
      (define doing-eval? (attribute eval))
      (define code
