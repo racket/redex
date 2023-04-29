@@ -4,9 +4,9 @@
 
 (define-extended-language Lambda-calculus Lambda
   (e ::= .... n)
-  (v ::= n (lambda (x ...) e))
+  (v ::= n (lambda (x) e))
   (n ::= number)
-  (C ::= hole (e ... C e ...) (lambda (x_!_ ...) C)))
+  (C ::= hole (e ... C e ...) (lambda (x) C)))
 
 (define lambda? (redex-match? Lambda-calculus e))
 (define context? (redex-match? Lambda-calculus C))
@@ -16,13 +16,17 @@
 (define-metafunction Lambda-calculus
   ;;  let : ((x e) ...) e -> e but e plus hole 
   let : ((x any) ...) any -> any
-  [(let ([x_lhs any_rhs] ...) any_body)
-   ((lambda (x_lhs ...) any_body) any_rhs ...)])
+  [(let () any_body) any_body]
+  [(let ([x_lhs any_rhs] [x_lhs-more any_rhs-more] ...) any_body)
+   ((lambda (x_lhs)
+      (let ([x_lhs-more any_rhs-more] ...)
+        any_body))
+    any_rhs)])
 
 (module+ test
-  (define C1 (term ((lambda (x y) x) hole 1)))
-  (define C2 (term ((lambda (x y) hole) 0 1)))
-  (define C3 (term (let ([x hole][y 3]) (lambda (a) (a (x 1 y 2))))))
+  (define C1 (term (((lambda (x) (lambda (y) x)) hole) 1)))
+  (define C2 (term (((lambda (x) (lambda (y) hole)) 0) 1)))
+  (define C3 (term (let ([x hole][y 3]) (lambda (a) (a (((x 1) y) 2))))))
   
   (test-equal (context? C1) #true)
   (test-equal (context? C2) #true)
@@ -30,7 +34,7 @@
   
   (define e1 (term (in-hole ,C1 1)))
   (define e2 (term (in-hole ,C2 x)))
-  (define e3 (term (in-hole ,C3 (lambda (x y z) x))))
+  (define e3 (term (in-hole ,C3 (lambda (x) (lambda (y) (lambda (z) x))))))
   
   (test-equal (lambda? e1) #true)
   (test-equal (lambda? e2) #true)
@@ -48,23 +52,26 @@
   ;; reduces to TWO expressions 
   (define e4 ;; a term that contains TWO βv redexes 
     (term
-     ((lambda (x y)
-        [(lambda (f) (f (x 1 y 2)))
-         (lambda (w) 42)])
-      [(lambda (x) x) (lambda (a b c) a)]
+     (((lambda (x)
+         (lambda (y)
+           [(lambda (f) (f (((x 1) y) 2)))
+            (lambda (w) 42)]))
+       [(lambda (x) x) (lambda (a) (lambda (b) (lambda (c) a)))])
       3)))
   (define e4-one-step
     (term
-     ((lambda (x y)
-        ((lambda (f) (f (x 1 y 2)))
-         (lambda (w) 42)))
-      (lambda (a b c) a)
+     (((lambda (x)
+         (lambda (y)
+           ((lambda (f) (f (((x 1) y) 2)))
+            (lambda (w) 42))))
+       (lambda (a) (lambda (b) (lambda (c) a))))
       3)))
   (define e4-other-step
     (term
-     ((lambda (x y)
-        ((lambda (w) 42) (x 1 y 2)))
-      ((lambda (x) x) (lambda (a b c) a))
+     (((lambda (x)
+         (lambda (y)
+           ((lambda (w) 42) (((x 1) y) 2))))
+       ((lambda (x) x) (lambda (a) (lambda (b) (lambda (c) a)))))
       3)))
   
   (test--> -->βv #:equiv =α/racket e4 e4-other-step e4-one-step)
@@ -73,8 +80,8 @@
 (define -->βv 
   (reduction-relation
    Lambda-calculus
-   (--> (in-hole C ((lambda (x_1 ..._n) e) v_1 ..._n))
-        (in-hole C (subst ([v_1 x_1] ...) e))
+   (--> (in-hole C ((lambda (x) e) v))
+        (in-hole C (subst ([v x]) e))
         βv)))
 
 #;
@@ -94,8 +101,8 @@
 (define s-->βv
   (reduction-relation
    Standard
-   (--> (in-hole E ((lambda (x_1 ..._n) e) v_1 ..._n))
-        (in-hole E (subst ((v_1 x_1) ...) e)))))
+   (--> (in-hole E ((lambda (x) e) v))
+        (in-hole E (subst ([v x]) e)))))
 
 ;; -----------------------------------------------------------------------------
 ;; a semantics
