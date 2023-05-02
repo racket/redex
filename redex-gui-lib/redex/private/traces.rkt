@@ -160,6 +160,13 @@
     (post-process graph-pb)
     (print-to-ps graph-pb canvas filename)))
 
+;; this function breaks the connection between the
+;; graph-pb and the canvas and does not restore it;
+;; it used to restore it but this seemed to cause
+;; some editor invariant to go wrong which resulted
+;; in the sequence-lock being grabbed but not released
+;; but since we don't need to use this pasteboard again
+;; we can just trash it.
 (define (print-to-ps graph-pb canvas filename)
   (let ([admin (send graph-pb get-admin)]
         [printing-admin (new printing-editor-admin% [ed graph-pb])])
@@ -179,17 +186,9 @@
          (send ps-setup set-mode 'file)
          (parameterize ([current-ps-setup ps-setup])
            (send graph-pb print #f #f 'postscript #f #f #t))))
-     
      (λ ()
-       (send graph-pb set-admin admin)
-       (send canvas set-editor graph-pb)
-       (send printing-admin shutdown) ;; do this early
-       (let loop ([snip (send graph-pb find-first-snip)])
-         (when snip
-           (send snip size-cache-invalid)
-           (loop (send snip next))))
-       (send graph-pb size-cache-invalid)
-       (send graph-pb re-run-layout)))))
+       (send graph-pb set-admin #f)
+       (send printing-admin shutdown)))))
 
 (define printing-editor-admin%
   (class editor-admin%

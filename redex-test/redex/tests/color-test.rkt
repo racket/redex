@@ -123,3 +123,19 @@ Expect the second step to split and show two steps.
           tmp.ps))
    (λ ()
      (delete-file tmp.ps))))
+
+(let ()
+  (define-language L
+    (n ::= Z (S n)))
+  (define tmp.ps (make-temporary-file "redex-traces-ps-test~a.ps"))
+  (dynamic-wind
+   void
+   (λ ()
+     (traces/ps (reduction-relation
+                 L
+                 (--> (S n) n))
+                (term (S (S (S Z))))
+                tmp.ps))
+   (λ ()
+     (delete-file tmp.ps))))
+

@@ -203,18 +203,22 @@
 (define (find-snip-height ed snip)
   (let ([bt (box 0)]
         [bb (box 0)])
-    (send ed get-snip-location snip #f bt #f)
-    (send ed get-snip-location snip #f bb #t)
-    (- (unbox bb)
-       (unbox bt))))
+    (define l1 (send ed get-snip-location snip #f bt #f))
+    (define l2 (send ed get-snip-location snip #f bb #t))
+    (if (and l1 l2)
+        (- (unbox bb)
+           (unbox bt))
+        0)))
 
 (define (find-snip-width ed snip)
   (let ([br (box 0)]
         [bl (box 0)])
-    (send ed get-snip-location snip br #f #t)
-    (send ed get-snip-location snip bl #f #f)
-    (- (unbox br)
-       (unbox bl))))
+    (define l1 (send ed get-snip-location snip br #f #t))
+    (define l2 (send ed get-snip-location snip bl #f #f))
+    (if (and l1 l2)
+        (- (unbox br)
+           (unbox bl))
+        0)))
 
 (define initial-font-size
   (make-parameter
