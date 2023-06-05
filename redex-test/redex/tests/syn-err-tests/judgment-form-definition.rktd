@@ -236,3 +236,18 @@
      (define-extended-judgment-form L f1
        #:mode (f2))
      (void))))
+
+(#rx"n-hole's first argument is expected to match exactly one hole"
+ ([IH (in-hole EC (! s))])
+ (let ()
+   (define-language L
+     (e ::= (! s) N (op e e))
+     (EC ::= hole (op EC e) (op v e))
+     (v ::= k^ (par v v))
+     (N ::= natural))
+   (define-judgment-form L
+     #:mode (-->& I I O O)
+     [--------------------------------------
+      (-->& IH E
+            (in-hole EC nothing) (extend E s tt))])
+   (void)))
