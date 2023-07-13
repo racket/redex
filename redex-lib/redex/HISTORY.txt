@@ -2,6 +2,8 @@ v8.10
 
   * added judgment-form->rule-names
 
+  * unbreak traces/ps
+
 v8.9
 
   * bug fix
