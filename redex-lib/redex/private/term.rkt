@@ -27,10 +27,10 @@ see also rewrite-side-conditions.rkt for some restrictions/changes there
          "lang-struct.rkt"
          "matcher.rkt")
 
-(provide term term-let define-term
+(provide term term-let term-define define-term
          hole in-hole
          #%mf-apply
-         term-let/error-name term-let-fn term-define-fn
+         term-let/error-name term-define/error-name term-let-fn term-define-fn
          (for-syntax term-rewrite
                      term-fn-id?
                      term-temp->pat
@@ -607,6 +607,77 @@ see also rewrite-side-conditions.rkt for some restrictions/changes there
         (term-let/error-name term-let ((x rhs) ...) body1 body2 ...)))]
     [(_ x)
      (raise-syntax-error 'term-let "expected at least one body" stx)]))
+
+(define-syntax (term-define/error-name stx)
+  (syntax-case stx ()
+    [(_ error-name x rhs)
+     (let ()
+       (define-values (orig-names new-names depths new-x)
+         (let loop ([stx #'x] [depth 0] [seen-an-ellipsis-at-this-depth? #f])
+           (syntax-case stx (...)
+             [x 
+              (and (identifier? #'x)
+                   (not (free-identifier=? (quote-syntax ...) #'x)))
+              (let ([new-name (datum->syntax #'here (syntax-e #'x) #'x #'x)])
+                (values (list #'x)
+                        (list new-name)
+                        (list depth)
+                        new-name))]
+             [(x (... ...) . xs)
+              (let-values ([(orig-names new-names depths new-pat)
+                            (let-values ([(orig-names1 new-names1 depths1 new-pat1)
+                                          (loop #'x (add1 depth) #f)]
+                                         [(orig-names2 new-names2 depths2 new-pat2)
+                                          (loop #'xs depth #t)])
+                              (values (append orig-names1 orig-names2)
+                                      (append new-names1 new-names2)
+                                      (append depths1 depths2)
+                                      (cons new-pat1 new-pat2)))])
+                (when seen-an-ellipsis-at-this-depth?
+                  (raise-syntax-error (syntax-e #'error-name)
+                                      "only one ellipsis is allowed in each sequence"
+                                      (cadr (syntax->list stx))))
+                (values orig-names new-names depths 
+                        (datum->syntax stx
+                                       (list* (car new-pat) #'(... ...) (cdr new-pat))
+                                       stx stx)))]
+             [(x . xs)
+              (let-values ([(orig-names1 new-names1 depths1 new-pat1)
+                            (loop #'x depth #f)]
+                           [(orig-names2 new-names2 depths2 new-pat2)
+                            (loop #'xs depth seen-an-ellipsis-at-this-depth?)])
+                (values (append orig-names1 orig-names2)
+                        (append new-names1 new-names2)
+                        (append depths1 depths2)
+                        (datum->syntax stx (cons new-pat1 new-pat2) stx stx)))]
+             [_
+              (values '() '() '() stx)])))
+       (with-syntax ([(orig-names ...) orig-names]
+                     [(new-names ...) new-names]
+                     [(depths ...) depths]
+                     [new-x new-x]
+                     [no-match
+                      (forward-errortrace-prop
+                       #'rhs
+                       (syntax/loc #'rhs
+                         (error 'error-name "term ~s does not match pattern ~s" rhs 'x)))])
+         (forward-errortrace-prop
+          stx
+          (syntax/loc stx
+            (begin
+              (define/with-datum new-x rhs)
+              (define-syntax orig-names
+                (make-term-id #'new-names depths #'orig-names
+                              (forward-id #'orig-names)))
+              ...)))))]))
+
+(define-syntax (term-define stx)
+  (syntax-case stx ()
+    [(_ x rhs)
+     (forward-errortrace-prop
+      stx
+      (syntax/loc stx
+        (term-define/error-name term-define x rhs)))]))
 
 (define-syntax (define-term stx)
   (syntax-parse stx

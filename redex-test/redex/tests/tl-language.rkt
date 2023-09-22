@@ -763,12 +763,15 @@
           (void))
         "redex-define: pattern (_ ... integer _ ...) matched term (0 1) multiple ways")
 
-  (test (with-handlers ([exn:fail:syntax? exn-message])
-          (convert-syntax-error
-           (let ()
-             (redex-define empty-language (any ...) (list 1 2))
-             (void))))
-        "redex-define: defining identifiers under ellipses is not supported"))
+  (test (let ()
+          (redex-define empty-language ((any_hd ... w) ...) '((1 w) (2 w) (3 4 w)))
+          (term (any_hd ... ...)))
+        '(1 2 3 4))
+
+  (test (with-handlers ([exn:fail:redex? exn-message])
+          (redex-define empty-language ((any_hd ... w) ...) '((1 w) (2 w) (3 4 x)))
+          (term (any_hd ... ...)))
+        "redex-define: term ((1 w) (2 w) (3 4 x)) does not match pattern ((any_hd ... w) ...)"))
 
 (let ()
   (define-language A

@@ -42,7 +42,7 @@ stands for repetition unless otherwise indicated):
 
 @item{A term written @racket[_identifier] is equivalent to the
 corresponding symbol, unless the identifier is bound by
-@racket[term-let], @racket[define-term], or a @|pattern| variable or
+@racket[term-let], @racket[term-define], @racket[define-term], or a @|pattern| variable or
 the identifier is @tt{hole} (as below).}
 
 @item{A term written @racket[(_term-sequence ...)] constructs a list of
@@ -86,7 +86,7 @@ Used for construction of a term.
 
 The @racket[term] form behaves similarly to @racket[quasiquote], except for a few special
 forms that are recognized (listed below) and that names bound by
-@racket[term-let] are implicitly substituted with the values that
+@racket[term-let] and @racket[term-define] are implicitly substituted with the values that
 those names were bound to, expanding ellipses as in-place sublists (in
 the same manner as syntax-case patterns).
 
@@ -166,6 +166,34 @@ This form is a lower-level form in Redex, and not really designed to
 be used directly. For @racket[let]-like forms that use
 Redex's full pattern matching facilities, see @racket[redex-let],
 @racket[redex-let*], @racket[term-match], @racket[term-match/single].
+
+@examples[
+#:eval redex-eval
+(term-let ([x 1]
+           [y #t]
+           [z '(p q r)])
+  (term (x y z)))
+(term-let ([((init ... last) ...) '((1 2 3 x) (4 5 y))])
+  (term (last ...)))
+(term-let ([((init ... last) ...) '((1 2 3 x) (4 5 y))])
+  (term ((~@ init init) ... ...)))
+]
+}
+
+@defform[(term-define tl-pat expr body)]{
+ The @racket[define] analog of @racket[term-let].
+
+ @examples[
+ #:eval redex-eval
+ (term-define z '(p q r))
+ (term z)
+ (term-define ((init ... last) ...)
+   '((1 2 3 x) (4 5 y)))
+ (term (last ...))
+ (term ((~@ init init) ... ...))
+ ]
+
+ @history[#:added "1.21"]
 }
 
 @defform[(redex-let language ([@#,ttpattern expression] ...) body ...+)]{
@@ -182,7 +210,9 @@ In some contexts, it may be more efficient to use @racket[term-match/single]
 }
 
 @defform[(redex-let* language ([@#,ttpattern expression] ...) body ...+)]{
-The @racket[let*] analog of @racket[redex-let].
+ The @racket[let*] analog of @racket[redex-let].
+
+ @history[#:added "1.21"]
 }
 
 @defform[(redex-define language @#,ttpattern expression)]{
@@ -193,18 +223,19 @@ The @racket[let*] analog of @racket[redex-let].
 
  The form @racket[redex-define] cannot bind identifiers with ellipses.
 
- @examples[#:eval
-           redex-eval
-           (define-language nums
-             (AE number
-                 (+ AE AE)))
-           (redex-define nums (name AE_all (+ AE_common AE_common)) (term (+ 4 4)))
-           (term (AE_all AE_common))
-           (eval:error (redex-define nums (+ AE_same AE_same) (term (+ 6 3))))
-           (eval:error (redex-define nums (number ...) (term (2 1 7))))
+ @examples[
+ #:eval redex-eval
+ (define-language nums
+   (AE number
+       (+ AE AE)))
+ (redex-define nums (name AE_all (+ AE_common AE_common)) (term (+ 4 4)))
+ (term (AE_all AE_common))
+ (eval:error (redex-define nums (+ AE_same AE_same) (term (+ 6 3))))
+ (redex-define nums (number ...) (term (2 1 7)))
+ (term ((~@ number number) ...))
  ]
 
- @history[#:added "1.13"]
+ @history[#:added "1.21"]
 }
 
 @defform[(define-term identifier @#,tttterm)]{

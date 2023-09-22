@@ -34,6 +34,7 @@
          compiled-lang?
          term
          term-let
+         term-define
          define-metafunction
          define-metafunction/extension
          define-relation
