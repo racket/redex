@@ -180,7 +180,7 @@ Redex's full pattern matching facilities, see @racket[redex-let],
 ]
 }
 
-@defform[(term-define tl-pat expr body)]{
+@defform[(term-define tl-pat expr)]{
  The @racket[define] analog of @racket[term-let].
 
  @examples[
@@ -210,9 +210,7 @@ In some contexts, it may be more efficient to use @racket[term-match/single]
 }
 
 @defform[(redex-let* language ([@#,ttpattern expression] ...) body ...+)]{
- The @racket[let*] analog of @racket[redex-let].
-
- @history[#:added "1.21"]
+The @racket[let*] analog of @racket[redex-let].
 }
 
 @defform[(redex-define language @#,ttpattern expression)]{
@@ -221,17 +219,21 @@ In some contexts, it may be more efficient to use @racket[term-match/single]
  matches the result against @|ttpattern|
  and binds the corresponding identifiers.
 
- The form @racket[redex-define] cannot bind identifiers with ellipses.
-
  @examples[
  #:eval redex-eval
- (define-language nums
+ (define-language Larith
    (AE number
        (+ AE AE)))
- (redex-define nums (name AE_all (+ AE_common AE_common)) (term (+ 4 4)))
+ (redex-define Larith (name AE_all (+ AE_common AE_common)) (term (+ 4 4)))
  (term (AE_all AE_common))
- (eval:error (redex-define nums (+ AE_same AE_same) (term (+ 6 3))))
- (redex-define nums (number ...) (term (2 1 7)))
+ (eval:error (redex-define Larith AE_stx-err (term (+ (+ 0 #f) 1))))
+ (eval:error (redex-define Larith (+ AE_same AE_same) (term (+ 6 3))))
+ ]
+
+@examples[
+ #:eval redex-eval
+ (define-language Lempty)
+ (redex-define Lempty (number ...) (term (2 1 7)))
  (term ((~@ number number) ...))
  ]
 
