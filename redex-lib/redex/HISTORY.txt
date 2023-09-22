@@ -1,3 +1,7 @@
+v8.11
+
+  * added `redex-define`, thanks to Shu-Hung You
+
 v8.10
 
   * added judgment-form->rule-names
