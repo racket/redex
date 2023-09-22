@@ -23,4 +23,6 @@ jobs:
         run: |
              raco pkg install --auto -i --no-setup --skip-installed redex-test
              raco pkg update -i --auto --no-setup redex/ redex-doc/ redex-gui-lib/ redex-pict-lib/ redex-benchmark/ redex-examples/ redex-lib/ redex-test/
+      - name: Compile the Local Checkout of Redex
+        run: raco setup --pkgs redex
       - run: xvfb-run -a racket -l redex/tests/run-tests -- --no-bitmap-tests --examples --set-exit-status-on-stderr
