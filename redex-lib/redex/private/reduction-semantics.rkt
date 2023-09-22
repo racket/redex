@@ -34,6 +34,7 @@
                      "binding-forms-compiler.rkt"
                      syntax/boundmap
                      syntax/id-table
+                     racket/sequence
                      racket/base
                      racket/list
                      syntax/parse
@@ -75,7 +76,6 @@
                                                                       (syntax-e #'form-name)
                                                                       #t x))
                            (syntax->list (syntax (pattern ...))))]
-                     [(cp-x ...) (generate-temporaries #'(pattern ...))]
                      [make-matcher make-matcher])
          (with-syntax ([(mtch-procs ...)
                         (for/list ([names/ellipses
@@ -150,6 +150,7 @@
       (syntax-case stx ()
         [(form-name lang pattern rhs)
          (begin
+           ;; modified from term-matcher
            (unless (identifier? #'lang)
              (raise-syntax-error (syntax-e #'form-name)
                                  "expected an identifier in the language position" stx #'lang))
@@ -157,30 +158,41 @@
                           (rewrite-side-conditions/check-errs #'lang
                                                               (syntax-e #'form-name)
                                                               #t #'pattern)])
-             (define name-under-ellipses
-               (for/first ([name (in-list (syntax->list #'(names ...)))]
-                           [name/ellipse (in-list (syntax->list #'(names/ellipses ...)))]
-                           #:unless (identifier? name/ellipse))
-                 name))
-             (when name-under-ellipses
-               (raise-syntax-error (syntax-e #'form-name)
-                                   "defining identifiers under ellipses is not supported"
-                                   stx
-                                   name-under-ellipses))
-             (with-syntax ([(matched ...) (generate-temporaries (syntax->list #'(names ...)))])
+             ;; modified from rewrite-side-conditions.rkt:bind-pattern-names
+             (define known (make-free-identifier-mapping))
+             (define (get-id stx)
+               (syntax-case stx ()
+                 [(x . y) (get-id #'x)]
+                 [x (identifier? #'x) #'x]))
+             (define binds
+               #'((lookup-binding (mtch-bindings match) 'names) ...))
+             ;; filter out duplicate bindings
+             (define/with-syntax ((names/nodup names/ellipses/nodup binds/nodup) ...)
+               (for/list ([names (in-syntax #'(names ...))]
+                          [names/ellipsis (in-syntax #'(names/ellipses ...))]
+                          [binds (in-syntax binds)]
+                          #:unless (free-identifier-mapping-get
+                                    known
+                                    (get-id names/ellipsis)
+                                    (λ () #f)))
+                 (free-identifier-mapping-put!
+                  known
+                  (get-id names/ellipsis)
+                  #t)
+                 (list names names/ellipsis binds)))
+             (with-syntax ([(names/tmp/nodup ...) (generate-temporaries (syntax->list #'(names/nodup ...)))])
+               ;; modified from term-matcher
                #`(begin
                    syncheck-expr
-                   (define-values (matched ...)
+                   (define-values (names/tmp/nodup ...)
                      ((term-match/single/proc
                        'form-name
                        lang
                        '(pattern)
                        (list (compile-pattern lang `side-conditions-rewritten #t))
-                       (list
-                        (λ (match)
-                          (values (lookup-binding (mtch-bindings match) 'names) ...))))
+                       (list (λ (match) (values binds/nodup ...))))
                       rhs))
-                   (define-term names ,matched) ...))))]))
+                   (term-define/error-name redex-define names/ellipses/nodup names/tmp/nodup) ...))))]))
     
     (define (redex-let stx)
       (define-values (form-name nts)
