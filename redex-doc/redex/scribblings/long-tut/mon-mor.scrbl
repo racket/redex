@@ -74,8 +74,9 @@ All of the above is mathematics but it is just that,
 mathematics. It might be considered theory of computation,
 but it is not theory of programming languages. But we can
 use these ideas to create a theory of programming languages.
-Plotkin's 1974 TCS paper on call-by-name versus
-call-by-value shows how to create a theory of programming
+@link["https://homepages.inf.ed.ac.uk/gdp/publications/cbn_cbv_lambda.pdf"]{
+ Plotkin's 1974 TCS paper on call-by-name versus
+ call-by-value} shows how to create a theory of programming
 languages.
 
 In addition, Plotkin's paper also sketches several research programs,
