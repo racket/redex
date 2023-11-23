@@ -2,7 +2,8 @@
 
 @(require racket/runtime-path)
 
-@(require (for-label redex/reduction-semantics))
+@(require (for-label racket/base
+                     redex/reduction-semantics))
 
 @; ---------------------------------------------------------------------------------------------------
 @title[#:tag "redex2015"]{Long Tutorial}
@@ -31,6 +32,7 @@ run July 27–31, 2015 at the University of Utah.
 @(define (load-it file)
    (apply
     typeset-code
+    #:context #'here
     (call-with-input-file file
       (λ (port)
         (for/list ([l (in-lines port)])
