@@ -2,7 +2,9 @@
 
 @(require racket/runtime-path
           scribble/core
-          (for-syntax racket/base))
+          (for-syntax racket/base)
+          (for-label racket/base
+                     redex/reduction-semantics))
 
 @(define-syntax (sol stx)
    (syntax-case stx ()
@@ -12,29 +14,29 @@
             (define-runtime-path filename filename-str)
             (fetch-solution filename)))]))
 
+@(define (get-lines filename)
+   (call-with-input-file filename
+     (λ (port)
+       (for/list ([l (in-lines port)])
+         (string-append l "\n")))))
+
 @(define-runtime-path common.rkt "common.rkt")
+@(define common-code
+   (list (typeset-code
+          "\n"
+          ";;; ------------------------------------------------------------\n"
+          ";;; common.rkt starts here\n")
+         (apply typeset-code #:context #'here (get-lines common.rkt))))
+
 @(define (fetch-solution filename)
-   (define common-needed? #f)
-   (define (get-lines filename)
-     (call-with-input-file filename
-       (λ (port)
-         (for/list ([l (in-lines port)])
-           (string-append l "\n")))))
    (define main-lines (get-lines filename))
+   (define main-code (apply typeset-code #:context #'here main-lines))
    (cond
-     [(ormap (λ (l) (regexp-match #rx"common.rkt" l)) main-lines)
+     [(ormap (λ (l) (regexp-match? #rx"\"common.rkt\"" l)) main-lines)
       (nested-flow
        (style #f '())
-       (list (apply typeset-code main-lines)
-             (apply
-              typeset-code
-              (append
-               '("\n"
-                 ";;; ------------------------------------------------------------\n"
-                 ";;; common.rkt starts here\n"
-                 "\n")
-               (get-lines common.rkt)))))]
-     [else (apply typeset-code main-lines)]))
+       (cons main-code common-code))]
+     [else main-code]))
 
 @; -----------------------------------------------------------------------------
 @title[#:tag "fri-mor" #:style 'toc]{Extended Exercises}
