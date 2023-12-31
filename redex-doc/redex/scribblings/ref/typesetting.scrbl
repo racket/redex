@@ -517,6 +517,20 @@ instead of on the right. The @racket['horizontal-side-conditions-same-line]
 is like @racket['horizontal], except that side-conditions
 are on the same lines as the rule, instead of on their own line below.
 
+ Each of these styles uses the function
+ @racket[rule-pict-info->side-condition-pict] to build the
+ side-conditions and where clauses, passing different values
+ for the @racket[_max-width] argument. The @racket['vertical]
+ and @racket['vertical-overlapping-side-conditions] pass
+ @racket[+inf.0], which means that the side-conditions stay
+ on a single line. The @racket['horizontal],
+ @racket['horizontal-left-align], and
+ @racket['horizontal-side-conditions-same-line] pass the
+ width of left and right-hand sides combined. The
+ @racket['compact-vertical] style offers some configuration,
+ passing the larger of the value of
+ @racket[compact-vertical-min-width] and the width of the
+ left and right-hand sides.
 }
 
 @defthing[reduction-rule-style/c contract?]{
