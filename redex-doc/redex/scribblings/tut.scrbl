@@ -98,7 +98,7 @@ If you are not familiar with Racket, first try
 @other-doc['(lib "quick.scrbl" "scribblings/quick")] or
 @other-doc['(lib "more.scrbl" "scribblings/more")].
 If you wish to follow along with only parts of this tutorial
-but (perhaps using a different IDE or in a text-only
+(perhaps using a different IDE or in a text-only
 context), refer to @secref["reference"] for the full details on
 the constructs presented here.
 
@@ -1059,8 +1059,8 @@ then we can use the pict primitives to combine typeset fragments into a larger w
                  3/2)]
 
 Generally speaking, Redex has reasonable default ways to typeset its
-definitions, except when they escapes to Racket. In that case,
-it typesets the code in a fixed-width font and makes the background pink to call our
+definitions, except when they escape to Racket. In that case,
+it typesets the code in a fixed-width font and makes the background pink to call
 attention to it. While it is possible to use @racket[with-unquote-rewriter] to 
 tell Redex how to typeset those regions, often it is easier to define a metafunction
 and call it. In this case, we can use @racket[different] (defined earlier).
@@ -1115,8 +1115,9 @@ fills as much of the width established by rendering @racket[red].
 
 @exercise[]
 
-Typeset @racket[types]. Use a compound rewriter so a use of @racket[(type Γ e t)]
-is rendered as @racketblock[Γ ⊢ e : t]
+Use @racket[render-judgment-form] to typeset @racket[types].
+Use a compound rewriter so a use of @racket[(type Γ e t)] is
+rendered as @racketblock[Γ ⊢ e : t]
 
 @close-eval[amb-eval]
 

@@ -1,11 +1,11 @@
 #lang scribble/doc
 @(require scribble/manual)
-@title[#:tag "reference"]{The Redex Reference}
+@title[#:style 'toc #:tag "reference"]{The Redex Reference}
 
 @defmodule*/no-declare[(redex)]
 
 The @racketmodname[redex] library provides all of
-the names documented here.
+the names documented in this section.
 
 Alternatively, use the @racketmodname[redex/reduction-semantics] and 
 @racketmodname[redex/pict] libraries, which provide only non-GUI 
