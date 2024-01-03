@@ -93,7 +93,6 @@
          metafunction-cases
          judgment-form-cases
          judgment-form-show-rule-names
-         compact-vertical-min-width
          extend-language-show-union
          extend-language-show-extended-order
          set-arrow-pict!
@@ -326,8 +325,6 @@
                rps)
           (blank 0 (reduction-relation-rule-separation)))))))
 
-(define compact-vertical-min-width (make-parameter 0))
-
 (define rule-picts->pict/vertical 
   (make-vertical-style vr-append))
 
@@ -335,12 +332,12 @@
   (make-vertical-style rbl-superimpose))
 
 (define (rule-picts->pict/compact-vertical rps)
-  (let* ([max-w (apply max
-                       (compact-vertical-min-width)
-                       (map pict-width
-                            (append
-                             (map rule-pict-info-lhs rps)
-                             (map rule-pict-info-rhs rps))))]
+  (let* ([max-w
+          (apply max
+                 (map pict-width
+                      (append
+                       (map rule-pict-info-lhs rps)
+                       (map rule-pict-info-rhs rps))))]
          [scs (map (lambda (rp)
                      (rule-pict-info->side-condition-pict rp max-w))
                    rps)]
@@ -348,7 +345,7 @@
                         (hbl-append (blank (label-space) 0) (rp->pict-label rp)))
                       rps)]
          [total-w (apply max
-                         max-w
+                         max-w ; max-width-of-rule-picts
                          (append (map pict-width scs)
                                  (map (lambda (lbl)
                                         (+ max-w 2 (label-space) (pict-width lbl)))
@@ -360,8 +357,6 @@
                   [lhs (rule-pict-info-lhs rp)]
                   [rhs (rule-pict-info-rhs rp)]
                   [spc (basic-text " " (default-style))]
-                  [sep (blank (compact-vertical-min-width)
-                              (reduction-relation-rule-separation))]
                   [add-label (lambda (p label)
                                (htl-append 
                                 p
@@ -378,14 +373,13 @@
                    (list arrow rhs)
                    (list (blank) sc)))))])
     (define rowss
-      (map one-line rps scs  labels))
+      (map one-line rps scs labels))
     (define all-cols
-      (let ([min-left (blank (compact-vertical-min-width) 0)])
-        (for*/fold ([all-cols (list min-left (blank))]) ([rows (in-list rowss)]
-                                                         [row (in-list rows)])
-          (for/list ([col (in-list all-cols)]
-                     [p (in-list row)])
-            (ltl-superimpose col (blank (pict-width p) 0))))))
+      (for*/fold ([all-cols (list (blank) (blank))]) ([rows (in-list rowss)]
+                                                      [row (in-list rows)])
+        (for/list ([col (in-list all-cols)]
+                   [p (in-list row)])
+          (ltl-superimpose col (blank (pict-width p) 0)))))
     (apply vl-append
            (+ (reduction-relation-rule-extra-separation)
               (reduction-relation-rule-separation))
