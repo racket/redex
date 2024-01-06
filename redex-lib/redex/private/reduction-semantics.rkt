@@ -154,7 +154,7 @@
            (unless (identifier? #'lang)
              (raise-syntax-error (syntax-e #'form-name)
                                  "expected an identifier in the language position" stx #'lang))
-           (with-syntax ([(syncheck-expr side-conditions-rewritten (names ...) (names/ellipses ...))
+           (with-syntax ([(syncheck-expr side-conditions-rewritten (names ...) (names...* ...))
                           (rewrite-side-conditions/check-errs #'lang
                                                               (syntax-e #'form-name)
                                                               #t #'pattern)])
@@ -164,35 +164,35 @@
                (syntax-case stx ()
                  [(x . y) (get-id #'x)]
                  [x (identifier? #'x) #'x]))
-             (define binds
+             (define lookup-exprs
                #'((lookup-binding (mtch-bindings match) 'names) ...))
              ;; filter out duplicate bindings
-             (define/with-syntax ((names/nodup names/ellipses/nodup binds/nodup) ...)
-               (for/list ([names (in-syntax #'(names ...))]
-                          [names/ellipsis (in-syntax #'(names/ellipses ...))]
-                          [binds (in-syntax binds)]
+             (define/with-syntax ((names/nodup names...*/nodup lookup-exprs/nodup) ...)
+               (for/list ([name (in-syntax #'(names ...))]
+                          [name...* (in-syntax #'(names...* ...))]
+                          [lookup-expr (in-syntax lookup-exprs)]
                           #:unless (free-identifier-mapping-get
                                     known
-                                    (get-id names/ellipsis)
+                                    (get-id name...*)
                                     (λ () #f)))
                  (free-identifier-mapping-put!
                   known
-                  (get-id names/ellipsis)
+                  (get-id name...*)
                   #t)
-                 (list names names/ellipsis binds)))
-             (with-syntax ([(names/tmp/nodup ...) (generate-temporaries (syntax->list #'(names/nodup ...)))])
+                 (list name name...* lookup-expr)))
+             (with-syntax ([(fresh-names/nodup ...) (generate-temporaries (syntax->list #'(names/nodup ...)))])
                ;; modified from term-matcher
                #`(begin
                    syncheck-expr
-                   (define-values (names/tmp/nodup ...)
+                   (define-values (fresh-names/nodup ...)
                      ((term-match/single/proc
                        'form-name
                        lang
                        '(pattern)
                        (list (compile-pattern lang `side-conditions-rewritten #t))
-                       (list (λ (match) (values binds/nodup ...))))
+                       (list (λ (match) (values lookup-exprs/nodup ...))))
                       rhs))
-                   (term-define/error-name redex-define names/ellipses/nodup names/tmp/nodup) ...))))]))
+                   (term-define/error-name redex-define names...*/nodup fresh-names/nodup) ...))))]))
     
     (define (redex-let stx)
       (define-values (form-name nts)

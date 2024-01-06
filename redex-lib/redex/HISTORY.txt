@@ -1,6 +1,6 @@
 v8.11
 
-  * added `redex-define`, thanks to Shu-Hung You
+  * added `redex-define` and `term-define`, thanks to Shu-Hung You
 
   * documentation fixes
 
