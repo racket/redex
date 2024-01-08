@@ -1,3 +1,7 @@
+v8.12
+
+  * documentation improvements
+
 v8.11
 
   * added `redex-define` and `term-define`, thanks to Shu-Hung You
