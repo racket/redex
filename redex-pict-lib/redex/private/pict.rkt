@@ -105,7 +105,14 @@
          rule-pict-info->side-condition-pict
 
          linebreaks sc-linebreaks
-         string->bracketed-label)
+         string->bracketed-label
+         compact-vertical-min-width)
+
+;; this isn't used by redex, but it is referred to
+;; by libraries on the pkg build server so export it
+;; in a minimal way
+(define compact-vertical-min-width (make-parameter 0))
+
 
 
 ;                                                                             
