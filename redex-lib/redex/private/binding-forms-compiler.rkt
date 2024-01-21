@@ -234,7 +234,7 @@
                        (let-values
                            ([(_ sub-bspec betas+ellipses)
                              (surface-bspec->pat&bspec
-                              #`((#,sub export-name #:refers-to imports) #:exports exports)
+                              (quasisyntax/loc #'sbspec-sub ((#,sub export-name #:refers-to imports) #:exports exports))
                               form-name)])
                          (for ([beta+ellipsis (in-list betas+ellipses)])
                            ;; add `ellipsis-depth` ellipses around the ones that
@@ -319,8 +319,8 @@
                                        (lambda (lhs rhs) (equal? (first lhs) (first rhs))))))
 
    (define (check-referrents names-and-depths)
-     (for/list ([name-and-depth (in-list names-and-depths)])
-       (unless (assoc (first name-and-depth) pattern-names) 
+     (for ([name-and-depth (in-list names-and-depths)])
+       (unless (assoc (first name-and-depth) pattern-names)
          (raise-syntax-error 
           (syntax-e form-name)
           (format "unknown name imported or exported: ~a" (first name-and-depth))
