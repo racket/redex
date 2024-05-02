@@ -677,7 +677,6 @@ to traverse the whole value at once, rather than one binding form at a time.
       (define maybe-car (if (value-with-spec? redex-val) values car))
       (define maybe-cdr (if (value-with-spec? redex-val) values cdr))
       (define maybe-drop (if (value-with-spec? redex-val) (λ (x y) x) drop))
-      (printf "body ~s\n" body)
       (match body
         ;; I thought that `rename-reference`ing this subterm of the current form was
         ;; going to be a problem: `rename-reference` doesn't have any idea about the
