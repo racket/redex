@@ -1,3 +1,7 @@
+v8.13
+
+  * bug fix
+
 v8.12
 
   * documentation improvements
