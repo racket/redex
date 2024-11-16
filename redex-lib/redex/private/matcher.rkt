@@ -690,24 +690,17 @@ See match-a-pattern.rkt for more details
              (define table (make-hash))
              (hash-set! mismatch-ht name table)
              (set! priors table))
-           (cond
-             [(equal? nesting-depth 'unknown-mismatch-depth)
-              (unless (null? exp)
-                (error 'matcher.rkt 
-                       (string-append "invariant broken; unknown-mismatch-depth should"
-                                      " appear only when the expression is an empty list: ~s")
-                       exp))]
-             [else
-              (let loop ([depth nesting-depth]
-                         [exp exp])
-                (cond
-                  [(= depth 0)
-                   (when (hash-ref priors exp #f)
-                     (fail #f))
-                   (hash-set! priors exp #t)]
-                  [else
-                   (for ([exp-ele (in-list exp)])
-                     (loop (- depth 1) exp-ele))]))])]))
+           (unless (equal? nesting-depth 'unknown-mismatch-depth)
+             (let loop ([depth nesting-depth]
+                        [exp exp])
+               (cond
+                 [(= depth 0)
+                  (when (hash-ref priors exp #f)
+                    (fail #f))
+                  (hash-set! priors exp #t)]
+                 [else
+                  (for ([exp-ele (in-list exp)])
+                    (loop (- depth 1) exp-ele))])))]))
       (make-bindings (hash-map match-ht make-bind)))))
 
 ;; compile-pattern : compiled-lang pattern boolean -> compiled-pattern
