@@ -116,16 +116,20 @@
   (define bad-kws (set-intersect used-kws satisfying-disallowed-kws))
   (syntax-case stx (=)
     [(form lang #:satisfying (mf-id . args) = res property . kw-args)
-     (unless (set-empty? bad-kws)
-       (raise-syntax-error 'redex-check (format "~s cannot be used with #:satisfying" (car (set->list bad-kws))) stx))
-     (redex-check/mf stx #'form #'lang #'mf-id #'args #'res #'property #'kw-args)]
+     (begin
+       (unless (set-empty? bad-kws)
+         (raise-syntax-error 'redex-check (format "~s cannot be used with #:satisfying" (car (set->list bad-kws))) stx))
+       (redex-check/mf stx #'form #'lang #'mf-id #'args #'res #'property #'kw-args))]
     [(form lang #:satisfying (jform-id . pats) property . kw-args)
-     (unless (set-empty? bad-kws)
-       (raise-syntax-error 'redex-check (format "~s cannot be used with #:satisfying" (car (set->list bad-kws))) stx))
-     (syntax-property
-      (redex-check/jf stx #'form #'lang #'jform-id #'pats #'property #'kw-args)
-      'disappeared-use
-      (syntax-local-introduce #'jform-id))]
+     (begin
+       (unless (set-empty? bad-kws)
+         (raise-syntax-error 'redex-check (format "~s cannot be used with #:satisfying" (car (set->list bad-kws))) stx))
+       (when (keyword? (syntax-e #'property))
+         (raise-syntax-error 'redex-check "expected a property" stx #'property))
+       (syntax-property
+        (redex-check/jf stx #'form #'lang #'jform-id #'pats #'property #'kw-args)
+        'disappeared-use
+        (syntax-local-introduce #'jform-id)))]
     [(form lang #:satisfying . rest)
      (raise-syntax-error 'redex-check "#:satisfying expected judgment form or metafunction syntax followed by a property" stx #'rest)]
     [(form lang pat #:enum biggest-e property . kw-args)
