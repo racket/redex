@@ -1,3 +1,7 @@
+v8.16
+
+  * bug fixes
+
 v8.15
 
   no changes since 8.14
