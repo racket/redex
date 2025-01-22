@@ -198,7 +198,7 @@ see also term.rkt for some restrictions/changes there
                  [under-mismatch-ellipsis '()])
         (syntax-case term (side-condition variable-except variable-prefix
                                           hole name in-hole hide-hole cross unquote and
-                                          compatible-closure-context)
+                                          compatible-closure-context #%mf-apply)
           [(side-condition pre-pat (and))
            ;; rewriting metafunctions (and possibly other things) that have no where, etc clauses
            ;; end up with side-conditions that are empty 'and' expressions, so we just toss them here.
@@ -391,6 +391,10 @@ see also term.rkt for some restrictions/changes there
                         (list (make-id/depth term (length under))))]
                [else
                 (values term '())]))]
+          [(#%mf-apply _ ...)
+           (raise-syntax-error what "mf-apply cannot be used in a pattern position" orig-stx term)]
+          [#%mf-apply
+           (raise-syntax-error what "mf-apply cannot be used in a pattern position" orig-stx term)]
           [(terms ...)
            (let ()
              (define terms-lst (syntax->list #'(terms ...)))
