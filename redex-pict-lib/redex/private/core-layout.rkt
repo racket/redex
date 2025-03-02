@@ -777,25 +777,38 @@
                                ((current-text) (if (string? atom) atom (format "~a" atom))
                                                pink-code-font
                                                (default-font-size)))))]
-      [(and (symbol? atom)
-            (not (equal? atom '_))
-            (regexp-match #rx"^([^_^]*)_([^^]*)\\^?(.*)$" (symbol->string atom)))
-       =>
-       (match-lambda
-           [(list _ nt sub sup)
-            (let* ([sub-pict (if (regexp-match? #rx"^′+$" sub)
-                                 (basic-text sub (non-terminal-style))
-                                 (basic-text sub (non-terminal-subscript-style)))]
-                   [sup-pict (basic-text sup (non-terminal-superscript-style))]
-                   [sub+sup (lbl-superimpose sub-pict sup-pict)])
-              (list (non-terminal->token col span nt)
-                    (make-pict-token (+ col span) 0 sub+sup)))])]
-      [(or (memq atom all-nts)
-           (memq atom underscore-allowed))
-       (list (non-terminal->token col span (symbol->string atom)))]
       [(symbol? atom)
-       (list (or (rewrite-atomic col span atom literal-style)
-                 (make-string-token col span (symbol->string atom) (literal-style))))]
+       (define (not-nt)
+         (list (or (rewrite-atomic col span atom literal-style)
+                   (make-string-token col span (symbol->string atom) (literal-style)))))
+       (define nt-m (regexp-match #rx"^([^_]*)_(.*)$" (symbol->string atom)))
+       (cond
+         [nt-m
+          (define nt-name (list-ref nt-m 1))
+          (define after-underscore (list-ref nt-m 2))
+          (define nt-name-sym (string->symbol nt-name))
+          (cond
+            [(or (memq nt-name-sym all-nts)
+                 (memq nt-name-sym underscore-allowed))
+             (define subsup-m (regexp-match #rx"^([^^]*)\\^(.*)$" after-underscore))
+             (define-values (sub sup)
+               (cond
+                 [subsup-m (values (list-ref subsup-m 1) (list-ref subsup-m 2))]
+                 [else (values after-underscore "")]))
+             (define sub-pict (if (regexp-match? #rx"^′+$" sub)
+                                  (basic-text sub (non-terminal-style))
+                                  (basic-text sub (non-terminal-subscript-style))))
+             (define sup-pict (basic-text sup (non-terminal-superscript-style)))
+             (define sub+sup (lbl-superimpose sub-pict sup-pict))
+             (list (non-terminal->token col span nt-name)
+                   (make-pict-token (+ col span) 0 sub+sup))]
+            [else
+             (not-nt)])]
+         [(or (memq atom all-nts)
+              (memq atom underscore-allowed))
+          (list (non-terminal->token col span (symbol->string atom)))]
+         [else
+          (not-nt)])]
       [(or (member atom '("(" ")" "[" "]" "{" "}"))
            ;; Typeset keywords in the same font as parentheses:
            (and (string? atom)

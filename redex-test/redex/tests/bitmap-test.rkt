@@ -202,12 +202,24 @@
          (render-metafunction T))
        "metafunction-T.png")
 
+(define-language lang-lw-test
+  (e (e e) 
+     x
+     (λ (x) e)
+     number)
+  (v number (λ (x) e))
+  (K^ e)
+  ((x y) variable-not-otherwise-mentioned))
 ;; in this test, the `x' is italic and the 'z' is sf, since 'x' is in the grammar, and 'z' is not.
-(btest (render-lw 
-        lang 
+(btest (render-lw
+        lang-lw-test
         (to-lw ((λ (x) (x x))
                 (λ (z) (z z)))))
        "lw.png")
+(btest (render-lw
+        lang-lw-test
+        (to-lw (e e_1 e_′ e_′′ e_^1 K^ K^_1 )))
+       "lw2.png")
 
 (define-metafunction lang
   [(TL 1) (a
