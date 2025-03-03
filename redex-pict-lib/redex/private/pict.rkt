@@ -1604,6 +1604,9 @@
        (make-pict))]))
 
 (define judgment-form-show-rule-names (make-parameter #t))
+
+;; inference-rules-pict : ?? ?? (listof (or/c #f string?)) ?? boolean? -> pict?
+;;   eqn-names is expected to be a list of all of the names in the jf/relation, in order
 (define (inference-rules-pict name all-eqns eqn-names lang judgment-form?)
   (define all-nts (language-nts lang))
   (define (wrapper->pict lw) (lw->pict all-nts lw))
@@ -1695,37 +1698,28 @@
 (define horizontal-bar-spacing (make-parameter 4))
 (define relation-clauses-combine (make-parameter (λ (l) (apply vc-append 20 l))))
 
-(define-for-syntax (inference-rules-pict/judgment-form form-name)
-  (define jf (syntax-local-value form-name))
-  (define-values (name lws rule-names lang relation?) 
-    (values (judgment-form-name jf) (judgment-form-lws jf) (judgment-form-rule-names jf)
-            (judgment-form-lang jf) (judgment-form-relation? jf)))
-  (syntax-property
-   #`(inference-rules-pict '#,name
-                           #,lws
-                           '#,rule-names
-                           #,lang
-                           #,(not relation?))
-   'disappeared-use
-   (syntax-local-introduce form-name)))
+(define (inference-rules-pict/judgment-form who jf save-as)
+  (unless (runtime-judgment-form? jf)
+    (error who "expected a judgment-form\n  given: ~e" jf))
+  (render-pict
+   (λ ()
+     (inference-rules-pict (runtime-judgment-form-name jf)
+                           (runtime-judgment-form-lws jf)
+                           (for/list ([name (in-list (runtime-judgment-form-rule-names jf))])
+                             (if (symbol? name)
+                                 (symbol->string name)
+                                 #f))
+                           (runtime-judgment-form-lang jf)
+                           (not (runtime-judgment-form-relation? jf))))
+   save-as))
 
-(define-syntax (render-judgment-form stx)
-  (syntax-case stx ()
-    [(_ form-name . opt-arg)
-     (if (judgment-form-id? #'form-name)
-         (let ([save-as (syntax-case #'opt-arg ()
-                          [() #'#f]
-                          [(path) #'path])])
-           #`(render-pict (λ () #,(inference-rules-pict/judgment-form #'form-name))
-                          #,save-as))
-         (raise-syntax-error #f "expected a judgment form name" stx #'form-name))]))
+(define (render-judgment-form jf [path #f])
+  (inference-rules-pict/judgment-form 'render-judgment-form
+                                      jf
+                                      path))
 
-(define-syntax (judgment-form->pict stx)
-  (syntax-case stx ()
-    [(_ form-name)
-     (if (judgment-form-id? #'form-name)
-         (inference-rules-pict/judgment-form #'form-name)
-         (raise-syntax-error #f "expected a judgment form name" stx #'form-name))]))
+(define (judgment-form->pict jf)
+  (inference-rules-pict/judgment-form 'judgment-form->pict jf #f))
 
 ;                              
 ;                              

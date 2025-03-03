@@ -1,3 +1,9 @@
+v8.17
+
+  * render-judgment-form and judgment-form->pict are functions, making
+    them suitable to abstract over (before, they required their
+    arguments to be identifiers bound to judgment forms)
+
 v8.16
 
   * bug fixes

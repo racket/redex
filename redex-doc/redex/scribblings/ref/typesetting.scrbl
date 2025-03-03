@@ -369,8 +369,7 @@ This function sets @racket[dc-for-text-size]. See also
 @racket[relation->pict].
 }
 
-@defform*[[(render-judgment-form judgment-form-name)
-           (render-judgment-form judgment-form-name filename)]]{
+@defproc[(render-judgment-form [judgment-form judgment-form?] [filename (or/c path-string? #f)]) pict?]{
 Like @racket[render-metafunction] but for judgment forms. The
 @racket[judgment-form-cases] parameter can be used to control which clauses
 are rendered.
@@ -428,8 +427,8 @@ This function sets @racket[dc-for-text-size]. See also
   @racketmodname[pict]s.
 }
 
-@defform[(judgment-form->pict judgment-form-name)]{
-  This produces a pict, but without setting @racket[dc-for-text-size].
+@defproc[(judgment-form->pict [judgment-form judgment-form?]) pict?]{
+  Produces a pict like @racket[render-judgment-form], but without setting @racket[dc-for-text-size].
   It is suitable for use in Slideshow or other libraries that combine
   @racketmodname[pict]s.
 }

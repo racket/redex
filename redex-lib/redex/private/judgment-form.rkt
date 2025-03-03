@@ -45,7 +45,9 @@
                                            compiled-output-contract-pat
                                            input-contract-pat
                                            output-contract-pat
-                                           rule-names)
+                                           rule-names
+                                           lws
+                                           relation?)
   #:methods gen:custom-write
   [(define (write-proc rjf port _mode)
      (if (runtime-judgment-form-mode rjf)
@@ -68,7 +70,9 @@
                                      original-contract-expression ;; (or/c #f (listof s-exp))
                                      input-contract-pat
                                      output-contract-pat
-                                     (rule-names '()))
+                                     rule-names
+                                     lws
+                                     relation?)
   (define cache (cons (box (make-hash)) (box (make-hash))))
   (make-runtime-judgment-form
    name proc mode cache lang
@@ -108,7 +112,9 @@
                                x
                                (string->symbol x)))]
             [else raw-name]))
-        rule-names)))
+        rule-names)
+   lws
+   relation?))
 
 (define-for-syntax (prune-syntax stx)
   (datum->syntax
@@ -957,7 +963,9 @@
                                          original-contract-expression
                                          judgment-form-input-contract
                                          judgment-form-output-contract
-                                         '#,rule-names))
+                                         '#,rule-names
+                                         jf-lws
+                                         #,is-relation?))
           (define jf-cache (runtime-judgment-form-cache the-runtime-judgment-form))
           (define original-contract-expression-id
             (runtime-judgment-form-original-contract-expression the-runtime-judgment-form))
