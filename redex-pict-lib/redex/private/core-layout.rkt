@@ -790,16 +790,23 @@
           (cond
             [(or (memq nt-name-sym all-nts)
                  (memq nt-name-sym underscore-allowed))
-             (define subsup-m (regexp-match #rx"^([^^]*)\\^(.*)$" after-underscore))
-             (define-values (sub sup)
+             (define-values (sub sup primes) (parse-subscript after-underscore))
+             (define sub+sup
                (cond
-                 [subsup-m (values (list-ref subsup-m 1) (list-ref subsup-m 2))]
-                 [else (values after-underscore "")]))
-             (define sub-pict (if (regexp-match? #rx"^′+$" sub)
-                                  (basic-text sub (non-terminal-style))
-                                  (basic-text sub (non-terminal-subscript-style))))
-             (define sup-pict (basic-text sup (non-terminal-superscript-style)))
-             (define sub+sup (lbl-superimpose sub-pict sup-pict))
+                 [(equal? primes "")
+                  (define sup-pict (basic-text sup (non-terminal-superscript-style)))
+                  (define sub-pict (basic-text sub (non-terminal-subscript-style)))
+                  (lbl-superimpose sup-pict sub-pict)]
+                 [(equal? sup "")
+                  (define primes-pict (basic-text primes (non-terminal-style)))
+                  (define sub-pict (basic-text sub (non-terminal-subscript-style)))
+                  (lbl-superimpose primes-pict sub-pict)]
+                 [else
+                  ;; here we've got both a superscript and primes. Do our best.
+                  (define primes-pict (basic-text primes (non-terminal-style)))
+                  (define sup-pict (basic-text sup (non-terminal-superscript-style)))
+                  (define sub-pict (basic-text sub (non-terminal-subscript-style)))
+                  (lbl-superimpose (hbl-append sup-pict primes-pict) sub-pict)]))
              (list (non-terminal->token col span nt-name)
                    (make-pict-token (+ col span) 0 sub+sup))]
             [else
@@ -825,6 +832,25 @@
      [(string? str/pict/sym) (make-string-token col span str/pict/sym (get-style))]
      [(pict-convertible? str/pict/sym) (make-pict-token col span str/pict/sym)]
      [(symbol? str/pict/sym) #f]))
+
+(define (parse-subscript after-underscore)
+  (let loop ([i 0]
+             [seen-caret? #f]
+             [sub '()]
+             [sup '()]
+             [primes 0])
+    (cond
+      [(< i (string-length after-underscore))
+       (define char (string-ref after-underscore i))
+       (match char
+         [#\^ (loop (+ i 1) #t sub sup primes)]
+         [#\′ (loop (+ i 1) seen-caret? sub sup (+ primes 1))]
+         [_ (if seen-caret?
+                (loop (+ i 1) #t sub (cons char sup) primes)
+                (loop (+ i 1) #f (cons char sub) sup primes))])]
+      [else (values (apply string (reverse sub))
+                    (apply string (reverse sup))
+                    (make-string primes #\′))])))
 
 (define (apply-atomic-rewrite e)
   (cond

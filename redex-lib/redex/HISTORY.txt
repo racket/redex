@@ -4,6 +4,8 @@ v8.17
     them suitable to abstract over (before, they required their
     arguments to be identifiers bound to judgment forms)
 
+  * fixed the rendering of nonterminals that have both subscripts and primes
+
 v8.16
 
   * bug fixes

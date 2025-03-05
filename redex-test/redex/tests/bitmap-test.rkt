@@ -218,7 +218,7 @@
        "lw.png")
 (btest (render-lw
         lang-lw-test
-        (to-lw (e e_1 e_′ e_′′ e_^1 K^ K^_1 )))
+        (to-lw (e e_1 e_′ e_′′ e_^1 e_1′ K^ K^_1)))
        "lw2.png")
 
 (define-metafunction lang
