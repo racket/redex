@@ -1,8 +1,8 @@
 #lang racket/base
-(require texpict/mrpict
-         racket/draw
+(require racket/draw
          racket/class
-         racket/contract)
+         racket/contract
+         "pict-interface.rkt")
 
 (provide/contract
  [make-arrow-pict
