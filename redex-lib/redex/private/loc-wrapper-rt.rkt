@@ -10,8 +10,8 @@
 
 (define (init-loc-wrapper e line column quoted?)
   (if quoted?
-      (make-lw e line #f column #f #f #f)
-      (make-lw e line #f column #f #t #f)))
+      (make-lw e line #f column #f #f #f #f)
+      (make-lw e line #f column #f #t #f #f)))
 
 (define (init-loc-wrapper/unquoted e line column)
   (init-loc-wrapper e line column #f))
@@ -22,13 +22,16 @@
 
 ;; e : (union string symbol #f (listof lw))
 ;; line, line-span, column, column-span : number
-(define-struct lw (e line line-span column column-span unq? metafunction?) 
+;; pict-tag is used when making a rhombus pict; it ends up 
+;;      in the metadata of the pict generated from the elements
+;;      of the list inside `e` (it shouldn't be there if there isn't a list)
+(define-struct lw (e line line-span column column-span unq? metafunction? pict-tag)
   #:mutable
   #:inspector (make-inspector))
 
 ;; build-lw is designed for external consumption
 (define (build-lw e line line-span column column-span)
-  (make-lw e line line-span column column-span #f #f))
+  (make-lw e line line-span column column-span #f #f #f))
 
 (define curly-quotes-for-strings (make-parameter #t))
 
@@ -49,7 +52,7 @@
         (init-loc-wrapper/unquoted (loop e) (loop line) (loop column))]
        [(vector 'make-lw e line line-span column column-span unq? metafunction?)
         (make-lw (loop e) (loop line) (loop line-span) (loop column) 
-                 (loop column-span) (loop unq?) (loop metafunction?))]
+                 (loop column-span) (loop unq?) (loop metafunction?) #f)]
        [(vector 'rewrite-quotes arg)
         (rewrite-quotes (loop arg))]
        [(vector 'list x ...)

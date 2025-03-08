@@ -6,14 +6,13 @@
          redex/private/underscore-allowed
          redex/private/lang-struct
          
-         texpict/utils
-         texpict/mrpict
-         (only-in pict/convert pict-convertible?)
-        
+         "pict-interface.rkt"
+
          racket/match
          racket/draw
          racket/class
-         racket/contract 
+         racket/contract
+         racket/treelist
          
          (for-syntax racket/base
                      syntax/parse
@@ -162,10 +161,13 @@
   
   ;; string : string
   ;; style : valid third argument to mrpict.rkt's `text' function
-  (define-struct (string-token token) (string style) #:inspector (make-inspector))
+  ;; pict-tag: added to the metadata field when a rhombus pict is created
+  (define-struct (string-token token) (string style pict-tag) #:inspector (make-inspector))
   
   ;; width : number
   ;; pict : pict
+  ;; if rhombus picts are being used, the pict should already have the
+  ;; pict-tag added the metadata of the pict
   (define-struct (pict-token token) (pict) #:inspector (make-inspector))
   
   (define-struct (spacer-token token) () #:inspector (make-inspector))
@@ -204,20 +206,21 @@
       (cond
         [(eq? 'spring an-lw) an-lw]
         [(lw? an-lw)
-         (let* ([w-out-term-let (remove-term-let an-lw)]
-                [rewritten 
-                 (if (lw-unq? w-out-term-let)
-                     ((current-unquote-rewriter) w-out-term-let)
-                     w-out-term-let)])
-           (if (equal? rewritten an-lw)
-               (struct-copy lw
-                            an-lw
-                            [e (ar/e (lw-e an-lw)
-                                     (lw-line an-lw)
-                                     (lw-line-span an-lw)
-                                     (lw-column an-lw)
-                                     (lw-column-span an-lw))])
-               (ar/lw rewritten)))]
+         (define w-out-term-let (remove-term-let an-lw))
+         (define rewritten 
+           (if (lw-unq? w-out-term-let)
+               ((current-unquote-rewriter) w-out-term-let)
+               w-out-term-let))
+         (cond
+           [(equal? rewritten an-lw)
+            (struct-copy lw
+                         an-lw
+                         [e (ar/e (lw-e an-lw)
+                                  (lw-line an-lw)
+                                  (lw-line-span an-lw)
+                                  (lw-column an-lw)
+                                  (lw-column-span an-lw))])]
+           [else (ar/lw rewritten)])]
         [else (error 'ar/lw "internal error ~s" an-lw)]))
     
     (define (remove-term-let an-lw)
@@ -259,7 +262,8 @@
                       "rewritten version still has symbol of the same name as original: ~s" 
                       (cadr rewritten)))
              (let ([adjusted 
-                    (adjust-spacing rewritten 
+                    (adjust-spacing rewritten
+                                    (string->immutable-string (symbol->string (lw-e (cadr e))))
                                     line line-span col col-span
                                     (lw-e (cadr e)))])
                (map ar/lw adjusted))))]
@@ -362,6 +366,7 @@
             (- (lw-column lw-after) start-col)))
   
   ;; adjust-spacing : (listof (union string pict loc-wrapper))
+  ;;                  immutable-string (used for the string part of the pict tag)
   ;;                  number
   ;;                  number
   ;;                  symbol
@@ -371,8 +376,9 @@
   ;; NB: there is still an issue with this code -- if the rewrite drops stuff that
   ;;     appears at the end of the sequence, blank space will still appear in the final output ...
   ;;     When this is fixed, remove the workaround for the `in-hole' rewriter.
-  (define (adjust-spacing in-rewrittens init-line init-line-span init-column init-column-span who)
+  (define (adjust-spacing in-rewrittens pict-tag init-line init-line-span init-column init-column-span who)
     (let loop ([rewrittens in-rewrittens]
+               [rewritten-index 0]
                [line init-line]
                [column init-column])
       (let* ([to-wrap (collect-non-lws rewrittens)]
@@ -412,7 +418,8 @@
                                    0))])
           (cond
             [(and after-next-lw (null? to-wrap))
-             (cons next-lw (loop after-next-lw next-line next-column))]
+             (cons (add-pict-tag next-lw pict-tag (+ rewritten-index (length to-wrap)))
+                   (loop after-next-lw (+ rewritten-index (length to-wrap) 1) next-line next-column))]
             [(and (not after-next-lw) (null? to-wrap))
              '()]
             [else
@@ -425,7 +432,7 @@
                       (if (= line next-lw-line)
                           (- next-lw-column column)
                           (- next-lw-column init-column))])
-                 (list* (build-lw to-wrap1 line 0 new-lw-col 0)
+                 (list* (add-pict-tag (build-lw to-wrap1 line 0 new-lw-col 0) pict-tag rewritten-index)
                         'spring
                         (build-lw (blank)
                                   line
@@ -435,16 +442,41 @@
                         (append
                          (cond [(= line next-lw-line) '(spring)]
                                [else '()])
-                         (list (build-lw to-wrap2 next-lw-line 0 (+ new-lw-col new-lw-col-span) 0))
+                         (list (cond
+                                 [to-wrap2
+                                  (add-pict-tag (build-lw to-wrap2 next-lw-line 0 (+ new-lw-col new-lw-col-span) 0)
+                                                pict-tag (+ rewritten-index 1))]
+                                 [else
+                                  (build-lw (blank) next-lw-line 0 (+ new-lw-col new-lw-col-span) 0)]))
                          (if after-next-lw
-                             (cons next-lw (loop after-next-lw next-line next-column))
+                             (cons (add-pict-tag next-lw pict-tag (+ rewritten-index 1))
+                                   (loop after-next-lw (+ rewritten-index (length to-wrap) 1) next-line next-column))
                              '())))))])))))
   
+(define (add-pict-tag an-lw new-pict-tag i)
+  (struct-copy lw
+               an-lw
+               [pict-tag (treelist new-pict-tag i)]))
+
   (define (extract-pieces-to-wrap who lst)
+    (match lst
+      [(cons fst '())
+       (values fst #f)]
+      [(cons fst (cons snd more))
+       (when (pair? more)
+         (error 'adjust-spacing 
+                "for ~a; found ~a consecutive loc-wrappers, expected at most 2: ~a"
+                who
+                (length lst)
+                (apply string-append
+                       (format "~s" fst)
+                       (map (λ (x) (format " ~s" x)) (cdr lst)))))
+       (values fst snd)])
+    #;
     (let ([fst (car lst)])
       (if (pair? (cdr lst))
           (let ([snd (cadr lst)])
-            (when (pair? (cddr lst))
+            (when (pair? more)
               (error 'adjust-spacing 
                      "for ~a; found ~a consecutive loc-wrappers, expected at most 2: ~a"
                      who
@@ -500,7 +532,7 @@
     (define last-token-spring? #f)
     (define tokens '())
     (define lines '())
-    (define (eject line line-span col col-span atom unquoted?)
+    (define (eject line line-span col col-span atom unquoted? pict-tag)
       (cond
         [(= current-line line)
          (void)]
@@ -543,7 +575,7 @@
       (set! last-token-spring? #f)
       (set! tokens (append 
                     (reverse
-                     (atom->tokens (- col initial-column) col-span atom all-nts unquoted?))
+                     (atom->tokens (- col initial-column) col-span atom all-nts unquoted? pict-tag))
                     tokens))
       (set! current-column (+ col col-span)))
     
@@ -555,7 +587,7 @@
                 (make-pict-token col col-span
                                  (pink-background
                                   ((current-text) str pink-code-font (default-font-size))))
-                (make-string-token col col-span str (default-style))))))
+                (make-string-token col col-span str (default-style) #f)))))
     
     (define (handle-loc-wrapped lw)
       (cond
@@ -567,17 +599,18 @@
                         (lw-line-span lw)
                         (lw-column lw)
                         (lw-column-span lw)
-                        (lw-unq? lw))]))
+                        (lw-unq? lw)
+                        (lw-pict-tag lw))]))
     
-    (define (handle-object obj line line-span col col-span unquoted?)
+    (define (handle-object obj line line-span col col-span unquoted? pict-tag)
       (cond
-        [(symbol? obj) (eject line line-span col col-span obj unquoted?)]
-        [(string? obj) (eject line line-span col col-span obj unquoted?)]
-        [(pict-convertible? obj) (eject line line-span col col-span obj unquoted?)]
-        [(not obj) (eject line line-span col col-span (blank) unquoted?)]
+        [(symbol? obj) (eject line line-span col col-span obj unquoted? pict-tag)]
+        [(string? obj) (eject line line-span col col-span obj unquoted? pict-tag)]
+        [(pict-convertible? obj) (eject line line-span col col-span obj unquoted? pict-tag)]
+        [(not obj) (eject line line-span col col-span (blank) unquoted? pict-tag)]
         [else
-         (for-each (λ (x) (handle-loc-wrapped x))
-                   obj)]))
+         (for ([x (in-list obj)])
+           (handle-loc-wrapped x))]))
     
     (handle-loc-wrapped lw)
     (set! lines (cons (make-line (- current-line gobbled-lines) (reverse tokens)) 
@@ -674,7 +707,9 @@
               (cons (car tokens)
                     (loop (cdr tokens)
                           (+ (token-column tok) (token-span tok))))]))])))
-               
+
+  ;; I'm not sure what pict-tags should go into this split token
+  ;; so I've just put it into the first one
   (define (split-token offset tok new-token)
     (cond
       [(string-token? tok)
@@ -683,14 +718,16 @@
                                 offset
                                 (substring (string-token-string tok)
                                            0 (min len offset))
-                                (string-token-style tok))
+                                (string-token-style tok)
+                                (string-token-pict-tag tok))
              new-token
              (make-string-token (+ (token-column tok) offset)
                                 (- (token-span tok) offset)
                                 (substring (string-token-string tok)
                                            (min offset len)
                                            len)
-                                (string-token-style tok)))]
+                                (string-token-style tok)
+                                #f))]
       [(pict-token? tok)
        (list new-token)]))
   
@@ -745,7 +782,7 @@
     (let ([tokens (line-tokens line)])
       (cond
         [(null? tokens) 
-         (let ([h (pict-height (token->pict (make-string-token 0 0 "x" (default-style))))])
+         (let ([h (pict-height (token->pict (make-string-token 0 0 "x" (default-style) #f)))])
            (blank 0 h))]
         [else
          (if (align-token? (car tokens))
@@ -764,24 +801,27 @@
   (define (token->pict tok)
     (cond
       [(string-token? tok)
-       (basic-text (string-token-string tok) (string-token-style tok))]
+       (add-redex-property (basic-text (string-token-string tok) (string-token-style tok))
+                           (string-token-pict-tag tok))]
       [(pict-token? tok) (pict-token-pict tok)]
       [else (error 'token->pict "~s" tok)]))
   
-  (define (atom->tokens col span atom all-nts unquoted?)
+  (define (atom->tokens col span atom all-nts unquoted? pict-tag)
     (cond
       [(pict-convertible? atom)
-       (list (make-pict-token col span atom))]
+       (list (make-pict-token col span (add-redex-property atom pict-tag)))]
       [unquoted?
-       (list (make-pict-token col span 
-                              (pink-background 
-                               ((current-text) (if (string? atom) atom (format "~a" atom))
-                                               pink-code-font
-                                               (default-font-size)))))]
+       (list (make-pict-token col span
+                              (add-redex-property
+                               (pink-background 
+                                ((current-text) (if (string? atom) atom (format "~a" atom))
+                                                pink-code-font
+                                                (default-font-size)))
+                               pict-tag)))]
       [(symbol? atom)
        (define (not-nt)
-         (list (or (rewrite-atomic col span atom literal-style)
-                   (make-string-token col span (symbol->string atom) (literal-style)))))
+         (list (or (rewrite-atomic col span atom literal-style pict-tag)
+                   (make-string-token col span (symbol->string atom) (literal-style) pict-tag))))
        (define nt-m (regexp-match #rx"^([^_]*)_(.*)$" (symbol->string atom)))
        (cond
          [nt-m
@@ -808,13 +848,13 @@
                   (define sup-pict (basic-text sup (non-terminal-superscript-style)))
                   (define sub-pict (basic-text sub (non-terminal-subscript-style)))
                   (lbl-superimpose (hbl-append sup-pict primes-pict) sub-pict)]))
-             (list (non-terminal->token col span nt-name)
-                   (make-pict-token (+ col span) 0 sub+sup))]
+             (list (non-terminal->token col span nt-name pict-tag)
+                   (make-pict-token (+ col span) 0 (add-redex-property sub+sup pict-tag)))]
             [else
              (not-nt)])]
          [(or (memq atom all-nts)
               (memq atom underscore-allowed))
-          (list (non-terminal->token col span (symbol->string atom)))]
+          (list (non-terminal->token col span (symbol->string atom) pict-tag))]
          [else
           (not-nt)])]
       [(or (member atom '("(" ")" "[" "]" "{" "}"))
@@ -822,16 +862,16 @@
            (and (string? atom)
                 ((string-length atom) . >= . 2)
                 (string=? "#:" (substring atom 0 2))))
-       (list (make-string-token col span atom (paren-style)))]
+       (list (make-string-token col span atom (paren-style) pict-tag))]
       [(string? atom)
-       (list (make-string-token col span atom (default-style)))]
+       (list (make-string-token col span atom (default-style) pict-tag))]
       [else (error 'atom->tokens "unk ~s" atom)]))
 
-  (define (rewrite-atomic col span e get-style)
+  (define (rewrite-atomic col span e get-style pict-tag)
     (define str/pict/sym (apply-atomic-rewrite e))
     (cond
-     [(string? str/pict/sym) (make-string-token col span str/pict/sym (get-style))]
-     [(pict-convertible? str/pict/sym) (make-pict-token col span str/pict/sym)]
+     [(string? str/pict/sym) (make-string-token col span str/pict/sym (get-style) pict-tag)]
+     [(pict-convertible? str/pict/sym) (make-pict-token col span (pict-convertible->pict str/pict/sym))]
      [(symbol? str/pict/sym) #f]))
 
 (define (parse-subscript after-underscore)
@@ -862,17 +902,18 @@
          (error 'apply-rewrites "rewritten version of ~s is still ~s" e e))
        (let ([p (cadr m)])
          (if (procedure? p)
-             (p)
+             (pict-convertible->pict (p))
              p)))]
     [else e]))
 
-  (define (non-terminal->token col span str)
+  (define (non-terminal->token col span str pict-tag)
     (let ([e (string->symbol str)])
-      (or (rewrite-atomic col span e non-terminal-style)
+      (or (rewrite-atomic col span e non-terminal-style pict-tag)
           (make-string-token col
                              span
                              str
-                             (non-terminal-style)))))
+                             (non-terminal-style)
+                             pict-tag))))
   
   (define (pick-font lst fallback)
     (let ([fl (get-face-list 'all)])
