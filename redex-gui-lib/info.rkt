@@ -9,8 +9,7 @@
                "data-lib"
                "profile-lib"
                "redex-lib"
-               "redex-pict-lib"
-               "pict-lib"))
+               "redex-pict-lib"))
 (define build-deps '("rackunit-lib"))
 (define implies '("redex-lib" "redex-pict-lib"))
 
