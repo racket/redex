@@ -71,6 +71,15 @@ picts inline in the paper. For producing
 papers with LaTeX, create @filepath{.ps} files from the picts with Redex,
 which can be included into a LaTeX document.
 
+Redex picts can also be used with the
+@seclink["top" #:doc '(lib "rhombus/pict/scribblings/rhombus-pict.scrbl") #:indirect? #t]{
+ Rhombus's pict library}. When the Rhombus library is installed, Redex
+creates Rhombus picts and when it is not installed, Redex
+creates Racket picts. Rhombus picts are
+@tech[#:doc '(lib "pict/scribblings/pict.scrbl")]{pict
+ convertible}, however, so Rhombus picts can be used whenever the Racket library
+picts are expected.
+
 @section{Generating Picts}
 
 This section documents two sets of operations, one for
