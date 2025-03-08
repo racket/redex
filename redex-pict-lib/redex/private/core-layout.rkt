@@ -6,10 +6,8 @@
          redex/private/underscore-allowed
          redex/private/lang-struct
          
-         texpict/utils
-         texpict/mrpict
-         (only-in pict/convert pict-convertible?)
-        
+         "pict-interface.rkt"
+
          racket/match
          racket/draw
          racket/class
