@@ -8,7 +8,7 @@
          (only-in racket/list drop-right last partition add-between
                   splitf-at remove-duplicates)
          
-         pict
+         "pict-interface.rkt"
          
          redex/private/reduction-semantics
          redex/private/judgment-form

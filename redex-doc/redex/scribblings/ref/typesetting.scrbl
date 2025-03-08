@@ -71,6 +71,12 @@ picts inline in the paper. For producing
 papers with LaTeX, create @filepath{.ps} files from the picts with Redex,
 which can be included into a LaTeX document.
 
+When Rhombus pict has been loaded (specifically, when @racket[(module-declared? '(lib "pict/main.rhm") #t)]
+returns a true value), the @racketmodname[redex/pict] library creates (and accepts) Rhombus picts.
+See @other-doc[#:indirect "Rhombus Pict" '(lib "rhombus/pict/scribblings/rhombus-pict.scrbl")]
+for more information about Rhombus picts.
+@history[#:changed "1.23" "Added support for Rhombus picts."]
+
 @section{Generating Picts}
 
 This section documents two sets of operations, one for

@@ -4,11 +4,10 @@
          "private/pict.rkt"
          "private/core-layout.rkt"
          "private/derivation-pict.rkt"
+         "private/pict-interface.rkt"
          redex/private/struct
          redex/private/loc-wrapper
-         redex/reduction-semantics
-         texpict/mrpict
-         (only-in pict/convert pict-convertible?))
+         redex/reduction-semantics)
 
 (define reduction-rule-style/c
   (or/c 'vertical 

@@ -1,9 +1,9 @@
 #lang racket/base
 (require "derivations-layout.rkt"
          "pict.rkt"
+         "pict-interface.rkt"
          racket/class
-         racket/contract
-         texpict/mrpict)
+         racket/contract)
 (provide derivation->pict)
 
 (define derivation-element%
@@ -31,7 +31,7 @@
     (define/public (set-line-layout x y w) (set! lx x) (set! ly y) (set! lw w))
     (define/public (get-children) children)
     (define/public (add-elements p0)
-      (define pl (pin-over p0 lx ly (frame (blank lw 0))))
+      (define pl (pin-over p0 lx ly (horizontal-line lw)))
       (define pn (if n (pin-over pl nx ny n) pl))
       (define pt (pin-over pn tx ty t))
       pt)
