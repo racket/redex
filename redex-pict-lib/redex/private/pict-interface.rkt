@@ -36,19 +36,46 @@
  (rename-out
   [p:pict-width pict-width]
   [p:pict-height pict-height]
+  [p:pict-descent pict-descent]
   [p:pict? pict?]
   [p:draw-pict draw-pict]
-  [p:dc dc]
   [p:text-style/c text-style/c]
-  [p:blank blank]
-  [p:pict-descent pict-descent]
-  [p:text text]
-  [p:dc-for-text-size dc-for-text-size]
-  [p:filled-rectangle filled-rectangle]))
+  [p:dc-for-text-size dc-for-text-size]))
+
+(define (to-rhm-pict p)
+  (choose p (r:from_handle p)))
+
+(provide dc
+         blank
+         text
+         filled-rectangle)
+
+(define (dc draw w h [a h] [d 0])
+  (to-rhm-pict (p:dc draw w h a d)))
+
+(define blank
+  (case-lambda
+    [() (to-rhm-pict (p:blank))]
+    [(s) (to-rhm-pict (p:blank s))]
+    [(w h) (to-rhm-pict (p:blank w h))]
+    [(w a h) (to-rhm-pict (p:blank w a h))]
+    [(w h a d) (to-rhm-pict (p:blank w h a d))]))
+
+(define (text content [style '()] [size 12] [angle 0])
+  (to-rhm-pict (p:text content style size angle)))
+
+(define (filled-rectangle w h
+                          #:draw-border? [draw-border? #t]
+                          #:color [color #f]
+                          #:border-color [border-color #f]
+                          #:border-width [border-width #f])
+  (to-rhm-pict
+   (filled-rectangle w h
+                     #:draw-border? draw-border? #:color color
+                     #:border-color border-color #:border-width border-width)))
 
 (define-rhombus
   (lib "pict/main.rhm")
-  rectangle ;; just temporary
   beside
   stack
   overlay
@@ -117,7 +144,6 @@
      #'(begin
          (provide name)
          (define (name arg1 . args)
-           (printf ">> ~s ~s ~s\n" name rhombus-name (cons arg1 args))
            (choose
             (apply racket-name arg1 args)
             (keyword-apply rhombus-name
@@ -129,9 +155,7 @@
                                (list (if (number? arg1) arg1 0) rhombus-kwd-value))
                            (if (number? arg1)
                                args
-                               (let ([ans (cons arg1 args)])
-                                 (printf "?? ~s\n" ans)
-                                 ans))))))]))
+                               (cons arg1 args))))))]))
 
 (define-append ht-append
   p:ht-append
@@ -164,7 +188,6 @@
      #'(begin
          (provide name)
          (define (name . args)
-           (printf "calling ~s with ~s\n" name args)
            (choose
             (apply racket-name args)
             (apply r:overlay #:horiz horiz #:vert vert args))))]))
@@ -189,18 +212,18 @@
 
 (define-namespace-anchor ns-anchor)
 (define ns (namespace-anchor->namespace ns-anchor))
-(define r:find
+(define-values (r:find r:from_handle)
   (cond
     [(rhombus-present?)
      (parameterize ([current-namespace ns])
        (namespace-require '(all-except rhombus #%top))
        (namespace-require 'rhombus/parse)
        (namespace-require 'redex/private/rhombus-bridge)
-       ;(eval `(rhombus-top (group def π (op =) 3.14)))
-       ;(eval 'π)
-       (eval 'find))]
+       (values (eval 'find)
+               (eval 'from_handle)))]
     [else
-     #f]))
+     (values "dummy value that's not rhombus's find"
+             "dummy value that's not rhombus's find_handle")]))
 (define-syntax (define-finder stx)
   (syntax-parse stx
     [(_ name racket-name horiz vert)
