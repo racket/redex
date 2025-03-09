@@ -610,7 +610,7 @@
 
   ;; split-out : number pict (listof line) -> (listof line)
   (define (split-out col pict lines)
-    (let ([new-token (make-pict-token col 0 pict)])
+    (let ([new-token (make-pict-token col 0 (pict-convertible->pict pict))])
       (let loop ([lines lines])
         (cond
           [(null? lines)
@@ -768,7 +768,7 @@
   (define (atom->tokens col span atom all-nts unquoted?)
     (cond
       [(pict-convertible? atom)
-       (list (make-pict-token col span atom))]
+       (list (make-pict-token col span (pict-convertible->pict atom)))]
       [unquoted?
        (list (make-pict-token col span 
                               (pink-background 
@@ -828,7 +828,7 @@
     (define str/pict/sym (apply-atomic-rewrite e))
     (cond
      [(string? str/pict/sym) (make-string-token col span str/pict/sym (get-style))]
-     [(pict-convertible? str/pict/sym) (make-pict-token col span str/pict/sym)]
+     [(pict-convertible? str/pict/sym) (make-pict-token col span (pict-convertible->pict str/pict/sym))]
      [(symbol? str/pict/sym) #f]))
 
 (define (parse-subscript after-underscore)

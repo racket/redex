@@ -1,8 +1,17 @@
 #lang racket
+#|
+
+This file exports functions that have the same interface as the functions
+in racket's pict library but, if rhombus is available, actually build
+rhombus picts. No other file in redex should depend on the racket
+pict library.
+
+|#
+
 (require (for-syntax syntax/parse racket/syntax)
          (only-in pict/convert pict-convertible?)
          (prefix-in p: pict)
-         pict)
+         pict/convert)
 
 (define-syntax (define-rhombus stx)
   (syntax-parse stx
@@ -49,6 +58,19 @@
 
 (define (to-rhm-pict p)
   (choose p (r:from_handle p)))
+
+;; we need this function to make sure that, when we're in rhombus mode
+;; we actually work only with rhombus picts, as rhombus pict functions
+;; don't implicitly do pict-convertible conversion
+(provide pict-convertible->pict)
+(define (pict-convertible->pict p)
+  (choose
+   (pict-convert p)
+   (cond
+     [(p:pict? p)
+      (to-rhm-pict p)]
+     [(pict-convertible? p)
+      (to-rhm-pict (pict-convert p))])))
 
 (provide dc
          blank
