@@ -610,7 +610,7 @@
 
   ;; split-out : number pict (listof line) -> (listof line)
   (define (split-out col pict lines)
-    (let ([new-token (make-pict-token col 0 (pict-convertible->pict pict))])
+    (let ([new-token (make-pict-token col 0 pict)])
       (let loop ([lines lines])
         (cond
           [(null? lines)
