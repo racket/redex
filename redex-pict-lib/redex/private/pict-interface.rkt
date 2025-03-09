@@ -37,10 +37,15 @@
   [p:pict-width pict-width]
   [p:pict-height pict-height]
   [p:pict-descent pict-descent]
-  [p:pict? pict?]
   [p:draw-pict draw-pict]
   [p:text-style/c text-style/c]
   [p:dc-for-text-size dc-for-text-size]))
+
+(provide pict?)
+(define (pict? p)
+  (choose
+   (p:pict? p)
+   (r:is_pict p)))
 
 (define (to-rhm-pict p)
   (choose p (r:from_handle p)))
@@ -70,16 +75,15 @@
                           #:border-color [border-color #f]
                           #:border-width [border-width #f])
   (to-rhm-pict
-   (filled-rectangle w h
-                     #:draw-border? draw-border? #:color color
-                     #:border-color border-color #:border-width border-width)))
+   (p:filled-rectangle w h
+                       #:draw-border? draw-border? #:color color
+                       #:border-color border-color #:border-width border-width)))
 
 (define-rhombus
   (lib "pict/main.rhm")
   beside
   stack
-  overlay
-  line)
+  overlay)
 
 (define-rhombus
   rhombus/dot
@@ -101,9 +105,8 @@
 
 (provide horizontal-line)
 (define (horizontal-line w)
-  (choose
-   (p:frame (p:blank w 0))
-   (r:line #:dx w)))
+  (to-rhm-pict
+   (p:frame (p:blank w 0))))
 
 (define-syntax-rule
   (define-simple name p:name r:name args ...)
@@ -143,19 +146,26 @@
     [(_ name racket-name rhombus-name rhombus-kwd rhombus-kwd-value)
      #'(begin
          (provide name)
-         (define (name arg1 . args)
+         (define (name . in-args)
            (choose
-            (apply racket-name arg1 args)
-            (keyword-apply rhombus-name
-                           (if (keyword<? 'rhombus-kwd '#:sep)
-                               (list 'rhombus-kwd '#:sep)
-                               (list '#:sep 'rhombus-kwd))
-                           (if (keyword<? 'rhombus-kwd '#:sep)
-                               (list rhombus-kwd-value (if (number? arg1) arg1 0))
-                               (list (if (number? arg1) arg1 0) rhombus-kwd-value))
-                           (if (number? arg1)
-                               args
-                               (cons arg1 args))))))]))
+            (apply racket-name in-args)
+            (call-rhombus-append rhombus-name 'rhombus-kwd rhombus-kwd-value in-args))))]))
+
+(define (call-rhombus-append rhombus-fn rhombus-kwd rhombus-kwd-value in-args)
+  (define-values (sep args)
+    (cond
+      [(and (pair? in-args) (number? (car in-args)))
+       (values (car in-args) (cdr in-args))]
+      [else
+       (values 0 in-args)]))
+  (keyword-apply rhombus-fn
+                 (if (keyword<? rhombus-kwd '#:sep)
+                     (list rhombus-kwd '#:sep)
+                     (list '#:sep rhombus-kwd))
+                 (if (keyword<? rhombus-kwd '#:sep)
+                     (list rhombus-kwd-value sep)
+                     (list sep rhombus-kwd-value))
+                 args))
 
 (define-append ht-append
   p:ht-append
@@ -212,7 +222,7 @@
 
 (define-namespace-anchor ns-anchor)
 (define ns (namespace-anchor->namespace ns-anchor))
-(define-values (r:find r:from_handle)
+(define-values (r:find r:from_handle r:is_pict)
   (cond
     [(rhombus-present?)
      (parameterize ([current-namespace ns])
@@ -220,10 +230,12 @@
        (namespace-require 'rhombus/parse)
        (namespace-require 'redex/private/rhombus-bridge)
        (values (eval 'find)
-               (eval 'from_handle)))]
+               (eval 'from_handle)
+               (eval 'is_pict)))]
     [else
      (values "dummy value that's not rhombus's find"
-             "dummy value that's not rhombus's find_handle")]))
+             "dummy value that's not rhombus's find_handle"
+             "dummy value that's not rhombus's is_a Pict")]))
 (define-syntax (define-finder stx)
   (syntax-parse stx
     [(_ name racket-name horiz vert)
@@ -231,7 +243,7 @@
          (provide name)
          (define (name pict subpict)
            (unless (pict? subpict)
-             (error 'name "the version in pict-interface.rkt supports only picts, not pict paths"))
+             (error 'name "the version in pict-interface.rkt supports only picts, not pict paths\n  ~s" subpict))
            (choose
             (racket-name pict subpict)
             (r:find pict subpict horiz vert)))
