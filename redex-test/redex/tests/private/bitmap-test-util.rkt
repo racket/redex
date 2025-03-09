@@ -47,11 +47,9 @@
                            (send bdc draw-text "does not exist" 0 0)
                            (send bdc set-bitmap #f)
                            bm))]
-         [new-bitmap ((if (eq? (system-type) 'unix)
-                          make-bitmap
-                          make-screen-bitmap)
-                       (ceiling (inexact->exact (pict-width pict))) 
-                       (ceiling (inexact->exact (pict-height pict))))]
+         [new-bitmap (make-bitmap
+                      (ceiling (inexact->exact (pict-width pict)))
+                      (ceiling (inexact->exact (pict-height pict))))]
          [bdc (make-object bitmap-dc% new-bitmap)])
     (send bdc clear)
     (draw-pict pict bdc 0 0)
@@ -207,8 +205,8 @@
   (define trsp (new vertical-panel% [parent (get-test-result-single-panel)]))
   (define msg (new message% [label (format "line ~a" line-number)] [parent trsp]))
   (define hp (new horizontal-panel% [parent trsp]))
-  (define vp1 (new vertical-panel% [parent hp]))
-  (define vp2 (new vertical-panel% [parent hp]))
+  (define vp1 (new vertical-panel% [parent hp] [alignment '(right top)]))
+  (define vp2 (new vertical-panel% [parent hp] [alignment '(left top)]))
   (define computing/differences-msg 
     (new message% [label (format "~a pixels different" number-of-different-pixels)] [parent trsp]))
   (define chk (new check-box% 
