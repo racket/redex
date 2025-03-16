@@ -247,12 +247,23 @@ pict library.
 (define-values (r:find r:from_handle r:is_pict)
   (cond
     [(rhombus-present?)
-     (parameterize ([current-namespace ns])
-       (namespace-require '(all-except rhombus #%top))
-       (namespace-require 'rhombus/parse)
-       (namespace-require 'redex/private/rhombus-bridge)
-       (values (eval 'find)
-               (eval 'from_handle)
+     (define rhombus-dynamic-require
+       (dynamic-require 'rhombus/dynamic-require 'rhombus-dynamic-require))
+     (define dynamic-dot-ref
+       (dynamic-require 'rhombus/dot 'dynamic-dot-ref))
+     (define r:from_handle
+       (rhombus-dynamic-require '(lib "pict/main.rhm") '(Pict from_handle)))
+     (define r:Find (rhombus-dynamic-require '(lib "pict/main.rhm") '(Find)))
+     (define (Find pict sub h v)
+       ((dynamic-dot-ref (r:Find pict #:horiz h #:vert v)
+                         'in)
+        sub))
+     (values Find
+             r:from_handle
+             (parameterize ([current-namespace ns])
+               (namespace-require '(all-except rhombus #%top))
+               (namespace-require 'rhombus/parse)
+               (namespace-require 'redex/private/rhombus-bridge)
                (eval 'is_pict)))]
     [else
      (values "dummy value that's not rhombus's find"

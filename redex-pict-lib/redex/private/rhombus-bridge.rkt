@@ -7,12 +7,6 @@
 // racket code that does the same thing
 
 import: pict open
-export: find from_handle is_pict
-
-fun find(pict,sub,h,v):
-  Find(sub, ~horiz: h, ~vert: v).in(pict)
-
-fun from_handle(p):
-  Pict.from_handle(p)
+export: is_pict
 
 fun is_pict(pict): pict is_a Pict
