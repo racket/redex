@@ -255,9 +255,9 @@ pict library.
        (rhombus-dynamic-require '(lib "pict/main.rhm") '(Pict from_handle)))
      (define r:Find (rhombus-dynamic-require '(lib "pict/main.rhm") '(Find)))
      (define (Find pict sub h v)
-       ((dynamic-dot-ref (r:Find pict #:horiz h #:vert v)
+       ((dynamic-dot-ref (r:Find sub #:horiz h #:vert v)
                          'in)
-        sub))
+        pict))
      (values Find
              r:from_handle
              (parameterize ([current-namespace ns])
@@ -275,14 +275,16 @@ pict library.
      #`(begin
          (provide name)
          (define (name pict subpict)
-           (unless (pict? subpict)
-             (error 'name "the version in pict-interface.rkt supports only picts, not pict paths\n  ~s" subpict))
+           (finder-check subpict)
            (choose
             (racket-name pict subpict)
             (r:find pict subpict horiz vert)))
          (hash-set! finder-table
                     name
                     (cons horiz vert)))]))
+(define (finder-check subpict)
+  (unless (pict? subpict)
+    (error 'name "the version in pict-interface.rkt supports only picts, not pict paths\n  ~s" subpict)))
 (define finder-table (make-hash))
 
 (define-finder lt-find p:lt-find 'left 'top)
