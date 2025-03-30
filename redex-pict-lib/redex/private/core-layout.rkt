@@ -217,7 +217,8 @@
                                      (lw-line-span an-lw)
                                      (lw-column an-lw)
                                      (lw-column-span an-lw))])
-               (ar/lw rewritten)))]))
+               (ar/lw rewritten)))]
+        [else (error 'ar/lw "internal error ~s" an-lw)]))
     
     (define (remove-term-let an-lw)
       (if (lw-unq? an-lw)

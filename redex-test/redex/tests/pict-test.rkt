@@ -116,6 +116,21 @@
     (render-judgment-form deep-empty)))
  0)
 
+;; make sure fresh variables in judgment forms don't crash
+(let ()
+  (define-language L
+    (x ::= variable-not-otherwise-mentioned))
+
+  (define-judgment-form L
+    #:mode (J I)
+    #:contract (J any)
+
+    [(where x_2 ,(variable-not-in (term e) 'x))
+     ------------------------------------------
+     (J any)])
+
+  (void (render-judgment-form J)))
+
 ;; check the contracts for the various rule-pict functions
 (void
  (parameterize ([rule-pict-style

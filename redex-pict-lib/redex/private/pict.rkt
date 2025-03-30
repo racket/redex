@@ -409,13 +409,7 @@
            (if (null? fresh-vars)
                null
                (list
-                (hbl-append
-                 (apply 
-                  hbl-append
-                  (add-between
-                   fresh-vars
-                   (basic-text ", " (default-style))))
-                 (basic-text " fresh" (default-style)))))]
+                (fresh-vars-pict fresh-vars)))]
           [lst (add-between
                 (append
                  (map (adjust 'side-condition) pattern-binds/sc)
@@ -436,6 +430,15 @@
                              (vl-append ((adjust 'side-condition-line) p)
                                         (loop (car lst) (cdr lst)))]
                             [else (loop (htl-append p (car lst)) (cdr lst))])))))))))
+
+(define (fresh-vars-pict fresh-vars)
+  (hbl-append
+   (apply
+    hbl-append
+    (add-between
+     fresh-vars
+     (basic-text ", " (default-style))))
+   (basic-text " fresh" (default-style))))
 
 (define where-make-prefix-pict
   (make-parameter (lambda ()
@@ -1636,7 +1639,10 @@
                               (+ (lw-line rhs) (lw-line-span rhs)))]
                        [(struct metafunc-extra-side-cond (expr))
                         (wrapper->pict+lines expr)]
-                       [wrapper (wrapper->pict+lines wrapper)])
+                       [(struct metafunc-extra-fresh (vars))
+                        (list (fresh-vars-pict (map wrapper->pict vars)))]
+                       [wrapper
+                        (wrapper->pict+lines wrapper)])
                      (list-ref eqn 1))))
       (define sorted-premises (sort all-premises < #:key (λ (x) (list-ref x 1))))
        
