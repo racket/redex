@@ -6,6 +6,8 @@ v8.17
 
   * fixed the rendering of nonterminals that have both subscripts and primes
 
+  * minor bug fix in redex's typesetting code
+
 v8.16
 
   * bug fixes
