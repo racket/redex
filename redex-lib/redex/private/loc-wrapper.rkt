@@ -1,6 +1,8 @@
 #lang racket/base
 
 (require racket/contract
+         racket/math
+         racket/treelist
          (for-syntax racket/base)
          (for-syntax "loc-wrapper-ct.rkt")
          "loc-wrapper-rt.rkt")
@@ -23,7 +25,8 @@
              (column pnum)
              (column-span pnum)
              (unq? boolean?)
-             (metafunction? boolean?))))
+             (metafunction? boolean?)
+             (pict-tag (or/c string? treelist? #f)))))
 
 (provide to-lw
          to-lw/uq
