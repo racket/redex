@@ -1522,6 +1522,7 @@
                           (lw-column an-lw)
                           0 
                           #f
+                          #f
                           #f)
                  (make-lw name
                           (lw-line an-lw)
@@ -1529,7 +1530,8 @@
                           (lw-column an-lw)
                           0 
                           #f
-                          #t)
+                          #t
+                          #f)
                  (cdr (lw-e an-lw)))]))  
 
 (define (add-commas-and-rewrite-parens eles)

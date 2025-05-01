@@ -67,6 +67,8 @@ pict library.
   (choose
    (pict-convert p)
    (cond
+     [(r:is_pict p)
+      p]
      [(p:pict? p)
       (to-rhm-pict p)]
      [(pict-convertible? p)
@@ -116,8 +118,7 @@ pict library.
     [(_ racket-pict:expr rhombus-pict:expr)
      #'(choose/proc (λ () racket-pict)
                     (λ () rhombus-pict))]))
-(define (rhombus-present?)
-  (module-declared? '(lib "pict/main.rhm") #t))
+(define (rhombus-present?) (module-declared? '(lib "pict/main.rhm") #t))
 (define (choose/proc racket-pict rhombus-pict)
   (cond
     [(rhombus-present?)
@@ -316,3 +317,15 @@ pict library.
       (define hv (hash-ref finder-table dy))
       (define-values (dx dy) (r:find base dx (car hv) (cdr hv)))
       (r:overlay base #:dx dx #:dy dy pict)])))
+
+(provide add-redex-property)
+(define (add-redex-property p what)
+  (choose
+   p
+   (cond
+     [what
+      (define rhm-p (pict-convertible->pict p))
+      ((r:dynamic-dot-ref rhm-p
+                          'set_metadata)
+       (hash-set ((r:dynamic-dot-ref rhm-p 'metadata)) "redex" what))]
+     [else p])))
