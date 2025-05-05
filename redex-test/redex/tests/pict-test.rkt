@@ -193,4 +193,16 @@
     (e ::= 1 2))
   (check-true (pict? (render-language L4))))
 
+(let ()
+  (define-language L)
+
+  (define-judgment-form L
+    #:mode (-->can2 I I O)
+    [(where any_2 ,(variable-not-in #f #f))
+     (-->can2 e Γ ·)
+     -----
+     (-->can2 e Γ ·)])
+
+  (check-true (pict? (render-judgment-form -->can2))))
+
 (printf "pict-test.rkt done\n")

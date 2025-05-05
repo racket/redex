@@ -1640,7 +1640,13 @@
                        [(struct metafunc-extra-side-cond (expr))
                         (wrapper->pict+lines expr)]
                        [(struct metafunc-extra-fresh (vars))
-                        (list (fresh-vars-pict (map wrapper->pict vars)))]
+                        (define line-mins (for/list ([lw (in-list vars)])
+                                            (lw-line lw)))
+                        (define line-maxes (for/list ([lw (in-list vars)])
+                                             (+ (lw-line lw) (lw-line-span lw))))
+                        (list (fresh-vars-pict (map wrapper->pict vars))
+                              (apply min line-mins)
+                              (apply max line-maxes))]
                        [wrapper
                         (wrapper->pict+lines wrapper)])
                      (list-ref eqn 1))))
