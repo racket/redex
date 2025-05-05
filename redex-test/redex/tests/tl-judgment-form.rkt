@@ -2194,4 +2194,13 @@
            "no exception raised"))
         #t))
 
+(let ()
+  (define-language L)
+  (define-judgment-form L
+    #:mode (J I I O)
+    [(where any_2 ,(((λ (x) x) (λ (x y) #f)) #f #f))
+     ----
+     (J 1 2 3)])
+  (test (judgment-holds (J 1 2 3)) #t))
+
 (print-tests-passed 'tl-judgment-form.rkt)

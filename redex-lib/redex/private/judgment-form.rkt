@@ -1711,8 +1711,9 @@
                      (and (or (identifier? #'pat)
                               (let ([l (syntax->list #'pat)])
                                 (and l (andmap identifier? (syntax->list #'pat)))))
-                          (or (free-identifier=? #'f #'variable-not-in)
-                              (free-identifier=? #'f #'variables-not-in)))
+                          (and (identifier? #'f)
+                               (or (free-identifier=? #'f #'variable-not-in)
+                                   (free-identifier=? #'f #'variables-not-in))))
                      (with-syntax ([(ids ...)
                                     (map to-lw/proc
                                          (if (identifier? #'pat)
