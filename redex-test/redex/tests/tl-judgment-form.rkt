@@ -2117,6 +2117,57 @@
         (list (derivation '(J2 1 2) "two" '())
               (derivation '(J2 1 1) "one" '()))))
 
+(let ()
+  (define-language L)
+
+  (define-judgment-form L
+    #:mode (∈ I I)
+    [--------------------- "a"
+     (∈ any_1 any_2)]
+
+    [(where #true (≠ any_1 any_2))
+     --------------------- "b"
+     (∈ any_1 (any_2 any_3))])
+
+  (define-judgment-form L
+    #:mode (∉ I I)
+    [(≠ any_1 any_2)
+     --------------------- "c"
+     (∉ any_1 (any_2 any_3))])
+
+  (define-judgment-form L
+    #:mode (≠ I I)
+    [-------- "d"
+     (≠ any_1 any_2)])
+
+  (define-judgment-form L
+    #:mode (mc I)
+
+    [---- "e"
+     (mc 2)]
+
+    [(mc 2)
+     (∈ s2 (s1 ·))
+     ---- "f"
+     (mc 1)]
+
+    [(mc 2)
+     (∉ s2 (s1 ·))
+     ---- "g"
+     (mc 1)])
+
+  ;; this test is narrowed down from a larger redex model; I don't know why this combination
+  ;; is exactly the one that triggers the bug -- the specific of the derivation it produces
+  ;; aren't really the test. the test is that it produces something reasonable at all.
+  ;; the bug had to do with the judgment forms can be called as metafunctions in the premise
+  ;; of the ∈ when we're in derivation-building mode.
+  (test (build-derivations (mc 1))
+        (list (derivation '(mc 1) "f" (list (derivation '(mc 2) "e" '()) (derivation '(∈ s2 (s1 ·)) "a" '())))
+              (derivation '(mc 1) "f" (list (derivation '(mc 2) "e" '()) (derivation '(∈ s2 (s1 ·)) "b" '())))
+              (derivation '(mc 1) "g" (list (derivation '(mc 2) "e" '())
+                                            (derivation '(∉ s2 (s1 ·)) "c"
+                                                        (list (derivation '(≠ s2 s1) "d" '()))))))))
+
 
 (let ()
   (define-language L)

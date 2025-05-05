@@ -1215,7 +1215,7 @@
                         '()
                         '()
                         #f
-                        #f))
+                        #'null))
           (with-syntax ([(compiled-pattern-identifier ...) compiled-pattern-identifiers]
                         [(pattern-to-compile ...) patterns-to-compile])
             #`(let ([compiled-pattern-identifier (compile-pattern lang pattern-to-compile #t)] ...)
