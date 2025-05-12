@@ -1,6 +1,6 @@
 # redex
 
-PLT Redex is a domain-specific language designed for specifying and debugging operational semantics. 
+[PLT Redex](https://docs.racket-lang.org/redex/) is a domain-specific language designed for specifying and debugging operational semantics. 
 
 Write down a grammar and the reduction rules, and PLT Redex allows you to interactively explore terms and to use randomized test generation to attempt to falsify properties of your semantics.
 
