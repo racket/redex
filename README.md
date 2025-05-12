@@ -1,5 +1,11 @@
 # redex
 
+PLT Redex is a domain-specific language designed for specifying and debugging operational semantics. 
+
+Write down a grammar and the reduction rules, and PLT Redex allows you to interactively explore terms and to use randomized test generation to attempt to falsify properties of your semantics.
+
+PLT Redex is embedded in Racket, meaning all of the convenience of a modern programming language is available, including standard libraries (and non-standard ones) and a program-development environment
+
 This the source for the Racket packages: "redex", "redex-benchmark", "redex-doc", "redex-examples", "redex-gui-lib", "redex-lib", "redex-pict-lib", "redex-test".
 
 ### Contributing
