@@ -1,3 +1,11 @@
+v8.18
+
+  * changed redex-check's default generation strategy so that it
+    always uses random generation. Specifically, spends half of its
+    attempts on the enumerator and half on random generation when the
+    total number of attempts is 1000 or less. Otherwise it caps the
+    enumerator to 500 attempts.
+
 v8.17
 
   * render-judgment-form and judgment-form->pict are functions, making
