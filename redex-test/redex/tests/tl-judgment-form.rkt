@@ -2161,12 +2161,12 @@
   ;; aren't really the test. the test is that it produces something reasonable at all.
   ;; the bug had to do with the judgment forms can be called as metafunctions in the premise
   ;; of the ∈ when we're in derivation-building mode.
-  (test (build-derivations (mc 1))
-        (list (derivation '(mc 1) "f" (list (derivation '(mc 2) "e" '()) (derivation '(∈ s2 (s1 ·)) "a" '())))
-              (derivation '(mc 1) "f" (list (derivation '(mc 2) "e" '()) (derivation '(∈ s2 (s1 ·)) "b" '())))
-              (derivation '(mc 1) "g" (list (derivation '(mc 2) "e" '())
-                                            (derivation '(∉ s2 (s1 ·)) "c"
-                                                        (list (derivation '(≠ s2 s1) "d" '()))))))))
+  (test (apply set (build-derivations (mc 1)))
+        (set (derivation '(mc 1) "f" (list (derivation '(mc 2) "e" '()) (derivation '(∈ s2 (s1 ·)) "a" '())))
+             (derivation '(mc 1) "f" (list (derivation '(mc 2) "e" '()) (derivation '(∈ s2 (s1 ·)) "b" '())))
+             (derivation '(mc 1) "g" (list (derivation '(mc 2) "e" '())
+                                           (derivation '(∉ s2 (s1 ·)) "c"
+                                                       (list (derivation '(≠ s2 s1) "d" '()))))))))
 
 
 (let ()
