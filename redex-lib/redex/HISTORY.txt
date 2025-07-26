@@ -6,6 +6,8 @@ v8.18
     total number of attempts is 1000 or less. Otherwise it caps the
     enumerator to 500 attempts.
 
+  * bug fixes and docs improvements
+
 v8.17
 
   * render-judgment-form and judgment-form->pict are functions, making
