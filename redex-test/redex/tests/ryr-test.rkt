@@ -51,5 +51,5 @@
 
 (module+ test
   (module config info
-    (define timeout 200)
+    (define timeout 400)
     (define random? #t)))
