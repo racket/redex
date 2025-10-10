@@ -60,24 +60,21 @@ The @racketmodname[redex/pict] library provides functions
 designed to typeset grammars, reduction relations, and
 metafunctions.
 
-Each grammar, reduction relation, and metafunction can be
-saved in a @filepath{.ps} file (as encapsulated PostScript),
-or can be turned into a pict for viewing in the REPL or
-using with Slideshow (see the @racketmodname[pict]
-library).
+Each grammar, reduction relation, and metafunction, and even
+individual examples can be
+turned into @seclink["top" #:doc '(lib "pict/scribblings/pict.scrbl")]{picts} for use with
+@seclink["top" #:doc '(lib "scribblings/scribble/scribble.scrbl") #:indirect? #t]{Scribble} or
+@seclink["top" #:doc '(lib "scribblings/slideshow/slideshow.scrbl") #:indirect? #t]{Slideshow}.
 
 For producing papers with Scribble, just include the
-picts inline in the paper and pass the @DFlag{dvipdf} 
-flag to generate the @filepath{.pdf} file. For producing
-papers with LaTeX, create @filepath{.ps} files from Redex and use
-@tt{latex} and @tt{dvipdf} to create @filepath{.pdf} files
-(using @tt{pdflatex} with @filepath{.pdf} files will 
-work but the results will not look as good onscreen).
+picts inline in the paper. For producing
+papers with LaTeX, create @filepath{.ps} files from the picts with Redex,
+which can be included into a LaTeX document.
 
-@section{Picts, PDF, & PostScript}
+@section{Generating Picts}
 
-This section documents two classes of operations, one for
-direct use of creating postscript figures for use in papers
+This section documents two sets of operations, one for
+direct use of creating figures for use in papers
 and for use in DrRacket to easily adjust the typesetting:
 @racket[render-term],
 @racket[render-language],
@@ -86,7 +83,7 @@ and for use in DrRacket to easily adjust the typesetting:
 @racket[render-judgment-form],
 @racket[render-metafunctions], and
 @racket[render-lw], 
-and one for use in combination with other libraries
+and a second set for use in combination with other libraries
 that operate on @racketmodname[pict]s
 @racket[term->pict],
 @racket[language->pict],
@@ -96,7 +93,7 @@ that operate on @racketmodname[pict]s
 @racket[derivation->pict],
 @racket[metafunction->pict], and
 @racket[lw->pict].
-The primary difference between these functions is that the former list
+The primary difference between these functions is that the former
 sets @racket[dc-for-text-size] and the latter does not.
 
 
