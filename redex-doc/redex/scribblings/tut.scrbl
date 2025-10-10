@@ -95,8 +95,8 @@ the λ-calculus extended with a variation on McCarthy's @racket[amb] operator
 for ambiguous choice@~cite[amb1 amb2].
 
 If you are not familiar with Racket, first try 
-@other-doc['(lib "quick.scrbl" "scribblings/quick")] or
-@other-doc['(lib "more.scrbl" "scribblings/more")].
+@other-doc['(lib "quick.scrbl" "scribblings/quick") #:indirect "quick tutorial"] or
+@other-doc['(lib "more.scrbl" "scribblings/more") #:indirect "more tutorial"].
 If you wish to follow along with only parts of this tutorial
 (perhaps using a different IDE or in a text-only
 context), refer to @secref["reference"] for the full details on

@@ -7,7 +7,6 @@
                      "gui-doc"
                      "htdp-doc"
                      "pict-doc"
-                     "slideshow-doc"
                      "at-exp-lib"
                      "data-doc"
                      "data-enumerate-lib"
