@@ -417,7 +417,7 @@
                 'comma)])
      (if (null? lst)
          (blank)
-         (let ([where ((where-make-prefix-pict))])
+         (let ([where (pict-convertible->pict ((where-make-prefix-pict)))])
            (let ([max-w (- max-w (pict-width where))])
              (htl-append where
                          (let loop ([p (car lst)][lst (cdr lst)])

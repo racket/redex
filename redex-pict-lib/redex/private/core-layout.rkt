@@ -902,7 +902,7 @@
          (error 'apply-rewrites "rewritten version of ~s is still ~s" e e))
        (let ([p (cadr m)])
          (if (procedure? p)
-             (p)
+             (pict-convertible->pict (p))
              p)))]
     [else e]))
 
