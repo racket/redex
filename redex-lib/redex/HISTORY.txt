@@ -1,3 +1,7 @@
+v9.0
+
+  No changes since v8.18
+
 v8.18
 
   * changed redex-check's default generation strategy so that it
