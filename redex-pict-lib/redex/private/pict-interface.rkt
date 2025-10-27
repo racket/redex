@@ -21,7 +21,7 @@ pict library.
        (format-id #'x #:source #'x "r:~a" (syntax-e #'x)))
      #`(begin
          ;; just check that the function actually exists
-         (when (module-declared? 'mod #t)
+         (when (module-declared/bool? 'mod)
            (void (dynamic-require 'mod 'x)))
          (define-syntax (#,(syntax-property
                             r:
@@ -39,6 +39,9 @@ pict library.
     [(_ mod x:id ...)
      #'(begin (define-rhombus mod x) ...)]))
 
+(define (module-declared/bool? mod)
+  (with-handlers ([exn:fail:filesystem:missing-module? (λ (x) #f)])
+    (module-declared? mod #t)))
 
 (provide
  pict-convertible?
@@ -119,8 +122,7 @@ pict library.
      #'(choose/proc (λ () racket-pict)
                     (λ () rhombus-pict))]))
 (define (rhombus-present?)
-  (with-handlers ([exn:fail:filesystem:missing-module? (λ (x) #f)])
-    (module-declared? '(lib "pict/main.rhm") #t)))
+  (module-declared/bool? '(lib "pict/main.rhm")))
 (define (choose/proc racket-pict rhombus-pict)
   (cond
     [(rhombus-present?)
