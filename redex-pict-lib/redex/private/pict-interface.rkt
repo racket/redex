@@ -118,7 +118,9 @@ pict library.
     [(_ racket-pict:expr rhombus-pict:expr)
      #'(choose/proc (λ () racket-pict)
                     (λ () rhombus-pict))]))
-(define (rhombus-present?) (module-declared? '(lib "pict/main.rhm") #t))
+(define (rhombus-present?)
+  (with-handlers ([exn:fail:filesystem:missing-module? (λ (x) #f)])
+    (module-declared? '(lib "pict/main.rhm") #t)))
 (define (choose/proc racket-pict rhombus-pict)
   (cond
     [(rhombus-present?)
