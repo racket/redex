@@ -72,9 +72,9 @@
         (build-lw "#f" 0 0 0 2))
   
   (test (normalize-lw (to-lw/uq ()))
-        (make-lw (list (make-lw "(" 0 0 0 1 #t #f)
-                       (make-lw ")" 0 0 1 1 #t #f))
-                 0 0 0 2 #t #f))
+        (make-lw (list (make-lw "(" 0 0 0 1 #t #f #f)
+                       (make-lw ")" 0 0 1 1 #t #f #f))
+                 0 0 0 2 #t #f #f))
   
   (test (normalize-lw (to-lw (a)))
         (build-lw (list (build-lw "(" 0 0 0 1)
@@ -187,39 +187,39 @@
   (test (normalize-lw (to-lw ,x))
         (make-lw
          (list 
-          (make-lw "" 0 0 0 0 #f #f)
+          (make-lw "" 0 0 0 0 #f #f #f)
           'spring
-          (make-lw 'x 0 0 1 1 #t #f))
-         0 0 0 2 #f #f))
+          (make-lw 'x 0 0 1 1 #t #f #f))
+         0 0 0 2 #f #f #f))
   
   (test (normalize-lw (to-lw ,@x))
         (make-lw
          (list 
-          (make-lw "" 0 0 0 0 #f #f)
+          (make-lw "" 0 0 0 0 #f #f #f)
           'spring
-          (make-lw 'x 0 0 2 1 #t #f))
-         0 0 0 3 #f #f))
+          (make-lw 'x 0 0 2 1 #t #f #f))
+         0 0 0 3 #f #f #f))
   
   (test (normalize-lw (to-lw 'x))
         (make-lw
          (list 
-          (make-lw "'" 0 0 0 1 #f #f)
+          (make-lw "'" 0 0 0 1 #f #f #f)
           'spring
-          (make-lw 'x 0 0 1 1 #f #f))
-         0 0 0 2 #f #f))
+          (make-lw 'x 0 0 1 1 #f #f #f))
+         0 0 0 2 #f #f #f))
   
   (test (normalize-lw (to-lw ,(term x)))
         (make-lw
          (list 
-          (make-lw "" 0 0 0 0 #f #f)
+          (make-lw "" 0 0 0 0 #f #f #f)
           'spring
           (make-lw
            (list 
-            (make-lw "" 0 0 1 0 #t #f) 
+            (make-lw "" 0 0 1 0 #t #f #f)
             'spring
-            (make-lw 'x 0 0 7 1 #f #f))
-           0 0 1 7 #t #f))
-         0 0 0 8 #f #f))
+            (make-lw 'x 0 0 7 1 #f #f #f))
+           0 0 1 7 #t #f #f))
+         0 0 0 8 #f #f #f))
 
   (test (normalize-lw (to-lw (term x)))
         (build-lw 
@@ -280,11 +280,11 @@
           'spring
           (make-lw
            (list
-            (make-lw "," 0 0 1 1 #t #f)
+            (make-lw "," 0 0 1 1 #t #f #f)
             'spring
-            (make-lw 'x 0 0 2 1 #t #f))
+            (make-lw 'x 0 0 2 1 #t #f #f))
            0 0 1 2
-           #t #f))
+           #t #f #f))
          0 0 0 3))
 
   (test (map lw-e (lw-e (to-lw (#t #true #f #false))))

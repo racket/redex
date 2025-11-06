@@ -13,13 +13,13 @@
 (reset-count)
 
 (let ([content
-       (list (make-lw 'x 15 1 35 0 #f #f)
+       (list (make-lw 'x 15 1 35 0 #f #f #f)
              (make-lw (list
-                       (make-lw "(" 15 0 35 1 #f #f)
-                       (make-lw 'a 15 0 36 1 #f #f)
-                       (make-lw 'b 16 0 36 1 #f #f)
-                       (make-lw ")" 16 0 37 1 #f #f))
-                      15 1 35 3 #f #f))])
+                       (make-lw "(" 15 0 35 1 #f #f #f)
+                       (make-lw 'a 15 0 36 1 #f #f #f)
+                       (make-lw 'b 16 0 36 1 #f #f #f)
+                       (make-lw ")" 16 0 37 1 #f #f #f))
+                      15 1 35 3 #f #f #f))])
   (test (find-enclosing-loc-wrapper content)
         (build-lw content
                   15 1 35 3)))
@@ -43,15 +43,15 @@
             (a b c))))))
       (list (make-line 0
                        (list (make-spacer-token 0 2)
-                             (make-string-token 2 1 "(" 'roman)
-                             (make-string-token 3 1 "a" 'swiss)
-                             (make-string-token 4 1 " " 'roman)
-                             (make-string-token 5 1 "b" 'swiss)
-                             (make-string-token 6 1 " " 'roman)
-                             (make-string-token 7 1 "c" 'swiss)
-                             (make-string-token 8 1 ")" 'roman)))
+                             (make-string-token 2 1 "(" 'roman #f)
+                             (make-string-token 3 1 "a" 'swiss #f)
+                             (make-string-token 4 1 " " 'roman #f)
+                             (make-string-token 5 1 "b" 'swiss #f)
+                             (make-string-token 6 1 " " 'roman #f)
+                             (make-string-token 7 1 "c" 'swiss #f)
+                             (make-string-token 8 1 ")" 'roman #f)))
             (make-line 0
-                       (list (make-string-token 0 0 "" 'roman) 
+                       (list (make-string-token 0 0 "" 'roman #f)
                              (make-pict-token 0 1 'pict)
                              (make-pict-token 1 0 'pict)))))
 
@@ -64,13 +64,13 @@
             (|+1| x))))))
       (list (make-line 0
                        (list (make-spacer-token 0 2)
-                             (make-string-token 2 1 "(" 'roman)
-                             (make-string-token 3 4 "+1" '(italic . roman))
-                             (make-string-token 7 1 " " 'roman)
-                             (make-string-token 8 1 "x" 'swiss)
-                             (make-string-token 9 1 ")" 'roman)))
+                             (make-string-token 2 1 "(" 'roman #f)
+                             (make-string-token 3 4 "+1" '(italic . roman) #f)
+                             (make-string-token 7 1 " " 'roman #f)
+                             (make-string-token 8 1 "x" 'swiss #f)
+                             (make-string-token 9 1 ")" 'roman #f)))
             (make-line 0
-                       (list (make-string-token 0 0 "" 'roman) 
+                       (list (make-string-token 0 0 "" 'roman #f)
                              (make-pict-token 0 1 'pict)
                              (make-pict-token 1 0 'pict)))))
 
@@ -84,16 +84,16 @@
                c))))))
       (list (make-line 1
                        (list (make-spacer-token 0 5)
-                             (make-string-token 5 1 "c" 'swiss)
-                             (make-string-token 6 1 ")" 'roman)))
+                             (make-string-token 5 1 "c" 'swiss #f)
+                             (make-string-token 6 1 ")" 'roman #f)))
             (make-line 0
                        (list (make-spacer-token 0 2)
-                             (make-string-token 2 1 "(" 'roman)
-                             (make-string-token 3 1 "a" 'swiss)
-                             (make-string-token 4 1 " " 'roman)
-                             (make-string-token 5 1 "b" 'swiss)))
+                             (make-string-token 2 1 "(" 'roman #f)
+                             (make-string-token 3 1 "a" 'swiss #f)
+                             (make-string-token 4 1 " " 'roman #f)
+                             (make-string-token 5 1 "b" 'swiss #f)))
             (make-line 0
-                       (list (make-string-token 0 0 "" 'roman) 
+                       (list (make-string-token 0 0 "" 'roman #f)
                              (make-pict-token 0 1 'pict)
                              (make-pict-token 1 0 'pict)))))
 

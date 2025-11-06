@@ -14,7 +14,8 @@
                 (- (lw-column lw) min-column)
                 (lw-column-span lw)
                 (lw-unq? lw)
-                (lw-metafunction? lw))]
+                (lw-metafunction? lw)
+                (lw-pict-tag lw))]
       [else lw]))
   (define (normalize/e e)
     (cond
