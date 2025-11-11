@@ -1163,18 +1163,18 @@ The @racket[proc] must match the contract @racket[(-> lw? lw?)].
 Its result should be the rewritten version version of the input.
 }
 
-@defform[(with-atomic-rewriter name-symbol
+@defform[(with-atomic-rewriter atom
                                string-or-thunk-returning-pict
                                expression)]{
 
 Extends the current set of atomic-rewriters with one
-new one that rewrites the value of name-symbol to
+new one that rewrites the value of atom to
 @racket[string-or-pict-returning-thunk] (applied, in the case of a
 thunk), during the evaluation of expression.
 
-@racket[name-symbol] is expected to evaluate to a symbol. The value
-of @racket[string-or-thunk-returning-pict] is used whenever the symbol
-appears in a pattern.
+@racket[atom] is expected to evaluate to a symbol, string, boolean,
+ or number. The value of @racket[string-or-thunk-returning-pict] is
+used that atom appears in a pattern.
 
 @ex[
   (define-language lam-lang
@@ -1186,7 +1186,7 @@ appears in a pattern.
 ]
 }
 
-@defform[(with-atomic-rewriters ([name-symbol string-or-thunk-returning-pict] ...)
+@defform[(with-atomic-rewriters ([atom string-or-thunk-returning-pict] ...)
                                   expression)]{
 Shorthand for nested @racket[with-atomic-rewriter] expressions.
 @history[#:added "1.4"]}

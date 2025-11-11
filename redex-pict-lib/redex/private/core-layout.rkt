@@ -89,6 +89,22 @@
                    (basic-text "..." (default-style)))))
        (hole "[]"))))
 
+  ;; generate the assoc-table lookup entries to rewrite atoms
+  ;; (i.e. since internally all atom literals will be a string
+  ;;       of some sort)
+  (define (generate-atom-entries atom transformer)
+    (match atom
+      [(? symbol?) (list (list atom transformer))]
+      [(? string?) (list (list (format "“~a”" atom) transformer)
+                         (list (format "~v" atom) transformer))]
+      [#t (list (list "#t" transformer)
+                (list "#T" transformer)
+                (list "#true" transformer))]
+      [#f (list (list "#f" transformer)
+                (list "#F" transformer)
+                (list "#false" transformer))]
+      [(? number?) (list (list (number->string atom) transformer))]))
+
   (define-syntax-rule 
     (with-atomic-rewriter name rewriter body)
     (with-atomic-rewriters ([name rewriter]) body))
@@ -96,14 +112,16 @@
     (syntax-parse stx
       [(_ ([name transformer] ...) e:expr)
        #:declare name
-       (expr/c #'symbol?
+       (expr/c #'(or/c symbol? string? boolean? number?)
                #:name "atomic-rewriter name")
        #:declare transformer
        (expr/c #'(or/c (-> pict-convertible?) string?)
                #:name "atomic-rewriter rewrite")
        #`(parameterize ([atomic-rewrite-table
-                         (append (list (list name.c transformer.c) ...)
-                                 (atomic-rewrite-table))])
+                         (apply append
+                                (generate-atom-entries name.c transformer.c)
+                                 ...
+                                 (list (atomic-rewrite-table)))])
            e)]))
   
 ;; compound-rewrite-table : (listof lw) -> (listof (union lw pict string))
@@ -824,7 +842,8 @@
                 (string=? "#:" (substring atom 0 2))))
        (list (make-string-token col span atom (paren-style)))]
       [(string? atom)
-       (list (make-string-token col span atom (default-style)))]
+       (list (or (rewrite-atomic col span atom literal-style)
+                 (make-string-token col span atom (default-style))))]
       [else (error 'atom->tokens "unk ~s" atom)]))
 
   (define (rewrite-atomic col span e get-style)
@@ -858,7 +877,7 @@
     [(assoc e (atomic-rewrite-table))
      =>
      (λ (m)
-       (when (eq? (cadr m) e)
+       (when (equal? (cadr m) e)
          (error 'apply-rewrites "rewritten version of ~s is still ~s" e e))
        (let ([p (cadr m)])
          (if (procedure? p)
