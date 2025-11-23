@@ -217,9 +217,10 @@ This accepts a reduction, a language, the name of a
 non-terminal in the language and returns the compatible
 closure of the reduction for the specified non-terminal.
 
-In the below example, @racket[_r] is intended to calculate a boolean @racket[or].
-Since @tt{r} does not recursively break apart its input, it will not reduce
-subexpressions within a larger non-matching expression @tt{t}.
+In the below example, @racket[addition-without-context]
+contains two rules that calculate sums. But, since it
+requires a @tt{+} at the top level, it will not reduce
+subexpressions within a larger non-matching expression.
 
 @examples[
 #:label #f
@@ -247,8 +248,8 @@ subexpressions within a larger non-matching expression @tt{t}.
 ]
 
 The @racket[compatible-closure] operator allows us to close
-@racket[_addition-without-context] over all nested @racket[_e]
-contexts and then we can use it to find the sum.
+@racket[addition-without-context] over all nested @racket[e]
+contexts and then we can use it to find nested sums.
 
 @examples[
 #:label #f
