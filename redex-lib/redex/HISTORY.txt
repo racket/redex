@@ -1,3 +1,7 @@
+v9.1
+
+  * bug fixes and documentation improvements
+
 v9.0
 
   No changes since v8.18
