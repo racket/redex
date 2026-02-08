@@ -2,6 +2,7 @@
 (require net/url 
          racket/port 
          racket/file
+         racket/format
          file/gunzip
          file/untar)
 
@@ -39,13 +40,18 @@
         #:key path->string))
 
 (for ([file (in-list racket-files)])
-  (printf "running ~a\n" file)
+  (define start-time (current-process-milliseconds))
+  (printf "starting ~a\n" file)
   (flush-output)
   (let/ec k
     (parameterize ([error-escape-handler (λ args (k (void)))])
       (dynamic-require file #f)))
   (flush-output (current-error-port))
-  (flush-output))
+  (flush-output)
+  (printf "finished ~a, took ~a seconds\n"
+          file
+          (~r (/ (min 0 (- (current-process-milliseconds) start-time)) 1000)
+              #:precision 2)))
 
 (delete-directory/files tmp-dir)
 
