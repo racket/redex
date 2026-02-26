@@ -8,6 +8,8 @@
 (test-equal (fvs an-x? (term (+ x a b))) (set 'x 'a 'b))
 (test-equal (fvs an-x? (term (λ (x num) (+ x y)))) (set 'y))
 (test-equal (fvs an-x? (term (λ (x num) (y num) (+ x y)))) (set))
+(test-equal (fvs an-x? (term (λ x y (+ x y)))) (set))
+(test-equal (fvs an-x? (term (λ x (+ x y)))) (set 'y))
 
 (define-language L)
 (define-metafunction L
@@ -55,4 +57,12 @@
             (term (λ (a (→ num (→ num num)))
                     (λ (b (→ num (→ num num)))
                       1))))
+(test-equal (subst/proc symbol?
+                        (list 'f1)
+                        (list '((λ f1 (λ x9 (f1 (f1 x9)))) x1))
+                        '(λ x9 (f1 (f1 x9))))
+            (term (λ x9
+                    (((λ f1 (λ x9 (f1 (f1 x9)))) x1)
+                     (((λ f1 (λ x9 (f1 (f1 x9)))) x1)
+                      x9)))))
 (test-results)
