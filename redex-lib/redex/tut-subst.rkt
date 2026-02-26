@@ -97,6 +97,8 @@ for untyped.
     (match body
       [`(λ (,xs ,ts) ... ,body)
        (set-subtract (loop body) (apply set xs))]
+      [`(λ ,(? symbol? xs) ... ,body)
+       (set-subtract (loop body) (apply set xs))]
       [(? x?)
        (set body)]
       [(? list?)
