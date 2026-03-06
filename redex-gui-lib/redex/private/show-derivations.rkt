@@ -282,7 +282,7 @@
       (send dc draw-rectangle x y width 1)
       (send dc set-smoothing old-smoothing)
       (send dc set-pen old-pen))
-    (define/override (get-extent dc x y wb hb db sb lb rb)
+    (define/override (get-extent dc x y [wb #f] [hb #f] [db #f] [sb #f] [lb #f] [rb #f])
       (super get-extent dc x y wb hb db sb lb rb)
       (set-box/f wb width)
       (set-box/f hb 1))
