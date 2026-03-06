@@ -251,7 +251,9 @@
                 #:no-show-frame? [no-show-frame? #f]
                 #:x-spacing [x-spacing default-x-spacing]
                 #:y-spacing [y-spacing default-y-spacing]
-                #:reduce [reduce apply-reduction-relation/tag-with-names])
+                #:reduce [reduce apply-reduction-relation/tag-with-names]
+                #:autorun-dot? [autorun-dot? #f]
+                #:hide-controls? [hide-controls? #f])
   (define exprs (if multiple? pre-exprs (list pre-exprs)))
   (define main-eventspace (current-eventspace))
   (define saved-parameterization (current-parameterization))
@@ -305,7 +307,7 @@
                           "Reducing..." 
                           lower-panel
                           (lambda (x y)
-                            (reduce-button-callback #f))))
+                            (reduce-button-callback #f #f))))
   (define status-message (instantiate message% ()
                            (label "")
                            (parent lower-panel)
@@ -514,7 +516,7 @@
   
   ;; reduce-button-callback : boolean -> void
   ;; =eventspace main thread=
-  (define (reduce-button-callback show-all-at-once?)
+  (define (reduce-button-callback show-all-at-once? run-dot-when-done?)
     (when show-all-at-once? (send graph-pb begin-edit-sequence))
     (send reduce-button enable #f)
     (send reduce-button set-label "Reducing...")
@@ -526,6 +528,11 @@
                  (lambda () ;; =eventspace main thread=
                    (send graph-pb begin-edit-sequence)
                    (send graph-pb re-run-layout)
+                   (when run-dot-when-done?
+                     (set! dot? (not dot?))
+                     (dot-callback)
+                     (set! dot? (not dot?))
+                     (dot-callback))
                    (send graph-pb end-edit-sequence)
                    (when show-all-at-once? (send graph-pb end-edit-sequence))
                    (scroll-to-rightmost-snip)
@@ -637,9 +644,11 @@
   (send remove-my-contents-panel
         change-children
         (lambda (l)
-          (if (preferences:get 'plt-reducer:show-bottom)
-              (list bottom-panel)
-              null)))
+          (cond
+            [hide-controls? '()]
+            [(preferences:get 'plt-reducer:show-bottom)
+             (list bottom-panel)]
+            [else '()])))
   (out-of-dot-state) ;; make sure the state is initialized right
   (set-font-size (initial-font-size)) ;; call this before 'insert-into' or it triggers resizing
   (insert-into init-rightmost-x 0 graph-pb frontier y-spacing)
@@ -652,7 +661,10 @@
        (yield s))
      (values graph-pb ec)]
     [else
-     (reduce-button-callback #t)
+     (reduce-button-callback
+      #t
+      (and autorun-dot?
+           (find-dot)))
      (send f show #t)]))
 
 (define red-sem-frame%

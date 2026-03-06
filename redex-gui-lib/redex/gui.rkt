@@ -48,7 +48,9 @@
                #:y-spacing real?
                #:graph-pasteboard-mixin (make-mixin-contract graph-pasteboard<%>)
                #:reduce (-> reduction-relation? any/c
-                            (listof (list/c (or/c false/c string?) any/c))))
+                            (listof (list/c (or/c false/c string?) any/c)))
+               #:autorun-dot? any/c
+               #:hide-controls? any/c)
               any)]
  [traces/ps (->* ((or/c IO-judgment-form? reduction-relation?)
                   any/c

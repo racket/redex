@@ -45,6 +45,8 @@ exploring reduction sequences.
                  [#:layout layout (-> (listof term-node?) void?) void]
                  [#:edge-labels? edge-labels? boolean? #t]
                  [#:edge-label-font edge-label-font (or/c #f (is-a?/c font%)) #f]
+                 [#:autorun-dot? autorun-dot? any/c #f]
+                 [#:hide-controls? hide-controls? any/c #f]
                  [#:graph-pasteboard-mixin graph-pasteboard-mixin 
                                            (make-mixin-contract graph-pasteboard<%>)
                                            values])
@@ -142,6 +144,13 @@ are drawn; otherwise not.
 The @racket[edge-label-font] argument is used as the font on the edge
 labels. If @racket[#f] is supplied, the @racket[dc<%>] object's default
 font is used.
+
+If @racket[autorun-dot?] is a true value and the dot binary
+can be found, then the layout is adjusted using dot before
+the window is shown.
+
+If @racket[hide-controls?] is a true value, then the controls
+on the bottom of the window are initially hidden.
 
 The traces library uses an instance of the @racketmodname[mrlib/graph]
 library's @racket[graph-pasteboard<%>] interface to layout
