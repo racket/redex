@@ -2938,8 +2938,14 @@
   (cond
     [(reduction-relation? x) (reduction-relation->rule-names x)]
     [(IO-judgment-form? x) (runtime-judgment-form-rule-names x)]))
-(define (judgment-form->rule-names x)
-  (runtime-judgment-form-rule-names x))
+(define (judgment-form->rule-names x #:include-unnamed? [include-unnamed? #f])
+  (cond
+    [include-unnamed?
+     (runtime-judgment-form-rule-names x)]
+    [else
+     (for/list ([n (in-list (runtime-judgment-form-rule-names x))]
+                #:when n)
+       n)]))
 
 
 ;                                                                               

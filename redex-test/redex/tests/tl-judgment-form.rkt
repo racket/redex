@@ -2203,4 +2203,22 @@
      (J 1 2 3)])
   (test (judgment-holds (J 1 2 3)) #t))
 
+(let ()
+  (define-language L)
+  (define-judgment-form L
+    #:mode (J I)
+    [----- "1"
+     (J 1)]
+
+    [----- two
+     (J 1)]
+
+    [-----
+     (J 2)])
+  (test (judgment-form->rule-names J)
+        (list (string->symbol "1") 'two))
+
+  (test (judgment-form->rule-names J #:include-unnamed? #t)
+        (list (string->symbol "1") 'two #f)))
+
 (print-tests-passed 'tl-judgment-form.rkt)

@@ -627,10 +627,20 @@ helpful when debugging.
  See @racket[define-judgment-form] for more examples.
 }
 
-@defproc[(judgment-form->rule-names [r judgment-form?])
-         (listof symbol?)]{
+@defproc[(judgment-form->rule-names [r judgment-form?]
+                                    [#:include-unnamed? include-unnamed? any/c #f])
+         (listof (or/c symbol? #f))]{
 
-Returns the names of the judgment form's named clauses.
+ Returns the names of the judgment form's clauses.
+
+ If @racket[include-unnamed?] is @racket[#f] (the default)
+ then any case that does not have a name is not included in
+ the result and the result list contains only
+ @racket[symbol?]s.
+
+ Otherwise, each case is included in the result and unnamed
+ cases have a @racket[#false] at that position in the result
+ list.
 }
 
 
