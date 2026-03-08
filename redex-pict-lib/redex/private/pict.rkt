@@ -663,7 +663,7 @@
     [(null? info)
      (error what
             (string-append
-             "expected some non-terminals to render, but there were none\n"
+             "expected some non-terminals to have productions to render, but there were none\n"
              "  language's nts: ~a\n"
              "  requested nts: ~a")
             (nts->str all-nts)
