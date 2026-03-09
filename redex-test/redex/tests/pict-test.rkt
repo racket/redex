@@ -168,7 +168,7 @@
   (check-exn
    (λ (x)
      (and (exn:fail? x)
-          (regexp-match? #rx"expected some non-terminals to render"
+          (regexp-match? #rx"expected some non-terminals to have productions to render"
                          (exn-message x))))
    (λ () (render-language L1)))
   (define-union-language L2 L1)
@@ -185,8 +185,9 @@
   (check-exn
    (λ (x)
      (and (exn:fail? x)
-          (regexp-match? #rx"expected some non-terminals to render"
-                         (exn-message x))))
+          (regexp-match? #rx"expected some non-terminals to have productions to render"
+                         (exn-message x)))
+     #t)
    (λ () (render-language L3 #:nts '())))
 
   (define-extended-language L4 L2
