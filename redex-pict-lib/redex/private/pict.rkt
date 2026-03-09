@@ -630,35 +630,12 @@
                      (map (λ (x) (format " ~a" x)) (cdr langs-nts)))))))
      nts)))
 
-;; save-as-ps/pdf : (-> pict) path-string -> void
-(define (save-as-ps/pdf mk-pict filename) 
-  (let ([ps/pdf-dc (make-ps/pdf-dc filename)])
-    (parameterize ([dc-for-text-size ps/pdf-dc])
-      (send ps/pdf-dc start-doc "x")
-      (send ps/pdf-dc start-page)
-      (draw-pict (mk-pict) ps/pdf-dc 0 0)
-      (send ps/pdf-dc end-page)
-      (send ps/pdf-dc end-doc))))
-
-(define (make-ps/pdf-dc filename)
-  (let ([ps-setup (make-object ps-setup%)])
-    (send ps-setup copy-from (current-ps-setup))
-    (send ps-setup set-file filename)
-    (send ps-setup set-mode 'file)
-    (define is-pdf? 
-      (cond
-        [(path? filename) (regexp-match #rx#"[.]pdf$" (path->bytes filename))]
-        [else (regexp-match #rx"[.]pdf$" filename)]))
-    (define % (if is-pdf? pdf-dc% post-script-dc%))
-    (parameterize ([current-ps-setup ps-setup])
-      (make-object % #f #f))))
-
 (define non-terminal-gap-space (make-parameter 0))
 
 ;; raw-info : language-pict-info
 ;; nts : (listof symbol) -- the nts that the user expects to see
 (define (make-grammar-pict what raw-info nts all-nts)
-  (define info (remove-unwanted-nts nts (flatten-grammar-info raw-info all-nts nts)))
+  (define info (remove-unwanted-nts nts (flatten-grammar-info raw-info all-nts)))
   (cond
     [(null? info)
      (error what
@@ -669,8 +646,9 @@
             (nts->str all-nts)
             (nts->str nts))]
     [else
-     (define snts (map (λ (x) (sequence-of-non-terminals (car x)))
-                       info))
+     (define snts
+       (for/list ([x (in-list info)])
+         (sequence-of-non-terminals (car x))))
      (define term-space
        (launder
         (ghost
@@ -734,62 +712,57 @@
 ;; remove-unwanted-nts : (listof symbol) flattened-language-pict-info -> flattened-language-pict-info
 (define (remove-unwanted-nts nts info)
   (filter (λ (x) (not (null? (car x))))
-          (map
-           (λ (x) (cons (filter (λ (x) (member x nts)) (car x))
-                        (cdr x)))
-           info)))
-
+          (for/list ([x (in-list info)])
+            (cons (filter (λ (x) (member x nts)) (car x))
+                  (cdr x)))))
 
 ;; flatten-grammar-info : language-pict-info (listof symbol) -> flattened-language-pict-info
-(define (flatten-grammar-info info all-nts wanted-nts)
+(define (flatten-grammar-info info all-nts)
   (define (merge-line nt extension orig-line)
     (cond
-     [(and extension orig-line)
-      (let ([rhss (cdr extension)])
-        (cons nt
-              (map (λ (x)
-                     (if (and (lw? x) (eq? '.... (lw-e x)))
-                         (struct-copy lw
-                                      x
-                                      [e
-                                       (lw->pict all-nts
-                                                 (find-enclosing-loc-wrapper
-                                                  (add-bars (cdr orig-line))))])
-                         x))
-                   (cdr extension))))]
+      [(and extension orig-line)
+       (define rhss (cdr extension))
+       (cons nt
+             (for/list ([x (in-list (cdr extension))])
+               (if (and (lw? x) (eq? '.... (lw-e x)))
+                   (struct-copy lw
+                                x
+                                [e
+                                 (lw->pict all-nts
+                                           (find-enclosing-loc-wrapper
+                                            (add-bars (cdr orig-line))))])
+                   x)))]
      [extension extension]
      [else orig-line]))
-  (let ([union? (extend-language-show-union)]
-        [ext-order? (extend-language-show-extended-order)])
-    (let loop ([info info])
-      (cond
-        [(vector? info) 
-         (let ([orig (loop (vector-ref info 0))]
-               [extensions (vector-ref info 1)])
-           (if union?
-               (cond
-                [(not ext-order?)
-                 ;; Use original order, adding extra extensions after:
-                 (define orig-nts (list->set (map car orig)))
-                 (append
-                  (map (λ (orig-line)
-                         (define nt (car orig-line))
-                         (merge-line nt (assoc nt extensions) orig-line))
-                       orig)
-                  (filter (lambda (extension) (not (set-member? orig-nts (car extension))))
-                          extensions))]
-                [else
-                 ;; Use extension order, adding any extra originals after:
-                 (define ext-nts (list->set (map car extensions)))
-                 (append
-                  (map (λ (extension)
-                         (define nt (car extension))
-                         (merge-line nt extension (assoc nt orig)))
-                       extensions)
-                  (filter (lambda (orig-line) (not (set-member? ext-nts (car orig-line))))
-                          orig))])
-               extensions))]
-        [else info]))))
+  (define union? (extend-language-show-union))
+  (define ext-order? (extend-language-show-extended-order))
+  (let loop ([info info])
+    (cond
+      [(and (vector? info) (not union?))
+       (vector-ref info 1)]
+      [(vector? info)
+       (define orig (loop (vector-ref info 0)))
+       (define extensions (vector-ref info 1))
+       (cond
+         [(not ext-order?)
+          ;; Use original order, adding extra extensions after:
+          (define orig-nts (list->set (map car orig)))
+          (append
+           (for/list ([orig-line (in-list orig)])
+             (define nt (car orig-line))
+             (merge-line nt (assoc nt extensions) orig-line))
+           (filter (lambda (extension) (not (set-member? orig-nts (car extension))))
+                   extensions))]
+         [else
+          ;; Use extension order, adding any extra originals after:
+          (define ext-nts (list->set (map car extensions)))
+          (append
+           (for/list ([extension (in-list extensions)])
+             (define nt (car extension))
+             (merge-line nt extension (assoc nt orig)))
+           (filter (lambda (orig-line) (not (set-member? ext-nts (car orig-line))))
+                   orig))])]
+      [else info])))
 
 (define (default-make-::= non-terminals) (basic-text " ::= " (grammar-style)))
 (define language-make-::=-pict (make-parameter default-make-::=))
@@ -1803,3 +1776,28 @@
     (define r (unappend (cdr l) (cons (cdar wrt) (cdr wrt))))
     (cons (cons (car l) (car r))
           (cdr r))]))
+
+
+
+;; save-as-ps/pdf : (-> pict) path-string -> void
+(define (save-as-ps/pdf mk-pict filename)
+  (let ([ps/pdf-dc (make-ps/pdf-dc filename)])
+    (parameterize ([dc-for-text-size ps/pdf-dc])
+      (send ps/pdf-dc start-doc "x")
+      (send ps/pdf-dc start-page)
+      (draw-pict (mk-pict) ps/pdf-dc 0 0)
+      (send ps/pdf-dc end-page)
+      (send ps/pdf-dc end-doc))))
+
+(define (make-ps/pdf-dc filename)
+  (let ([ps-setup (make-object ps-setup%)])
+    (send ps-setup copy-from (current-ps-setup))
+    (send ps-setup set-file filename)
+    (send ps-setup set-mode 'file)
+    (define is-pdf?
+      (cond
+        [(path? filename) (regexp-match #rx#"[.]pdf$" (path->bytes filename))]
+        [else (regexp-match #rx"[.]pdf$" filename)]))
+    (define % (if is-pdf? pdf-dc% post-script-dc%))
+    (parameterize ([current-ps-setup ps-setup])
+      (make-object % #f #f))))
