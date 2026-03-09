@@ -43,6 +43,21 @@
     [d .... yet-more-d]
     [f different-f]
     [g .... more-g])
+
+  (define-language multi-line1
+    (e ::=
+       (+ e e)
+       (* e e)
+       number))
+
+  (define-extended-language multi-line2
+    multi-line1
+    (e ::=
+       (- e)
+       (cos e)
+       ....
+       (expt e e)
+       (sin e)))
   
   (btest
    (apply
@@ -56,7 +71,8 @@
          2
          (frame (language->pict L1))
          (frame (language->pict L2))
-         (frame (language->pict L3))))))
+         (frame (language->pict L3))
+         (frame (language->pict multi-line2))))))
    "extended-language.png"))
 
 (let ()
