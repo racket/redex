@@ -397,7 +397,19 @@ see also term.rkt for some restrictions/changes there
            (raise-syntax-error what "mf-apply cannot be used in a pattern position" orig-stx term)]
           [(terms ...)
            (let ()
-             (define terms-lst (syntax->list #'(terms ...)))
+             (define-values (metafunction-application? terms-lst)
+               (let ([term-lst (syntax->list #'(terms ...))])
+                 (syntax-case (and (pair? term-lst) (car term-lst)) (#%list-term)
+                   [#%list-term (values #f (cdr term-lst))]
+                   [id (and (identifier? #'id)
+                            (term-fn? (syntax-local-value #'id (λ () #f))))
+                       (values (car term-lst) term-lst)]
+                   [_ (values #f term-lst)])))
+             (when metafunction-application?
+               (raise-syntax-error what
+                                   "metafunctions cannot be called in pattern positions"
+                                   orig-stx
+                                   (car terms-lst)))
              (when (and (pair? terms-lst) (is-ellipsis? (car terms-lst)))
                (raise-syntax-error what
                                    "ellipsis should not appear in the first position of a sequence"

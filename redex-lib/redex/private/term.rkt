@@ -30,6 +30,7 @@ see also rewrite-side-conditions.rkt for some restrictions/changes there
 (provide term term-let term-define define-term
          hole in-hole
          #%mf-apply
+         #%list-term
          term-let/error-name term-define/error-name term-let-fn term-define-fn
          (for-syntax term-rewrite
                      term-fn-id?
@@ -39,7 +40,8 @@ see also rewrite-side-conditions.rkt for some restrictions/changes there
 
 (define-syntax (hole stx) (raise-syntax-error 'hole "used outside of term" stx))
 (define-syntax (in-hole stx) (raise-syntax-error 'in-hole "used outside of term" stx))
-(define-syntax (#%mf-apply stx) (raise-syntax-error 'mf-apply "used outside of term" stx))
+(define-syntax (#%mf-apply stx) (raise-syntax-error '#%mf-apply "used outside of term" stx))
+(define-syntax (#%list-term stx) (raise-syntax-error '#%list-term "used outside of term" stx))
 
 (define (with-syntax* stx)
   (syntax-case stx ()

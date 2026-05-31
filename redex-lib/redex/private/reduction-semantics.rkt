@@ -1510,7 +1510,7 @@
                         stuff-with-ors-intact ...) ...)
                       pats])
          (with-syntax ([((rhs stuff+names ...) ...) #'((raw-rhses ...) ...)]
-                       [(lhs ...) #'((lhs-clauses ...) ...)])
+                       [(lhs ...) #'((#%list-term lhs-clauses ...) ...)])
            (with-syntax ([((clause-name stuff ...) ...) 
                           (extract-clause-names #'((stuff+names ...) ...))])
              (parse-extras #'((stuff ...) ...))
