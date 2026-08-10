@@ -774,6 +774,13 @@ case, only the numbers are used).
  @history[#:added "1.5"]
 }
 
+@defparam[judgment-form-no-bar-when-no-premises no-bar-when-no-premises? boolean?]{
+ Controls if a horizontal bar is shown above the conclusion when there are no premises for a particular rule.
+ If the horizontal bar is not shown, then the label for the rule is also not shown.
+
+ Used by @racket[default-relation-clause-combine] and defaults to @racket[#t].
+}
+
 @deftogether[[
 @defparam[label-style style text-style/c]{}
 @defparam[grammar-style style text-style/c]{}

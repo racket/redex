@@ -93,6 +93,7 @@
          metafunction-cases
          judgment-form-cases
          judgment-form-show-rule-names
+         judgment-form-no-bar-when-no-premises
          extend-language-show-union
          extend-language-show-extended-order
          set-arrow-pict!
@@ -1789,11 +1790,14 @@
   (define line-w (max (pict-width top) (pict-width conclusion)))
   (define line (dc (λ (dc dx dy) (send dc draw-line dx dy (+ dx line-w) dy))
                    line-w 1))
+  (define skip-the-bar? (and (null? premises) (judgment-form-no-bar-when-no-premises)))
   (define w/out-label
     (vc-append
      (horizontal-bar-spacing)
      top
-     line
+     (cond
+       [skip-the-bar? (blank)]
+       [else line])
      conclusion))
   (define the-label-pict
     (and name
@@ -1803,9 +1807,11 @@
              (vl-append label
                         (blank 0 (- (- (pict-height w/out-label) y)
                                     (/ (pict-height label) 2))))))))
-  (if the-label-pict
+  (if (and the-label-pict (not skip-the-bar?))
       (hb-append w/out-label the-label-pict)
       w/out-label))
+
+(define judgment-form-no-bar-when-no-premises (make-parameter #f))
 
 (define relation-clause-combine (make-parameter default-relation-clause-combine))
 
