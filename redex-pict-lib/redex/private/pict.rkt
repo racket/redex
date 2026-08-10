@@ -1801,6 +1801,7 @@
      conclusion))
   (define the-label-pict
     (and name
+         (not skip-the-bar?)
          (judgment-form-show-rule-names)
          (let ([label (string->bracketed-label name)])
            (let-values ([(x y) (rc-find w/out-label line)])
