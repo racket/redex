@@ -1,3 +1,11 @@
+v9.4
+
+  * added premise-spacing
+
+v9.3
+
+  * no changes since 9.2
+
 v9.2
 
   * bug fixes and improvements mostly in typesetting

@@ -100,6 +100,7 @@
  [white-bracket-sizing (parameter/c
                         (-> string? number? (values number? number? number? number?)))]
  [horizontal-bar-spacing (parameter/c exact-nonnegative-integer?)]
+ [premise-spacing (parameter/c exact-nonnegative-integer?)]
  [relation-clauses-combine (parameter/c (-> (listof pict-convertible?) pict-convertible?))]
  [relation-clause-combine (parameter/c (-> (listof (listof pict-convertible?)) pict-convertible? (or/c string? #f) pict-convertible?))]
  [default-relation-clause-combine (-> (listof (listof pict-convertible?)) pict-convertible? (or/c string? #f) pict-convertible?)]

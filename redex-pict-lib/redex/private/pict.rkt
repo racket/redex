@@ -99,6 +99,7 @@
          set-arrow-pict!
          arrow->pict
          horizontal-bar-spacing
+         premise-spacing
          relation-clauses-combine
          relation-clause-combine
          default-relation-clause-combine
@@ -1786,7 +1787,7 @@
       name))))
 
 (define (default-relation-clause-combine premises conclusion name)
-  (define top (apply vc-append 4 (map (λ (premises) (apply hbl-append 20 premises)) premises)))
+  (define top (apply vc-append 4 (map (λ (premises) (apply hbl-append (premise-spacing) premises)) premises)))
   (define line-w (max (pict-width top) (pict-width conclusion)))
   (define line (dc (λ (dc dx dy) (send dc draw-line dx dy (+ dx line-w) dy))
                    line-w 1))
@@ -1813,6 +1814,7 @@
       w/out-label))
 
 (define judgment-form-no-bar-when-no-premises (make-parameter #f))
+(define premise-spacing (make-parameter 20))
 
 (define relation-clause-combine (make-parameter default-relation-clause-combine))
 

@@ -942,6 +942,12 @@ single reduction relation.
   to @racket[4].
 }
 
+@defparam[premise-spacing space (parameter/c exact-nonnegative-integer?)]{
+ Controls the amount of space between premises when render judgment forms
+
+ @history[#:added "1.22"]
+}
+
 @defparam[metafunction-gap-space gap-space real?]{
   Controls the amount of vertical space between different metafunctions
   rendered together with @racket[render-metafunctions].
@@ -1056,7 +1062,7 @@ single reduction relation.
  Builds a pict for the premises as
  @racketblock[(apply vc-append 4
                      (for/list ([premises (in-list premises)])
-                       (apply hbl-append 20 premises)))]
+                       (apply hbl-append (premise-spacing) premises)))]
  and then adds a line below it and the conclusion pict below that.
  If @racket[rule-name] is not @racket[#f], then it adds the name
  next to the bar.
