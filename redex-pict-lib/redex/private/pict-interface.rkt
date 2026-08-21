@@ -13,6 +13,16 @@ pict library.
          (prefix-in p: pict)
          pict/convert)
 
+(define rhombus-present?
+  (let ([rhombus-present? 'unknown])
+    (λ ()
+      (when (symbol? rhombus-present?)
+        (set! rhombus-present?
+              (with-handlers ([exn:fail? (λ (x) #f)])
+                (dynamic-require '(lib "pict/main.rhm") #f)
+                #t)))
+      rhombus-present?)))
+
 (define-syntax (define-rhombus stx)
   (syntax-parse stx
     [(_ mod x:id)
@@ -21,7 +31,7 @@ pict library.
        (format-id #'x #:source #'x "r:~a" (syntax-e #'x)))
      #`(begin
          ;; just check that the function actually exists
-         (when (module-declared? 'mod #t)
+         (when (rhombus-present?)
            (void (dynamic-require 'mod 'x)))
          (define-syntax (#,(syntax-property
                             r:
@@ -120,8 +130,7 @@ pict library.
     [(_ racket-pict:expr rhombus-pict:expr)
      #'(choose/proc (λ () racket-pict)
                     (λ () rhombus-pict))]))
-(define (rhombus-present?)
-  (module-declared? '(lib "pict/main.rhm") #t))
+
 (define (choose/proc racket-pict rhombus-pict)
   (cond
     [(rhombus-present?)
@@ -159,12 +168,12 @@ pict library.
 (provide inset)
 (define inset
   (case-lambda
-    [(p amt) (choose (p:inset amt) ((r:dynamic-dot-ref p 'pad) amt))]
+    [(p amt) (choose (p:inset p amt) ((r:dynamic-dot-ref p 'pad) amt))]
     [(p horiz vert)
-     (choose (p:inset horiz vert)
+     (choose (p:inset p horiz vert)
              ((r:dynamic-dot-ref p 'pad) #:horiz horiz #:vert vert))]
     [(p l t r b)
-     (choose (p:inset l t r b)
+     (choose (p:inset p l t r b)
              ((r:dynamic-dot-ref p 'pad) #:left l #:top t #:right r #:bottom b))]))
 
 (define-syntax (define-append stx)

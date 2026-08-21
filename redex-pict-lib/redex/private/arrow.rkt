@@ -126,4 +126,4 @@
             (send dc set-pen old-pen)
             (send dc set-brush old-brush)))
         w h (- h d) d)
-       2 0))))
+       2 2 0 0))))
