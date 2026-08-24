@@ -7,7 +7,7 @@
                "draw-lib"
                "data-lib"
                "profile-lib"
-               "redex-lib"
+               ["redex-lib" #:version "1.23"]
                "pict-lib"))
 
 (define build-deps '("rackunit-lib"))
@@ -18,7 +18,7 @@
 
 (define pkg-authors '(robby bfetscher))
 
-(define version "1.9")
+(define version "1.10")
 
 (define license
   '(Apache-2.0 OR MIT))

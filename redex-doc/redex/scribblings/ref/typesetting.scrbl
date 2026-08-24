@@ -75,7 +75,7 @@ When Rhombus pict has been loaded (specifically, when @racket[(module-declared? 
 returns a true value), the @racketmodname[redex/pict] library creates (and accepts) Rhombus picts.
 See @other-doc[#:indirect "Rhombus Pict" '(lib "rhombus/pict/scribblings/rhombus-pict.scrbl")]
 for more information about Rhombus picts.
-@history[#:changed "1.23" "Added support for Rhombus picts."]
+@history[#:changed "1.10" "Added support for Rhombus picts."]
 
 @section{Generating Picts}
 
