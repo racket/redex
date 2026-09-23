@@ -1592,7 +1592,7 @@
     (cond
       [(or (symbol? name-rewritten) (string? name-rewritten))
        ((current-text) (format "~a" name-rewritten) (metafunction-style) (metafunction-font-size))]
-      [else name-rewritten]))
+      [else (pict-convertible->pict name-rewritten)]))
   ((adjust 'metafunction-contract)
    (hbl-append name-pict
                (basic-text " : " (default-style))
