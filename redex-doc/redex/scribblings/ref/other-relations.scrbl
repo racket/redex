@@ -614,7 +614,7 @@ helpful when debugging.
 
  In its third form, the @racket[judgment-form-id] must not
  have a mode, and the @racket[derivation-expr] must produce a
- @racket[derviation] struct. The result of
+ @racket[derivation] struct. The result of
  @racket[judgment-holds] is @racket[#t] when the derivation
  is valid, according to the rules of the judgment form, and
  @racket[#f] otherwise. Note that the premises of the
