@@ -322,15 +322,9 @@ Now α equivalence is straightforward:
 (racketblock
 ;; (=α e_1 e_2) determines whether e_1 and e_2 are α equivalent
 
-(define-extended-language Lambda/n Lambda
-  (e ::= .... n)
-  (n ::= natural))
-
-(define in-Lambda/n? (redex-match? Lambda/n e))
-
 (module+ test
   (test-equal (term (=α (lambda (x) x) (lambda (y) y))) #true)
-  (test-equal (term (=α (lambda (x) (x 1)) (lambda (y) (y 1)))) #true)
+  (test-equal (term (=α (lambda (x) (x x)) (lambda (y) (y y)))) #true)
   (test-equal (term (=α (lambda (x) x) (lambda (y) z))) #false))
 
 (define-metafunction SD
