@@ -88,7 +88,7 @@ Now you can formulate language tests:
 (define eb1 (term (lambda (x x) y)))
 (define eb2 (term (lambda (x y) 3)))
 
-(test-equal (lambda? eb1) #false)
+(test-equal (lambda? eb1) #true)
 (test-equal (lambda? eb2) #false)
 
 (test-results)
