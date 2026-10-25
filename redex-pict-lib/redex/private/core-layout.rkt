@@ -74,7 +74,8 @@
          (struct-out pict-token)
          (struct-out spacer-token)
          (struct-out line)
-         current-text)
+         current-text
+         call-current-text)
   
   (define STIX? #f)
   
@@ -552,7 +553,7 @@
             (if unquoted?
                 (make-pict-token col col-span
                                  (pink-background
-                                  ((current-text) str pink-code-font (default-font-size))))
+                                  (call-current-text str pink-code-font (default-font-size))))
                 (make-string-token col col-span str (default-style))))))
     
     (define (handle-loc-wrapped lw)
@@ -772,10 +773,10 @@
        (list (make-pict-token col span (pict-convertible->pict atom)))]
       [unquoted?
        (list (make-pict-token col span 
-                              (pink-background 
-                               ((current-text) (if (string? atom) atom (format "~a" atom))
-                                               pink-code-font
-                                               (default-font-size)))))]
+                              (pink-background
+                               (call-current-text (if (string? atom) atom (format "~a" atom))
+                                                  pink-code-font
+                                                  (default-font-size)))))]
       [(symbol? atom)
        (define (not-nt)
          (list (or (rewrite-atomic col span atom literal-style)
@@ -882,10 +883,12 @@
                     (loop (cdr lst)))]))))
   
   (define current-text (make-parameter text))
+(define (call-current-text str style size)
+  (pict-convertible->pict ((current-text) str style size)))
 
-  (define (basic-text str style) ((current-text) str style (default-font-size)))
-  (define (non-terminal str) ((current-text) str (non-terminal-style) (default-font-size)))
-  (define (unksc str) (pink-background ((current-text) str pink-code-font (default-font-size))))
+  (define (basic-text str style) (call-current-text str style (default-font-size)))
+  (define (non-terminal str) (call-current-text str (non-terminal-style) (default-font-size)))
+  (define (unksc str) (pink-background (call-current-text str pink-code-font (default-font-size))))
   (define non-terminal-style (make-parameter '(italic . roman)))
   (define non-terminal-subscript-style (make-parameter `(subscript . ,(non-terminal-style))))
   (define non-terminal-superscript-style (make-parameter `(superscript . ,(non-terminal-style))))
@@ -893,7 +896,7 @@
   (define grammar-style (make-parameter 'roman))
   (define paren-style (make-parameter 'roman))
   (define metafunction-style (make-parameter 'swiss))
-  (define (metafunction-text str) ((current-text) str (metafunction-style) (metafunction-font-size)))
+  (define (metafunction-text str) (call-current-text str (metafunction-style) (metafunction-font-size)))
   (define literal-style (make-parameter 'swiss))
   (define label-style (make-parameter 'swiss))
   (define default-font-size (make-parameter 14))
@@ -907,10 +910,9 @@
 
 (define white-square-bracket-cache (make-hash))
 (define (default-white-square-bracket open?)
-  (let ([text (current-text)])
-    (text (if open? "⟦" "⟧") ; U+27E6 and U+27E7
-          (default-style)
-          (default-font-size))))
+  (call-current-text (if open? "⟦" "⟧") ; U+27E6 and U+27E7
+                     (default-style)
+                     (default-font-size)))
 
 (define (homemade-white-square-bracket open?)
   (white-bracket (if open? "[" "]")))

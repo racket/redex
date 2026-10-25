@@ -474,16 +474,16 @@
   (define m (regexp-match #rx"^([^_]*)(?:_([^_]*)|)$" str))
   (bracket
    (hbl-append
-    ((current-text) (cadr m) (label-style) (label-font-size))
+    (call-current-text (cadr m) (label-style) (label-font-size))
     (if (caddr m)
-        ((current-text) (caddr m) `(subscript . ,(label-style)) (label-font-size))
+        (call-current-text (caddr m) `(subscript . ,(label-style)) (label-font-size))
         (blank)))))
 
 (define (bracket label)
   (hbl-append
-   ((current-text) " [" (label-style) (label-font-size))
+   (call-current-text " [" (label-style) (label-font-size))
    label
-   ((current-text) "]" (label-style) (label-font-size))))
+   (call-current-text "]" (label-style) (label-font-size))))
 
 (define (make-horiz-space picts) (blank (pict-width (apply cc-superimpose picts)) 0))
 
@@ -1591,7 +1591,7 @@
   (define name-pict
     (cond
       [(or (symbol? name-rewritten) (string? name-rewritten))
-       ((current-text) (format "~a" name-rewritten) (metafunction-style) (metafunction-font-size))]
+       (call-current-text (format "~a" name-rewritten) (metafunction-style) (metafunction-font-size))]
       [else (pict-convertible->pict name-rewritten)]))
   ((adjust 'metafunction-contract)
    (hbl-append name-pict
