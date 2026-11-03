@@ -1,6 +1,10 @@
 v9.4
 
-  * added premise-spacing
+  * add support for rhombus's pict library; specifically when
+    rhombus is loaded, redex's pict library creates Rhombus picts
+    instead of Racket picts
+  
+  * added premise-spacing and judgment-form-no-bar-when-no-premises
 
 v9.3
 
