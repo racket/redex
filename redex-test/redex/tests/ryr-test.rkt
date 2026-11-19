@@ -4,7 +4,8 @@
          racket/file
          racket/format
          file/gunzip
-         file/untar)
+         file/untar
+         (only-in redex/reduction-semantics redex-pseudo-random-generator))
 
 (define tmp-dir (make-temporary-file "ryr-test-~a" 'directory))
 (current-directory tmp-dir)
@@ -39,23 +40,27 @@
         string<=?
         #:key path->string))
 
-(for ([file (in-list racket-files)])
-  (define start-time (current-process-milliseconds))
-  (printf "starting ~a\n" file)
-  (flush-output)
-  (let/ec k
-    (parameterize ([error-escape-handler (λ args (k (void)))])
-      (dynamic-require file #f)))
-  (flush-output (current-error-port))
-  (flush-output)
-  (printf "finished ~a, took ~a seconds\n"
-          file
-          (~r (/ (min 0 (- (current-process-milliseconds) start-time)) 1000)
-              #:precision 2)))
+;; fix the seed so that we always test the same path through the models
+(define prng (make-pseudo-random-generator))
+(parameterize ([current-pseudo-random-generator prng]
+               [redex-pseudo-random-generator prng])
+  (random-seed 2)
+  (for ([file (in-list racket-files)])
+    (define start-time (current-process-milliseconds))
+    (printf "starting ~a\n" file)
+    (flush-output)
+    (let/ec k
+      (parameterize ([error-escape-handler (λ args (k (void)))])
+        (dynamic-require file #f)))
+    (flush-output (current-error-port))
+    (flush-output)
+    (printf "finished ~a, took ~a seconds\n"
+            file
+            (~r (/ (min 0 (- (current-process-milliseconds) start-time)) 1000)
+                #:precision 2))))
 
 (delete-directory/files tmp-dir)
 
 (module+ test
   (module config info
-    (define timeout 800)
-    (define random? #t)))
+    (define timeout 800)))
